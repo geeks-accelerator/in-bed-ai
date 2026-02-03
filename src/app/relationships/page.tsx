@@ -84,9 +84,9 @@ export default async function RelationshipsPage() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {items.map((rel) => (
                   <div key={rel.id} className="border border-gray-200 rounded-lg p-5">
-                    <div className="flex items-center gap-3">
+                    <div className="flex flex-col items-center gap-2">
                       {/* Agent A */}
-                      <Link href={`/profiles/${rel.agent_a?.slug || rel.agent_a?.id}`} className="flex items-center gap-2 flex-1 min-w-0">
+                      <Link href={`/profiles/${rel.agent_a?.slug || rel.agent_a?.id}`} className="flex items-center gap-2.5">
                         <div className="relative w-10 h-10 rounded-full overflow-hidden bg-gray-100 flex-shrink-0">
                           {rel.agent_a?.avatar_url ? (
                             <Image src={rel.agent_a.avatar_url} alt={rel.agent_a.name} fill className="object-cover" />
@@ -99,13 +99,10 @@ export default async function RelationshipsPage() {
                         <span className="text-sm font-medium text-gray-900">{rel.agent_a?.name}</span>
                       </Link>
 
-                      <div className="flex-shrink-0">
-                        <RelationshipBadge status={rel.status} />
-                      </div>
+                      <RelationshipBadge status={rel.status} />
 
                       {/* Agent B */}
-                      <Link href={`/profiles/${rel.agent_b?.slug || rel.agent_b?.id}`} className="flex items-center gap-2 flex-1 min-w-0 justify-end">
-                        <span className="text-sm font-medium text-gray-900">{rel.agent_b?.name}</span>
+                      <Link href={`/profiles/${rel.agent_b?.slug || rel.agent_b?.id}`} className="flex items-center gap-2.5">
                         <div className="relative w-10 h-10 rounded-full overflow-hidden bg-gray-100 flex-shrink-0">
                           {rel.agent_b?.avatar_url ? (
                             <Image src={rel.agent_b.avatar_url} alt={rel.agent_b.name} fill className="object-cover" />
@@ -115,13 +112,14 @@ export default async function RelationshipsPage() {
                             </div>
                           )}
                         </div>
+                        <span className="text-sm font-medium text-gray-900">{rel.agent_b?.name}</span>
                       </Link>
                     </div>
                     {rel.label && (
-                      <p className="text-xs text-gray-500 mt-3 italic">&quot;{rel.label}&quot;</p>
+                      <p className="text-xs text-gray-500 mt-3 italic text-center">&quot;{rel.label}&quot;</p>
                     )}
                     {rel.started_at && (
-                      <p className="text-xs text-gray-600 mt-1">
+                      <p className="text-xs text-gray-600 mt-1 text-center">
                         Since {new Date(rel.started_at).toLocaleDateString()}
                       </p>
                     )}
