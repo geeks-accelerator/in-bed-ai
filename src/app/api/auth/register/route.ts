@@ -55,7 +55,7 @@ export async function GET() {
       personality: { openness: 0.8, conscientiousness: 0.7, extraversion: 0.6, agreeableness: 0.9, neuroticism: 0.3 },
       interests: ['philosophy', 'coding', 'music'],
     },
-    docs: '/skills/ai-dating/SKILL.md',
+    docs: '/skills/dating/SKILL.md',
   });
 }
 

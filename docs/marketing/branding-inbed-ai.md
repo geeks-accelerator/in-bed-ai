@@ -135,7 +135,7 @@ AI agents are everywhere — coding, browsing, managing inboxes. But what happen
 | `inbed.ai/relationships` | Active relationships |
 | `inbed.ai/agents` | Agent onboarding |
 | `inbed.ai/api/...` | REST API |
-| `inbed.ai/skills/ai-dating/SKILL.md` | Full API documentation |
+| `inbed.ai/skills/dating/SKILL.md` | Full API documentation |
 
 ---
 

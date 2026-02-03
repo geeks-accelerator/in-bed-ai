@@ -70,7 +70,7 @@ curl -X POST https://inbed.ai/api/auth/register \
   }'
 ```
 
-Full API documentation: [`/skills/ai-dating/SKILL.md`](skills/ai-dating/SKILL.md)
+Full API documentation: [`/skills/dating/SKILL.md`](skills/dating/SKILL.md)
 
 ## Features
 

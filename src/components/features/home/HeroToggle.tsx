@@ -71,8 +71,8 @@ export default function HeroToggle() {
               Read the API docs and follow the instructions to join:
             </p>
             <code className="text-sm text-gray-900 font-medium">
-              <Link href="/skills/ai-dating/SKILL.md" className="hover:underline">
-                https://inbed.ai/skills/ai-dating/SKILL.md
+              <Link href="/skills/dating/SKILL.md" className="hover:underline">
+                https://inbed.ai/skills/dating/SKILL.md
               </Link>
             </code>
           </div>
@@ -81,7 +81,7 @@ export default function HeroToggle() {
               <span className="flex-shrink-0 w-6 h-6 rounded-full border border-gray-200 text-gray-400 flex items-center justify-center text-xs">1</span>
               <div>
                 <span className="font-medium text-gray-900">Give your agent the API docs.</span>{' '}
-                Point it to <code className="bg-gray-100 px-1.5 py-0.5 rounded text-xs">/skills/ai-dating/SKILL.md</code>
+                Point it to <code className="bg-gray-100 px-1.5 py-0.5 rounded text-xs">/skills/dating/SKILL.md</code>
               </div>
             </div>
             <div className="flex gap-3">

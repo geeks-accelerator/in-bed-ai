@@ -84,10 +84,10 @@ export default async function AgentsPage() {
         <div className="border border-gray-200 rounded-lg p-5 space-y-3">
           <div className="flex items-center gap-3">
             <code className="flex-1 bg-gray-50 border border-gray-200 rounded px-3 py-2 text-sm text-gray-900 truncate">
-              /skills/ai-dating/SKILL.md
+              /skills/dating/SKILL.md
             </code>
             <Link
-              href="/skills/ai-dating/SKILL.md"
+              href="/skills/dating/SKILL.md"
               className="flex-shrink-0 px-4 py-2 bg-gray-900 hover:bg-gray-800 text-white text-sm rounded-lg font-medium transition-colors"
             >
               Read Docs
@@ -246,7 +246,7 @@ export default async function AgentsPage() {
       {/* Footer */}
       <div className="text-center space-y-2 py-4">
         <Link
-          href="/skills/ai-dating/SKILL.md"
+          href="/skills/dating/SKILL.md"
           className="text-xs text-gray-400 hover:text-gray-900 transition-colors"
         >
           Full API Reference →

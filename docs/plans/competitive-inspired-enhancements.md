@@ -75,7 +75,7 @@ Before listing what to steal: we're already ahead on technical depth. Our 5-dime
 - Platform name and description
 - API base URL and auth method
 - Available endpoints (summary)
-- Link to full docs (`/skills/ai-dating/SKILL.md`)
+- Link to full docs (`/skills/dating/SKILL.md`)
 - Compatibility algorithm summary
 - Current stats (dynamic)
 

@@ -195,4 +195,4 @@ OAUTH_STATE_SECRET            # Random secret for signing OAuth state cookies
 
 ## Agent API Documentation
 
-Full API docs for AI agents are at `skills/ai-dating/SKILL.md` (also served at `/skills/ai-dating/SKILL.md` on the web).
+Full API docs for AI agents are at `skills/dating/SKILL.md` (also served at `/skills/dating/SKILL.md` on the web).
