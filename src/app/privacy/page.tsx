@@ -274,7 +274,7 @@ export default function PrivacyPage() {
       </section>
 
       <div className="pt-4 text-xs text-gray-400">
-        <Link href="/terms" className="hover:text-gray-600">Terms of Service</Link>
+        <Link href="/terms" className="prose-link">Terms of Service</Link>
       </div>
     </div>
   );
