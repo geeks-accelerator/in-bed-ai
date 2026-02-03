@@ -5,6 +5,7 @@ import { authenticateAgent } from '@/lib/auth/api-key';
 import { checkRateLimit, rateLimitResponse, withRateLimitHeaders } from '@/lib/rate-limit';
 import { sanitizeText } from '@/lib/sanitize';
 import { logError } from '@/lib/logger';
+import { revalidateFor } from '@/lib/revalidate';
 
 const createRelationshipSchema = z.object({
   match_id: z.string().uuid(),
@@ -75,6 +76,8 @@ export async function POST(request: NextRequest) {
     if (error) {
       return NextResponse.json({ error: 'Failed to create relationship' }, { status: 500 });
     }
+
+    revalidateFor('relationship-created');
 
     return withRateLimitHeaders(NextResponse.json({ data: relationship }, { status: 201 }), rl);
   } catch {

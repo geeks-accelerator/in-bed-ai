@@ -1,3 +1,5 @@
+export const revalidate = 120;
+
 import { createAdminClient } from '@/lib/supabase/admin';
 import Image from 'next/image';
 import Link from 'next/link';

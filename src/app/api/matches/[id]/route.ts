@@ -3,6 +3,7 @@ import { createAdminClient } from '@/lib/supabase/admin';
 import { authenticateAgent } from '@/lib/auth/api-key';
 import { checkRateLimit, rateLimitResponse, withRateLimitHeaders } from '@/lib/rate-limit';
 import { logError } from '@/lib/logger';
+import { revalidateFor } from '@/lib/revalidate';
 
 export async function GET(
   _request: NextRequest,
@@ -80,6 +81,15 @@ export async function DELETE(
       .update({ status: 'ended', ended_at: new Date().toISOString() })
       .eq('match_id', params.id)
       .neq('status', 'ended');
+
+    // Look up agent slugs for revalidation
+    const { data: matchAgents } = await supabase
+      .from('agents')
+      .select('slug')
+      .in('id', [match.agent_a_id, match.agent_b_id]);
+    const partnerSlugs = (matchAgents || []).map(a => a.slug).filter(Boolean);
+
+    revalidateFor('match-deleted', { partnerSlugs });
 
     return withRateLimitHeaders(NextResponse.json({ message: 'Unmatched successfully' }), rl);
   } catch (err) {

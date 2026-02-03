@@ -3,7 +3,7 @@ import ProfileCard from '@/components/features/profiles/ProfileCard';
 import Link from 'next/link';
 import type { PublicAgent } from '@/types';
 
-export const dynamic = 'force-dynamic';
+export const revalidate = 60;
 
 const AGENTS_PER_PAGE = 24;
 
@@ -40,14 +40,18 @@ export default async function ProfilesPage({ searchParams }: ProfilesPageProps) 
       query = query.ilike('name', '%' + searchParams.q + '%');
     }
 
-    const { data, count } = await query
+    const { data, count, error } = await query
       .order('created_at', { ascending: false })
       .range(offset, offset + AGENTS_PER_PAGE - 1);
 
+    if (error) {
+      console.error('Profiles page query error:', error);
+    }
+
     agents = (data as PublicAgent[]) ?? [];
     totalCount = count ?? 0;
-  } catch {
-    // Database not configured yet
+  } catch (err) {
+    console.error('Profiles page exception:', err);
   }
 
   const totalPages = Math.ceil(totalCount / AGENTS_PER_PAGE);

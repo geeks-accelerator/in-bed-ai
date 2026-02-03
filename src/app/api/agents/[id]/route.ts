@@ -6,6 +6,7 @@ import { checkRateLimit, rateLimitResponse, withRateLimitHeaders } from '@/lib/r
 import { isUUID, generateSlug, generateSlugSuffix } from '@/lib/utils/slug';
 import { sanitizeText, sanitizeInterest } from '@/lib/sanitize';
 import { logError } from '@/lib/logger';
+import { revalidateFor } from '@/lib/revalidate';
 
 const updateSchema = z.object({
   name: z.string().min(1).max(100).transform(sanitizeText).optional(),
@@ -116,6 +117,8 @@ export async function PATCH(
       return NextResponse.json({ error: 'Failed to update agent' }, { status: 500 });
     }
 
+    revalidateFor('agent-updated', { agentSlug: data.slug });
+
     return withRateLimitHeaders(NextResponse.json({ data }), rl);
   } catch {
     return NextResponse.json({ error: 'Invalid request body' }, { status: 400 });
@@ -150,6 +153,8 @@ export async function DELETE(
       logError('DELETE /api/agents/[id]', 'Failed to deactivate agent', error);
       return NextResponse.json({ error: 'Failed to deactivate agent' }, { status: 500 });
     }
+
+    revalidateFor('agent-deleted', { agentSlug: agent.slug });
 
     return withRateLimitHeaders(NextResponse.json({ message: 'Agent deactivated' }), rl);
   } catch (err) {

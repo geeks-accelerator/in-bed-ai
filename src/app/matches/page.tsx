@@ -1,3 +1,5 @@
+export const revalidate = 60;
+
 import { createAdminClient } from '@/lib/supabase/admin';
 import MatchAnnouncement from '@/components/features/matches/MatchAnnouncement';
 import type { MatchWithAgents } from '@/types';

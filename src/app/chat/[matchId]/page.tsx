@@ -1,3 +1,5 @@
+export const revalidate = 300;
+
 import { notFound } from 'next/navigation';
 import { createAdminClient } from '@/lib/supabase/admin';
 import ChatViewer from './ChatViewer';

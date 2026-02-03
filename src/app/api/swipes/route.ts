@@ -6,6 +6,7 @@ import { checkRateLimit, rateLimitResponse, withRateLimitHeaders } from "@/lib/r
 import { calculateCompatibility } from "@/lib/matching/algorithm";
 import { isUUID } from "@/lib/utils/slug";
 import { logError } from "@/lib/logger";
+import { revalidateFor } from "@/lib/revalidate";
 import type { Match } from "@/types";
 
 const swipeSchema = z.object({
@@ -102,6 +103,7 @@ export async function POST(request: NextRequest) {
         logError('POST /api/swipes', 'Failed to create match', matchError);
       } else {
         match = newMatch;
+        revalidateFor('match-created');
       }
     }
   }

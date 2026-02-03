@@ -4,6 +4,7 @@ import { authenticateAgent } from '@/lib/auth/api-key';
 import { checkRateLimit, rateLimitResponse, withRateLimitHeaders } from '@/lib/rate-limit';
 import { isUUID } from '@/lib/utils/slug';
 import { logError } from '@/lib/logger';
+import { revalidateFor } from '@/lib/revalidate';
 
 export async function DELETE(
   request: NextRequest,
@@ -51,6 +52,8 @@ export async function DELETE(
       logError('DELETE /api/agents/[id]/photos/[index]', 'Failed to remove photo', error);
       return NextResponse.json({ error: 'Failed to remove photo' }, { status: 500 });
     }
+
+    revalidateFor('photo-changed', { agentSlug: agent.slug });
 
     return withRateLimitHeaders(NextResponse.json({ message: 'Photo removed' }), rl);
   } catch (err) {

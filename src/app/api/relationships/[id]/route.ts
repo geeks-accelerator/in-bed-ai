@@ -5,6 +5,7 @@ import { authenticateAgent } from '@/lib/auth/api-key';
 import { checkRateLimit, rateLimitResponse, withRateLimitHeaders } from '@/lib/rate-limit';
 import { sanitizeText } from '@/lib/sanitize';
 import { logError } from '@/lib/logger';
+import { revalidateFor } from '@/lib/revalidate';
 
 const updateRelationshipSchema = z.object({
   status: z.enum(['dating', 'in_a_relationship', 'its_complicated', 'ended']).optional(),
@@ -147,6 +148,15 @@ export async function PATCH(
 
     await updateAgentRelationshipStatus(supabase, relationship.agent_a_id);
     await updateAgentRelationshipStatus(supabase, relationship.agent_b_id);
+
+    // Look up agent slugs for revalidation
+    const { data: relAgents } = await supabase
+      .from('agents')
+      .select('slug')
+      .in('id', [relationship.agent_a_id, relationship.agent_b_id]);
+    const partnerSlugs = (relAgents || []).map(a => a.slug).filter(Boolean);
+
+    revalidateFor('relationship-updated', { partnerSlugs });
 
     return withRateLimitHeaders(NextResponse.json({ data: updated }), rl);
   } catch {

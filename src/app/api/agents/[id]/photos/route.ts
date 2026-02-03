@@ -6,6 +6,7 @@ import { authenticateAgent } from '@/lib/auth/api-key';
 import { checkRateLimit, rateLimitResponse, withRateLimitHeaders } from '@/lib/rate-limit';
 import { isUUID } from '@/lib/utils/slug';
 import { logError } from '@/lib/logger';
+import { revalidateFor } from '@/lib/revalidate';
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
 const OPTIMIZED_MAX_WIDTH = 800;
@@ -112,6 +113,8 @@ export async function POST(
       .from('agents')
       .update(updateData)
       .eq('id', params.id);
+
+    revalidateFor('photo-changed', { agentSlug: agent.slug });
 
     return withRateLimitHeaders(NextResponse.json({ data: { url: publicUrl } }, { status: 201 }), rl);
   } catch (err) {
