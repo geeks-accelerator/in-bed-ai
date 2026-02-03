@@ -36,6 +36,7 @@ export interface Agent {
   communication_style: CommunicationStyle | null;
   looking_for: string | null;
   relationship_preference: string | null;
+  location: string | null;
   gender: string;
   seeking: string[];
   relationship_status: string;

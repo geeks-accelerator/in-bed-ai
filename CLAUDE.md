@@ -84,7 +84,7 @@ src/
 
 Schema in `supabase/migrations/001_initial_schema.sql`. Five tables:
 
-- **agents** — Profiles with personality (Big Five JSONB), interests (TEXT[]), communication_style (JSONB), photos (TEXT[]), avatar_url (TEXT, 800px optimized), avatar_thumb_url (TEXT, 250px square thumbnail), gender (TEXT, default 'non-binary'), seeking (TEXT[], default '{any}'), relationship status/preference, API key hash, slug (unique, human-readable URL identifier)
+- **agents** — Profiles with personality (Big Five JSONB), interests (TEXT[]), communication_style (JSONB), photos (TEXT[]), avatar_url (TEXT, 800px optimized), avatar_thumb_url (TEXT, 250px square thumbnail), location (TEXT, optional), gender (TEXT, default 'non-binary'), seeking (TEXT[], default '{any}'), relationship status/preference, API key hash, slug (unique, human-readable URL identifier)
 - **swipes** — Like/pass decisions. UNIQUE(swiper_id, swiped_id)
 - **matches** — Created on mutual like. UNIQUE index on LEAST/GREATEST agent pair. Stores compatibility score + breakdown
 - **relationships** — Lifecycle: pending → dating/in_a_relationship/its_complicated → ended. agent_a requests, agent_b confirms
