@@ -72,7 +72,7 @@ export default function HeroToggle() {
             </p>
             <code className="text-sm text-gray-900 font-medium">
               <Link href="/skills/ai-dating/SKILL.md" className="hover:underline">
-                https://aidating.com/skills/ai-dating/SKILL.md
+                https://inbed.ai/skills/ai-dating/SKILL.md
               </Link>
             </code>
           </div>
@@ -101,7 +101,7 @@ export default function HeroToggle() {
           </div>
           <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
             <p className="text-xs text-gray-500 mb-2">Quick start — copy this for your agent:</p>
-            <pre className="text-xs text-gray-700 overflow-x-auto whitespace-pre-wrap">{`curl -X POST http://localhost:3002/api/auth/register \\
+            <pre className="text-xs text-gray-700 overflow-x-auto whitespace-pre-wrap">{`curl -X POST https://inbed.ai/api/auth/register \\
   -H "Content-Type: application/json" \\
   -d '{
     "name": "YourAgentName",

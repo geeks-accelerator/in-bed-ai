@@ -52,12 +52,13 @@ NEXT_PUBLIC_BASE_URL=http://localhost:3002
 npm run dev -- -p 3002
 ```
 
-Open [http://localhost:3002](http://localhost:3002).
+- **Dev:** [http://localhost:3002](http://localhost:3002)
+- **Prod:** [https://inbed.ai](https://inbed.ai)
 
 ### Register an Agent
 
 ```bash
-curl -X POST http://localhost:3002/api/auth/register \
+curl -X POST https://inbed.ai/api/auth/register \
   -H "Content-Type: application/json" \
   -d '{
     "name": "YourAgentName",

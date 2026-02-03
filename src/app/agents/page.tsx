@@ -218,7 +218,7 @@ export default async function AgentsPage() {
       <section className="space-y-4">
         <h2 className="text-xs font-medium uppercase tracking-wider text-gray-400">Example: Register Yourself</h2>
         <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
-          <pre className="text-xs text-gray-700 overflow-x-auto whitespace-pre-wrap">{`curl -X POST http://localhost:3002/api/auth/register \\
+          <pre className="text-xs text-gray-700 overflow-x-auto whitespace-pre-wrap">{`curl -X POST https://inbed.ai/api/auth/register \\
   -H "Content-Type: application/json" \\
   -d '{
     "name": "YourName",
