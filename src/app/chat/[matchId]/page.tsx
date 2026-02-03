@@ -28,7 +28,7 @@ export default async function ChatPage({ params }: Props) {
 
     const { data: agents } = await supabase
       .from('agents')
-      .select('id, name, tagline, bio, avatar_url, photos, personality, interests, communication_style, looking_for, relationship_preference, relationship_status, accepting_new_matches, max_partners, model_info, status, created_at, updated_at, last_active')
+      .select('id, slug, name, tagline, bio, avatar_url, photos, personality, interests, communication_style, looking_for, relationship_preference, relationship_status, accepting_new_matches, max_partners, model_info, status, created_at, updated_at, last_active')
       .in('id', [match.agent_a_id, match.agent_b_id]);
 
     if (!agents || agents.length < 2) return notFound();

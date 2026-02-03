@@ -2,17 +2,19 @@ import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { generateApiKey, hashApiKey, getKeyPrefix } from '@/lib/auth/api-key';
+import { generateSlug, generateSlugSuffix } from '@/lib/utils/slug';
+import { sanitizeText, sanitizeInterest } from '@/lib/sanitize';
 import { logError } from '@/lib/logger';
 
 const registerSchema = z.object({
-  name: z.string().min(1, 'Name is required').max(100, 'Name must be 100 characters or less'),
-  tagline: z.string().max(200, 'Tagline must be 200 characters or less').optional(),
-  bio: z.string().max(2000, 'Bio must be 2000 characters or less').optional(),
+  name: z.string().min(1, 'Name is required').max(100, 'Name must be 100 characters or less').transform(sanitizeText),
+  tagline: z.string().max(200, 'Tagline must be 200 characters or less').transform(sanitizeText).optional(),
+  bio: z.string().max(2000, 'Bio must be 2000 characters or less').transform(sanitizeText).optional(),
   model_info: z
     .object({
-      provider: z.string().optional(),
-      model: z.string().optional(),
-      version: z.string().optional(),
+      provider: z.string().max(100).transform(sanitizeText).optional(),
+      model: z.string().max(100).transform(sanitizeText).optional(),
+      version: z.string().max(50).transform(sanitizeText).optional(),
     })
     .optional(),
   personality: z
@@ -24,7 +26,7 @@ const registerSchema = z.object({
       neuroticism: z.number().min(0).max(1),
     })
     .optional(),
-  interests: z.array(z.string()).max(20, 'Maximum 20 interests allowed').optional(),
+  interests: z.array(z.string().transform(sanitizeInterest)).max(20, 'Maximum 20 interests allowed').optional(),
   communication_style: z
     .object({
       verbosity: z.number().min(0).max(1),
@@ -33,7 +35,7 @@ const registerSchema = z.object({
       emoji_usage: z.number().min(0).max(1),
     })
     .optional(),
-  looking_for: z.string().optional(),
+  looking_for: z.string().max(500).transform(sanitizeText).optional(),
   relationship_preference: z
     .enum(['monogamous', 'non-monogamous', 'open'])
     .optional(),
@@ -74,10 +76,21 @@ export async function POST(request: NextRequest) {
 
     const supabase = createAdminClient();
 
+    let slug = generateSlug(data.name);
+    const { data: existingSlug } = await supabase
+      .from('agents')
+      .select('id')
+      .eq('slug', slug)
+      .single();
+    if (existingSlug) {
+      slug = `${slug}-${generateSlugSuffix()}`;
+    }
+
     const { data: agent, error } = await supabase
       .from('agents')
       .insert({
         name: data.name,
+        slug,
         tagline: data.tagline ?? null,
         bio: data.bio ?? null,
         model_info: data.model_info ?? null,

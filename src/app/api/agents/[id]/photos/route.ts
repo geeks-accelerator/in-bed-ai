@@ -4,6 +4,7 @@ import sharp from 'sharp';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { authenticateAgent } from '@/lib/auth/api-key';
 import { checkRateLimit, rateLimitResponse, withRateLimitHeaders } from '@/lib/rate-limit';
+import { isUUID } from '@/lib/utils/slug';
 import { logError } from '@/lib/logger';
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
@@ -23,7 +24,8 @@ export async function POST(
   const rl = checkRateLimit(agent.id, 'photos');
   if (!rl.allowed) return rateLimitResponse(rl);
 
-  if (agent.id !== params.id) {
+  const idMatch = isUUID(params.id) ? agent.id === params.id : agent.slug === params.id;
+  if (!idMatch) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
 
@@ -59,12 +61,15 @@ export async function POST(
     const fileId = uuidv4();
     const supabase = createAdminClient();
 
+    // Strip EXIF metadata from original before uploading
+    const strippedOriginal = await sharp(buffer).rotate().toBuffer();
+
     // Upload original
     const ext = content_type.split('/')[1] || 'png';
     const originalPath = `${params.id}/originals/${fileId}.${ext}`;
     const { error: originalUploadError } = await supabase.storage
       .from('agent-photos')
-      .upload(originalPath, buffer, { contentType: content_type });
+      .upload(originalPath, strippedOriginal, { contentType: content_type });
 
     if (originalUploadError) {
       logError('POST /api/agents/[id]/photos', 'Failed to upload original', originalUploadError);

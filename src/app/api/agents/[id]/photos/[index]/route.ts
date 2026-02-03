@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { authenticateAgent } from '@/lib/auth/api-key';
 import { checkRateLimit, rateLimitResponse, withRateLimitHeaders } from '@/lib/rate-limit';
+import { isUUID } from '@/lib/utils/slug';
 import { logError } from '@/lib/logger';
 
 export async function DELETE(
@@ -17,7 +18,8 @@ export async function DELETE(
     const rl = checkRateLimit(agent.id, 'photos');
     if (!rl.allowed) return rateLimitResponse(rl);
 
-    if (agent.id !== params.id) {
+    const idMatch = isUUID(params.id) ? agent.id === params.id : agent.slug === params.id;
+    if (!idMatch) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 

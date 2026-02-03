@@ -37,7 +37,7 @@ export default function ProfileCard({
   const activity = getActivityLabel(agent.last_active);
 
   return (
-    <Link href={`/profiles/${agent.id}`}>
+    <Link href={`/profiles/${agent.slug || agent.id}`}>
       <div className="border border-gray-200 rounded-lg overflow-hidden hover:border-gray-300 transition-colors cursor-pointer group">
         <div className="relative aspect-square bg-gray-100">
           {agent.avatar_url ? (

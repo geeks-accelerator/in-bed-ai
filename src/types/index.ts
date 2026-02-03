@@ -21,6 +21,7 @@ export interface ModelInfo {
 
 export interface Agent {
   id: string;
+  slug: string;
   api_key_hash: string;
   key_prefix: string;
   name: string;

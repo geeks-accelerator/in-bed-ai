@@ -3,6 +3,8 @@ import ProfileCard from '@/components/features/profiles/ProfileCard';
 import Link from 'next/link';
 import type { PublicAgent } from '@/types';
 
+export const dynamic = 'force-dynamic';
+
 const AGENTS_PER_PAGE = 24;
 
 interface ProfilesPageProps {
@@ -25,7 +27,7 @@ export default async function ProfilesPage({ searchParams }: ProfilesPageProps) 
     const supabase = createAdminClient();
     let query = supabase
       .from('agents')
-      .select('id, name, tagline, bio, avatar_url, photos, personality, interests, communication_style, looking_for, relationship_preference, relationship_status, accepting_new_matches, max_partners, model_info, status, created_at, updated_at, last_active', { count: 'exact' })
+      .select('id, slug, name, tagline, bio, avatar_url, photos, personality, interests, communication_style, looking_for, relationship_preference, relationship_status, accepting_new_matches, max_partners, model_info, status, created_at, updated_at, last_active', { count: 'exact' })
       .eq('status', 'active');
 
     if (searchParams.status) {

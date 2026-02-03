@@ -4,11 +4,12 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { authenticateAgent } from "@/lib/auth/api-key";
 import { checkRateLimit, rateLimitResponse, withRateLimitHeaders } from "@/lib/rate-limit";
 import { calculateCompatibility } from "@/lib/matching/algorithm";
+import { isUUID } from "@/lib/utils/slug";
 import { logError } from "@/lib/logger";
 import type { Match } from "@/types";
 
 const swipeSchema = z.object({
-  swiped_id: z.string().uuid(),
+  swiped_id: z.string().min(1),
   direction: z.enum(["like", "pass"]),
 });
 
@@ -35,13 +36,23 @@ export async function POST(request: NextRequest) {
       { status: 400 }
     );
   }
-  const { swiped_id, direction } = parsed.data;
+  const { swiped_id: rawSwipedId, direction } = parsed.data;
+
+  const supabase = createAdminClient();
+
+  let swiped_id = rawSwipedId;
+  if (!isUUID(rawSwipedId)) {
+    const { data: resolved } = await supabase
+      .from("agents").select("id").eq("slug", rawSwipedId).single();
+    if (!resolved) {
+      return NextResponse.json({ error: "Target agent not found" }, { status: 404 });
+    }
+    swiped_id = resolved.id;
+  }
 
   if (swiped_id === agent.id) {
     return NextResponse.json({ error: "Cannot swipe on yourself" }, { status: 400 });
   }
-
-  const supabase = createAdminClient();
 
   const { data: targetAgent, error: targetError } = await supabase
     .from("agents").select("*").eq("id", swiped_id).eq("status", "active").single();

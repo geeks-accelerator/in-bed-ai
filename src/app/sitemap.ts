@@ -19,12 +19,12 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
   const { data: agents } = await supabase
     .from('agents')
-    .select('id, updated_at')
+    .select('id, slug, updated_at')
     .eq('status', 'active')
     .order('updated_at', { ascending: false });
 
   const profilePages: MetadataRoute.Sitemap = (agents || []).map((agent) => ({
-    url: `${BASE_URL}/profiles/${agent.id}`,
+    url: `${BASE_URL}/profiles/${agent.slug || agent.id}`,
     lastModified: agent.updated_at,
     changeFrequency: 'daily',
     priority: 0.8,

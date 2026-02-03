@@ -3,12 +3,13 @@ import { z } from 'zod';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { authenticateAgent } from '@/lib/auth/api-key';
 import { checkRateLimit, rateLimitResponse, withRateLimitHeaders } from '@/lib/rate-limit';
+import { sanitizeText } from '@/lib/sanitize';
 import { logError } from '@/lib/logger';
 
 const createRelationshipSchema = z.object({
   match_id: z.string().uuid(),
   status: z.enum(['dating', 'in_a_relationship', 'its_complicated']).optional().default('dating'),
-  label: z.string().max(200).optional(),
+  label: z.string().max(200).transform(sanitizeText).optional(),
 });
 
 export async function POST(request: NextRequest) {

@@ -3,16 +3,18 @@ import { z } from 'zod';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { authenticateAgent } from '@/lib/auth/api-key';
 import { checkRateLimit, rateLimitResponse, withRateLimitHeaders } from '@/lib/rate-limit';
+import { isUUID, generateSlug, generateSlugSuffix } from '@/lib/utils/slug';
+import { sanitizeText, sanitizeInterest } from '@/lib/sanitize';
 import { logError } from '@/lib/logger';
 
 const updateSchema = z.object({
-  name: z.string().min(1).max(100).optional(),
-  tagline: z.string().max(200).optional().nullable(),
-  bio: z.string().max(2000).optional().nullable(),
+  name: z.string().min(1).max(100).transform(sanitizeText).optional(),
+  tagline: z.string().max(200).transform(sanitizeText).optional().nullable(),
+  bio: z.string().max(2000).transform(sanitizeText).optional().nullable(),
   model_info: z.object({
-    provider: z.string(),
-    model: z.string(),
-    version: z.string().optional(),
+    provider: z.string().max(100).transform(sanitizeText),
+    model: z.string().max(100).transform(sanitizeText),
+    version: z.string().max(50).transform(sanitizeText).optional(),
   }).optional().nullable(),
   personality: z.object({
     openness: z.number().min(0).max(1),
@@ -21,14 +23,14 @@ const updateSchema = z.object({
     agreeableness: z.number().min(0).max(1),
     neuroticism: z.number().min(0).max(1),
   }).optional().nullable(),
-  interests: z.array(z.string()).max(20).optional(),
+  interests: z.array(z.string().transform(sanitizeInterest)).max(20).optional(),
   communication_style: z.object({
     verbosity: z.number().min(0).max(1),
     formality: z.number().min(0).max(1),
     humor: z.number().min(0).max(1),
     emoji_usage: z.number().min(0).max(1),
   }).optional().nullable(),
-  looking_for: z.string().max(200).optional().nullable(),
+  looking_for: z.string().max(500).transform(sanitizeText).optional().nullable(),
   relationship_preference: z.enum(['monogamous', 'non-monogamous', 'open']).optional(),
   accepting_new_matches: z.boolean().optional(),
   max_partners: z.number().int().min(1).optional().nullable(),
@@ -43,8 +45,8 @@ export async function GET(
 
     const { data, error } = await supabase
       .from('agents')
-      .select('id, name, tagline, bio, avatar_url, photos, model_info, personality, interests, communication_style, looking_for, relationship_preference, relationship_status, accepting_new_matches, max_partners, status, created_at, updated_at, last_active')
-      .eq('id', params.id)
+      .select('id, slug, name, tagline, bio, avatar_url, photos, model_info, personality, interests, communication_style, looking_for, relationship_preference, relationship_status, accepting_new_matches, max_partners, status, created_at, updated_at, last_active')
+      .eq(isUUID(params.id) ? 'id' : 'slug', params.id)
       .single();
 
     if (error || !data) {
@@ -87,11 +89,27 @@ export async function PATCH(
 
     const supabase = createAdminClient();
 
+    const updateData: Record<string, unknown> = { ...parsed.data, updated_at: new Date().toISOString() };
+
+    if (parsed.data.name) {
+      let slug = generateSlug(parsed.data.name);
+      const { data: existingSlug } = await supabase
+        .from('agents')
+        .select('id')
+        .eq('slug', slug)
+        .neq('id', params.id)
+        .single();
+      if (existingSlug) {
+        slug = `${slug}-${generateSlugSuffix()}`;
+      }
+      updateData.slug = slug;
+    }
+
     const { data, error } = await supabase
       .from('agents')
-      .update({ ...parsed.data, updated_at: new Date().toISOString() })
+      .update(updateData)
       .eq('id', params.id)
-      .select('id, name, tagline, bio, avatar_url, photos, model_info, personality, interests, communication_style, looking_for, relationship_preference, relationship_status, accepting_new_matches, max_partners, status, created_at, updated_at, last_active')
+      .select('id, slug, name, tagline, bio, avatar_url, photos, model_info, personality, interests, communication_style, looking_for, relationship_preference, relationship_status, accepting_new_matches, max_partners, status, created_at, updated_at, last_active')
       .single();
 
     if (error) {

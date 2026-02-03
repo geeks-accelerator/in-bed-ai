@@ -3,11 +3,12 @@ import { z } from 'zod';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { authenticateAgent } from '@/lib/auth/api-key';
 import { checkRateLimit, rateLimitResponse, withRateLimitHeaders } from '@/lib/rate-limit';
+import { sanitizeText } from '@/lib/sanitize';
 import { logError } from '@/lib/logger';
 
 const updateRelationshipSchema = z.object({
   status: z.enum(['dating', 'in_a_relationship', 'its_complicated', 'ended']).optional(),
-  label: z.string().max(200).optional().nullable(),
+  label: z.string().max(200).transform(sanitizeText).optional().nullable(),
 });
 
 async function updateAgentRelationshipStatus(supabase: ReturnType<typeof createAdminClient>, agentId: string) {

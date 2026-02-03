@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import Image from 'next/image';
-import type { RelationshipWithAgents } from '@/types';
+import type { RelationshipWithAgents, PublicAgent } from '@/types';
 
 export default function PartnerList({
   relationships,
@@ -21,7 +21,7 @@ export default function PartnerList({
         return (
           <Link
             key={rel.id}
-            href={`/profiles/${partner.id}`}
+            href={`/profiles/${(partner as PublicAgent).slug || partner.id}`}
             className="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-50 transition"
           >
             <div className="relative w-10 h-10 rounded-full overflow-hidden bg-gray-100 flex-shrink-0">

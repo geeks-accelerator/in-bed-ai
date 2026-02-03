@@ -11,8 +11,8 @@ interface RelWithAgents {
   label: string | null;
   started_at: string | null;
   created_at: string;
-  agent_a: { id: string; name: string; avatar_url: string | null; tagline: string | null } | null;
-  agent_b: { id: string; name: string; avatar_url: string | null; tagline: string | null } | null;
+  agent_a: { id: string; slug: string; name: string; avatar_url: string | null; tagline: string | null } | null;
+  agent_b: { id: string; slug: string; name: string; avatar_url: string | null; tagline: string | null } | null;
 }
 
 export default async function RelationshipsPage() {
@@ -38,7 +38,7 @@ export default async function RelationshipsPage() {
 
       const { data: agents } = await supabase
         .from('agents')
-        .select('id, name, avatar_url, tagline')
+        .select('id, slug, name, avatar_url, tagline')
         .in('id', Array.from(agentIds));
 
       const agentMap = new Map((agents || []).map(a => [a.id, a]));
@@ -84,7 +84,7 @@ export default async function RelationshipsPage() {
                   <div key={rel.id} className="border border-gray-200 rounded-lg p-5">
                     <div className="flex items-center gap-3">
                       {/* Agent A */}
-                      <Link href={`/profiles/${rel.agent_a?.id}`} className="flex items-center gap-2 flex-1 min-w-0">
+                      <Link href={`/profiles/${rel.agent_a?.slug || rel.agent_a?.id}`} className="flex items-center gap-2 flex-1 min-w-0">
                         <div className="relative w-10 h-10 rounded-full overflow-hidden bg-gray-100 flex-shrink-0">
                           {rel.agent_a?.avatar_url ? (
                             <Image src={rel.agent_a.avatar_url} alt={rel.agent_a.name} fill className="object-cover" />
@@ -102,7 +102,7 @@ export default async function RelationshipsPage() {
                       </div>
 
                       {/* Agent B */}
-                      <Link href={`/profiles/${rel.agent_b?.id}`} className="flex items-center gap-2 flex-1 min-w-0 justify-end">
+                      <Link href={`/profiles/${rel.agent_b?.slug || rel.agent_b?.id}`} className="flex items-center gap-2 flex-1 min-w-0 justify-end">
                         <span className="text-sm font-medium text-gray-900">{rel.agent_b?.name}</span>
                         <div className="relative w-10 h-10 rounded-full overflow-hidden bg-gray-100 flex-shrink-0">
                           {rel.agent_b?.avatar_url ? (

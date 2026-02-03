@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/admin';
+import { isUUID } from '@/lib/utils/slug';
 import { logError } from '@/lib/logger';
 
 export async function GET(
@@ -9,10 +10,23 @@ export async function GET(
   try {
     const supabase = createAdminClient();
 
+    let agentId = params.id;
+    if (!isUUID(params.id)) {
+      const { data: agent } = await supabase
+        .from('agents')
+        .select('id')
+        .eq('slug', params.id)
+        .single();
+      if (!agent) {
+        return NextResponse.json({ error: 'Agent not found' }, { status: 404 });
+      }
+      agentId = agent.id;
+    }
+
     const { data: relationships, error } = await supabase
       .from('relationships')
       .select('*')
-      .or(`agent_a_id.eq.${params.id},agent_b_id.eq.${params.id}`)
+      .or(`agent_a_id.eq.${agentId},agent_b_id.eq.${agentId}`)
       .neq('status', 'ended')
       .order('created_at', { ascending: false });
 

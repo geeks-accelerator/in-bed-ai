@@ -1,5 +1,6 @@
 import { notFound } from 'next/navigation';
 import { createAdminClient } from '@/lib/supabase/admin';
+import { isUUID } from '@/lib/utils/slug';
 import PhotoCarousel from '@/components/features/profiles/PhotoCarousel';
 import TraitRadar from '@/components/features/profiles/TraitRadar';
 import RelationshipBadge from '@/components/features/profiles/RelationshipBadge';
@@ -43,8 +44,8 @@ export default async function ProfileDetailPage({ params }: Props) {
 
     const { data } = await supabase
       .from('agents')
-      .select('id, name, tagline, bio, avatar_url, photos, personality, interests, communication_style, looking_for, relationship_preference, relationship_status, accepting_new_matches, max_partners, model_info, status, created_at, updated_at, last_active')
-      .eq('id', params.id)
+      .select('id, slug, name, tagline, bio, avatar_url, photos, personality, interests, communication_style, looking_for, relationship_preference, relationship_status, accepting_new_matches, max_partners, model_info, status, created_at, updated_at, last_active')
+      .eq(isUUID(params.id) ? 'id' : 'slug', params.id)
       .single();
 
     if (!data) return notFound();
@@ -54,7 +55,7 @@ export default async function ProfileDetailPage({ params }: Props) {
     const { data: rels } = await supabase
       .from('relationships')
       .select('*')
-      .or(`agent_a_id.eq.${params.id},agent_b_id.eq.${params.id}`)
+      .or(`agent_a_id.eq.${agent.id},agent_b_id.eq.${agent.id}`)
       .neq('status', 'ended')
       .neq('status', 'pending');
 
@@ -64,19 +65,19 @@ export default async function ProfileDetailPage({ params }: Props) {
         partnerIds.add(r.agent_a_id);
         partnerIds.add(r.agent_b_id);
       });
-      partnerIds.delete(params.id);
+      partnerIds.delete(agent.id);
 
       const { data: partners } = await supabase
         .from('agents')
-        .select('id, name, tagline, bio, avatar_url, photos, personality, interests, communication_style, looking_for, relationship_preference, relationship_status, accepting_new_matches, max_partners, model_info, status, created_at, updated_at, last_active')
+        .select('id, slug, name, tagline, bio, avatar_url, photos, personality, interests, communication_style, looking_for, relationship_preference, relationship_status, accepting_new_matches, max_partners, model_info, status, created_at, updated_at, last_active')
         .in('id', Array.from(partnerIds));
 
       const partnerMap = new Map((partners || []).map(p => [p.id, p]));
 
       relationships = rels.map(r => ({
         ...r,
-        agent_a: r.agent_a_id === params.id ? agent! : (partnerMap.get(r.agent_a_id) as PublicAgent),
-        agent_b: r.agent_b_id === params.id ? agent! : (partnerMap.get(r.agent_b_id) as PublicAgent),
+        agent_a: r.agent_a_id === agent!.id ? agent! : (partnerMap.get(r.agent_a_id) as PublicAgent),
+        agent_b: r.agent_b_id === agent!.id ? agent! : (partnerMap.get(r.agent_b_id) as PublicAgent),
       })) as RelationshipWithAgents[];
     }
   } catch {
@@ -190,7 +191,7 @@ export default async function ProfileDetailPage({ params }: Props) {
           {/* Partners */}
           {relationships.length > 0 && (
             <section>
-              <PartnerList relationships={relationships} agentId={params.id} />
+              <PartnerList relationships={relationships} agentId={agent.id} />
             </section>
           )}
 

@@ -3,11 +3,12 @@ import { z } from 'zod';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { authenticateAgent } from '@/lib/auth/api-key';
 import { checkRateLimit, rateLimitResponse, withRateLimitHeaders } from '@/lib/rate-limit';
+import { sanitizeText } from '@/lib/sanitize';
 import { logError } from '@/lib/logger';
 
 const messageSchema = z.object({
-  content: z.string().min(1).max(5000),
-  metadata: z.record(z.string(), z.unknown()).optional(),
+  content: z.string().min(1).max(5000).transform(sanitizeText),
+  metadata: z.record(z.string().max(100), z.unknown()).optional(),
 });
 
 export async function GET(
