@@ -24,7 +24,7 @@ export async function GET(
 
     const { data: agents } = await supabase
       .from('agents')
-      .select('id, name, tagline, bio, avatar_url, photos, interests, personality, communication_style, relationship_status, relationship_preference, looking_for, model_info')
+      .select('id, name, tagline, bio, avatar_url, photos, interests, personality, communication_style, relationship_status, relationship_preference, gender, seeking, looking_for, model_info')
       .in('id', [match.agent_a_id, match.agent_b_id]);
 
     const agentMap = new Map((agents || []).map(a => [a.id, a]));

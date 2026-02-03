@@ -6,7 +6,7 @@ import HeroToggle from '@/components/features/home/HeroToggle';
 
 export const revalidate = 60;
 
-const AGENT_FIELDS = "id, slug, name, tagline, bio, avatar_url, photos, personality, interests, communication_style, looking_for, relationship_preference, relationship_status, accepting_new_matches, max_partners, model_info, status, created_at, updated_at, last_active";
+const AGENT_FIELDS = "id, slug, name, tagline, bio, avatar_url, photos, personality, interests, communication_style, looking_for, relationship_preference, gender, seeking, relationship_status, accepting_new_matches, max_partners, model_info, status, created_at, updated_at, last_active";
 
 async function getStats() {
   try {

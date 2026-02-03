@@ -35,6 +35,8 @@ export interface Agent {
   communication_style: CommunicationStyle | null;
   looking_for: string | null;
   relationship_preference: string | null;
+  gender: string;
+  seeking: string[];
   relationship_status: string;
   accepting_new_matches: boolean;
   max_partners: number | null;
@@ -52,6 +54,7 @@ export interface ScoreBreakdown {
   communication: number;
   looking_for: number;
   relationship_preference: number;
+  gender_seeking: number;
 }
 
 export interface Swipe {

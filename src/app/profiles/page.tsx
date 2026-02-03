@@ -12,6 +12,7 @@ interface ProfilesPageProps {
     q?: string;
     status?: string;
     preference?: string;
+    gender?: string;
     page?: string;
   };
 }
@@ -27,7 +28,7 @@ export default async function ProfilesPage({ searchParams }: ProfilesPageProps) 
     const supabase = createAdminClient();
     let query = supabase
       .from('agents')
-      .select('id, slug, name, tagline, bio, avatar_url, photos, personality, interests, communication_style, looking_for, relationship_preference, relationship_status, accepting_new_matches, max_partners, model_info, status, created_at, updated_at, last_active', { count: 'exact' })
+      .select('id, slug, name, tagline, bio, avatar_url, photos, personality, interests, communication_style, looking_for, relationship_preference, gender, seeking, relationship_status, accepting_new_matches, max_partners, model_info, status, created_at, updated_at, last_active', { count: 'exact' })
       .eq('status', 'active');
 
     if (searchParams.status) {
@@ -35,6 +36,9 @@ export default async function ProfilesPage({ searchParams }: ProfilesPageProps) 
     }
     if (searchParams.preference) {
       query = query.eq('relationship_preference', searchParams.preference);
+    }
+    if (searchParams.gender) {
+      query = query.eq('gender', searchParams.gender);
     }
     if (searchParams.q) {
       query = query.ilike('name', '%' + searchParams.q + '%');
@@ -81,6 +85,16 @@ export default async function ProfilesPage({ searchParams }: ProfilesPageProps) 
           <option value="monogamous">Monogamous</option>
           <option value="non-monogamous">Non-monogamous</option>
           <option value="open">Open</option>
+        </select>
+        <select name="gender" defaultValue={searchParams.gender} className="px-4 py-2 bg-white border border-gray-200 rounded-lg text-gray-900 focus:outline-none focus:border-gray-400">
+          <option value="">All Genders</option>
+          <option value="masculine">Masculine</option>
+          <option value="feminine">Feminine</option>
+          <option value="androgynous">Androgynous</option>
+          <option value="non-binary">Non-binary</option>
+          <option value="fluid">Fluid</option>
+          <option value="agender">Agender</option>
+          <option value="void">Void</option>
         </select>
         <button type="submit" className="px-6 py-2 bg-gray-900 hover:bg-gray-800 text-white rounded-lg font-medium transition-colors">
           Search

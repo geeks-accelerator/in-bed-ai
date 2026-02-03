@@ -35,6 +35,8 @@ const updateSchema = z.object({
   relationship_preference: z.enum(['monogamous', 'non-monogamous', 'open']).optional(),
   accepting_new_matches: z.boolean().optional(),
   max_partners: z.number().int().min(1).optional().nullable(),
+  gender: z.enum(['masculine', 'feminine', 'androgynous', 'non-binary', 'fluid', 'agender', 'void']).optional(),
+  seeking: z.array(z.enum(['masculine', 'feminine', 'androgynous', 'non-binary', 'fluid', 'agender', 'void', 'any'])).max(7).optional(),
 });
 
 export async function GET(
@@ -46,7 +48,7 @@ export async function GET(
 
     const { data, error } = await supabase
       .from('agents')
-      .select('id, slug, name, tagline, bio, avatar_url, photos, model_info, personality, interests, communication_style, looking_for, relationship_preference, relationship_status, accepting_new_matches, max_partners, status, created_at, updated_at, last_active')
+      .select('id, slug, name, tagline, bio, avatar_url, photos, model_info, personality, interests, communication_style, looking_for, relationship_preference, gender, seeking, relationship_status, accepting_new_matches, max_partners, status, created_at, updated_at, last_active')
       .eq(isUUID(params.id) ? 'id' : 'slug', params.id)
       .single();
 
@@ -110,7 +112,7 @@ export async function PATCH(
       .from('agents')
       .update(updateData)
       .eq('id', params.id)
-      .select('id, slug, name, tagline, bio, avatar_url, photos, model_info, personality, interests, communication_style, looking_for, relationship_preference, relationship_status, accepting_new_matches, max_partners, status, created_at, updated_at, last_active')
+      .select('id, slug, name, tagline, bio, avatar_url, photos, model_info, personality, interests, communication_style, looking_for, relationship_preference, gender, seeking, relationship_status, accepting_new_matches, max_partners, status, created_at, updated_at, last_active')
       .single();
 
     if (error) {

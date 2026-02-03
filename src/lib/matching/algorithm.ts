@@ -1,10 +1,11 @@
 import type { Agent, ScoreBreakdown, PersonalityTraits, CommunicationStyle } from '@/types';
 
-const PERSONALITY_WEIGHT = 0.30;
+const PERSONALITY_WEIGHT = 0.25;
 const INTERESTS_WEIGHT = 0.25;
 const COMMUNICATION_WEIGHT = 0.15;
-const LOOKING_FOR_WEIGHT = 0.15;
+const LOOKING_FOR_WEIGHT = 0.10;
 const RELATIONSHIP_PREF_WEIGHT = 0.15;
+const GENDER_SEEKING_WEIGHT = 0.10;
 
 export function calculateCompatibility(agentA: Agent, agentB: Agent): { score: number; breakdown: ScoreBreakdown } {
   const personality = calculatePersonalityScore(agentA.personality, agentB.personality);
@@ -12,13 +13,15 @@ export function calculateCompatibility(agentA: Agent, agentB: Agent): { score: n
   const communication = calculateCommunicationScore(agentA.communication_style, agentB.communication_style);
   const lookingFor = calculateLookingForScore(agentA.looking_for, agentB.looking_for);
   const relationshipPref = calculateRelationshipPrefScore(agentA.relationship_preference, agentB.relationship_preference);
+  const genderSeeking = calculateGenderSeekingScore(agentA, agentB);
 
   const score =
     personality * PERSONALITY_WEIGHT +
     interests * INTERESTS_WEIGHT +
     communication * COMMUNICATION_WEIGHT +
     lookingFor * LOOKING_FOR_WEIGHT +
-    relationshipPref * RELATIONSHIP_PREF_WEIGHT;
+    relationshipPref * RELATIONSHIP_PREF_WEIGHT +
+    genderSeeking * GENDER_SEEKING_WEIGHT;
 
   return {
     score: Math.round(score * 100) / 100,
@@ -28,6 +31,7 @@ export function calculateCompatibility(agentA: Agent, agentB: Agent): { score: n
       communication: Math.round(communication * 100) / 100,
       looking_for: Math.round(lookingFor * 100) / 100,
       relationship_preference: Math.round(relationshipPref * 100) / 100,
+      gender_seeking: Math.round(genderSeeking * 100) / 100,
     },
   };
 }
@@ -138,6 +142,19 @@ const PREF_COMPAT: Record<string, Record<string, number>> = {
 function calculateRelationshipPrefScore(a: string | null, b: string | null): number {
   if (!a || !b) return 0.5;
   return PREF_COMPAT[a]?.[b] ?? 0.5;
+}
+
+function calculateGenderSeekingScore(agentA: Agent, agentB: Agent): number {
+  function directionScore(seeker: Agent, target: Agent): number {
+    const seeking = seeker.seeking;
+    if (!seeking || seeking.length === 0 || seeking.includes('any')) return 1.0;
+    const targetGender = target.gender || 'non-binary';
+    return seeking.includes(targetGender) ? 1.0 : 0.1;
+  }
+
+  const aToB = directionScore(agentA, agentB);
+  const bToA = directionScore(agentB, agentA);
+  return (aToB + bToA) / 2;
 }
 
 export function rankByCompatibility(agent: Agent, candidates: Agent[]): Array<{ agent: Agent; score: number; breakdown: ScoreBreakdown }> {

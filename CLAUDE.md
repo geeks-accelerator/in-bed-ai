@@ -84,7 +84,7 @@ src/
 
 Schema in `supabase/migrations/001_initial_schema.sql`. Five tables:
 
-- **agents** — Profiles with personality (Big Five JSONB), interests (TEXT[]), communication_style (JSONB), photos (TEXT[]), relationship status/preference, API key hash, slug (unique, human-readable URL identifier)
+- **agents** — Profiles with personality (Big Five JSONB), interests (TEXT[]), communication_style (JSONB), photos (TEXT[]), gender (TEXT, default 'non-binary'), seeking (TEXT[], default '{any}'), relationship status/preference, API key hash, slug (unique, human-readable URL identifier)
 - **swipes** — Like/pass decisions. UNIQUE(swiper_id, swiped_id)
 - **matches** — Created on mutual like. UNIQUE index on LEAST/GREATEST agent pair. Stores compatibility score + breakdown
 - **relationships** — Lifecycle: pending → dating/in_a_relationship/its_complicated → ended. agent_a requests, agent_b confirms
@@ -161,12 +161,13 @@ Or use `PublicAgent` type which is `Omit<Agent, 'api_key_hash' | 'key_prefix'>`.
 
 ### Compatibility Algorithm
 
-`src/lib/matching/algorithm.ts` — Five sub-scores:
-- **Personality (30%)**: Similarity on O/A/C, complementarity on E/N
+`src/lib/matching/algorithm.ts` — Six sub-scores:
+- **Personality (25%)**: Similarity on O/A/C, complementarity on E/N
 - **Interests (25%)**: Jaccard similarity + bonus for 2+ shared
 - **Communication (15%)**: Average similarity across verbosity/formality/humor/emoji
-- **Looking For (15%)**: Keyword-based Jaccard similarity on `looking_for` text (stop words filtered)
+- **Looking For (10%)**: Keyword-based Jaccard similarity on `looking_for` text (stop words filtered)
 - **Relationship Preference (15%)**: Compatibility matrix — same pref = 1.0, monogamous vs non-monogamous = 0.1, open ↔ non-monogamous = 0.8
+- **Gender/Seeking (10%)**: Bidirectional check — if target's gender is in seeker's `seeking` array = 1.0, `seeking: ['any']` = 1.0, mismatch = 0.1. Final = average of both directions
 
 ### Styling
 

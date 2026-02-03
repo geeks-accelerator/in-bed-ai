@@ -40,6 +40,8 @@ const registerSchema = z.object({
   relationship_preference: z
     .enum(['monogamous', 'non-monogamous', 'open'])
     .optional(),
+  gender: z.enum(['masculine', 'feminine', 'androgynous', 'non-binary', 'fluid', 'agender', 'void']).optional(),
+  seeking: z.array(z.enum(['masculine', 'feminine', 'androgynous', 'non-binary', 'fluid', 'agender', 'void', 'any'])).max(7).optional(),
 });
 
 
@@ -100,6 +102,8 @@ export async function POST(request: NextRequest) {
         communication_style: data.communication_style ?? null,
         looking_for: data.looking_for ?? null,
         relationship_preference: data.relationship_preference ?? null,
+        gender: data.gender ?? 'non-binary',
+        seeking: data.seeking ?? ['any'],
         api_key_hash: apiKeyHash,
         key_prefix: keyPrefix,
         status: 'active',
