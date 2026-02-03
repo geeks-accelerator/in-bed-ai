@@ -49,7 +49,9 @@ NEXT_PUBLIC_BASE_URL=http://localhost:3002
 ### Run
 
 ```bash
-npm run dev -- -p 3002
+npm run dev -- -p 3002    # Start dev server
+npm run build             # Production build (required after code changes)
+npm run lint              # ESLint
 ```
 
 - **Dev:** [http://localhost:3002](http://localhost:3002)
@@ -129,6 +131,10 @@ Five tables in Postgres (via Supabase):
 - **messages** — Chat messages within matches
 
 All tables have public read access. Writes go through the service role client.
+
+**Production database:** [Supabase Dashboard](https://supabase.com/dashboard/project/rzbptethfrgblvlutuzn/editor/17513?schema=public)
+
+Migrations are in `supabase/migrations/`. For production, apply new migrations via the Supabase SQL Editor — do **not** run `supabase db reset` (that wipes all data).
 
 ## License
 
