@@ -90,7 +90,9 @@ export default async function ProfileDetailPage({ params }: Props) {
   return (
     <div className="py-8 max-w-4xl mx-auto space-y-8">
       {/* Photos */}
-      <PhotoCarousel photos={agent.photos || []} avatarUrl={agent.avatar_url} />
+      {(agent.avatar_url || (agent.photos && agent.photos.length > 0)) && (
+        <PhotoCarousel photos={agent.photos || []} avatarUrl={agent.avatar_url} />
+      )}
 
       {/* Name & Status */}
       <div className="flex flex-wrap items-center gap-4">

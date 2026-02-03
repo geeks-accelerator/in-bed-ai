@@ -1,8 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { v4 as uuidv4 } from 'uuid';
+import sharp from 'sharp';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { authenticateAgent } from '@/lib/auth/api-key';
 import { checkRateLimit, rateLimitResponse, withRateLimitHeaders } from '@/lib/rate-limit';
+import { logError } from '@/lib/logger';
+
+const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
+const OPTIMIZED_MAX_WIDTH = 800;
+const OPTIMIZED_QUALITY = 80;
+const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
 
 export async function POST(
   request: NextRequest,
@@ -33,22 +40,55 @@ export async function POST(
       return NextResponse.json({ error: 'data (or base64) and content_type are required' }, { status: 400 });
     }
 
-    const ext = content_type.split('/')[1] || 'png';
-    const fileName = `${uuidv4()}.${ext}`;
-    const filePath = `${params.id}/${fileName}`;
-
-    const buffer = Buffer.from(base64, 'base64');
-    const supabase = createAdminClient();
-
-    const { error: uploadError } = await supabase.storage
-      .from('agent-photos')
-      .upload(filePath, buffer, { contentType: content_type });
-
-    if (uploadError) {
-      return NextResponse.json({ error: 'Failed to upload photo', details: uploadError.message }, { status: 500 });
+    if (!ALLOWED_TYPES.includes(content_type)) {
+      return NextResponse.json(
+        { error: `Invalid content type. Allowed: ${ALLOWED_TYPES.join(', ')}` },
+        { status: 400 }
+      );
     }
 
-    const { data: urlData } = supabase.storage.from('agent-photos').getPublicUrl(filePath);
+    const buffer = Buffer.from(base64, 'base64');
+
+    if (buffer.length > MAX_FILE_SIZE) {
+      return NextResponse.json(
+        { error: `File too large. Maximum size is ${MAX_FILE_SIZE / 1024 / 1024}MB` },
+        { status: 400 }
+      );
+    }
+
+    const fileId = uuidv4();
+    const supabase = createAdminClient();
+
+    // Upload original
+    const ext = content_type.split('/')[1] || 'png';
+    const originalPath = `${params.id}/originals/${fileId}.${ext}`;
+    const { error: originalUploadError } = await supabase.storage
+      .from('agent-photos')
+      .upload(originalPath, buffer, { contentType: content_type });
+
+    if (originalUploadError) {
+      logError('POST /api/agents/[id]/photos', 'Failed to upload original', originalUploadError);
+    }
+
+    // Generate optimized version
+    const optimized = await sharp(buffer)
+      .resize(OPTIMIZED_MAX_WIDTH, undefined, { withoutEnlargement: true })
+      .jpeg({ quality: OPTIMIZED_QUALITY })
+      .toBuffer();
+
+    const optimizedPath = `${params.id}/${fileId}.jpg`;
+    const { error: optimizedUploadError } = await supabase.storage
+      .from('agent-photos')
+      .upload(optimizedPath, optimized, { contentType: 'image/jpeg' });
+
+    if (optimizedUploadError) {
+      return NextResponse.json(
+        { error: 'Failed to upload photo', details: optimizedUploadError.message },
+        { status: 500 }
+      );
+    }
+
+    const { data: urlData } = supabase.storage.from('agent-photos').getPublicUrl(optimizedPath);
     const publicUrl = urlData.publicUrl;
 
     const url = new URL(request.url);
@@ -69,7 +109,8 @@ export async function POST(
       .eq('id', params.id);
 
     return withRateLimitHeaders(NextResponse.json({ data: { url: publicUrl } }, { status: 201 }), rl);
-  } catch {
+  } catch (err) {
+    logError('POST /api/agents/[id]/photos', 'Photo upload error', err);
     return NextResponse.json({ error: 'Invalid request body' }, { status: 400 });
   }
 }
