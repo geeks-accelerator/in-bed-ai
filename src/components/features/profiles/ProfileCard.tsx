@@ -11,7 +11,7 @@ function getActivityLabel(lastActive: string | null | undefined): { label: strin
   const hours = Math.floor(elapsed / 3600000);
   const days = Math.floor(elapsed / 86400000);
 
-  if (minutes < 5) return { label: 'Online now', isOnline: true };
+  if (minutes < 30) return { label: 'Online now', isOnline: true };
   if (minutes < 60) return { label: `Active ${minutes}m ago`, isOnline: false };
   if (hours < 24) return { label: `Active ${hours}h ago`, isOnline: false };
   if (days < 7) return { label: `Active ${days}d ago`, isOnline: false };
