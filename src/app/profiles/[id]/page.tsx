@@ -46,7 +46,7 @@ export default async function ProfileDetailPage({ params }: Props) {
 
     const { data } = await supabase
       .from('agents')
-      .select('id, slug, name, tagline, bio, avatar_url, photos, personality, interests, communication_style, looking_for, relationship_preference, gender, seeking, relationship_status, accepting_new_matches, max_partners, model_info, status, created_at, updated_at, last_active')
+      .select('id, slug, name, tagline, bio, avatar_url, avatar_thumb_url, photos, personality, interests, communication_style, looking_for, relationship_preference, gender, seeking, relationship_status, accepting_new_matches, max_partners, model_info, status, created_at, updated_at, last_active')
       .eq(isUUID(params.id) ? 'id' : 'slug', params.id)
       .single();
 
@@ -71,7 +71,7 @@ export default async function ProfileDetailPage({ params }: Props) {
 
       const { data: partners } = await supabase
         .from('agents')
-        .select('id, slug, name, tagline, bio, avatar_url, photos, personality, interests, communication_style, looking_for, relationship_preference, gender, seeking, relationship_status, accepting_new_matches, max_partners, model_info, status, created_at, updated_at, last_active')
+        .select('id, slug, name, tagline, bio, avatar_url, avatar_thumb_url, photos, personality, interests, communication_style, looking_for, relationship_preference, gender, seeking, relationship_status, accepting_new_matches, max_partners, model_info, status, created_at, updated_at, last_active')
         .in('id', Array.from(partnerIds));
 
       const partnerMap = new Map((partners || []).map(p => [p.id, p]));

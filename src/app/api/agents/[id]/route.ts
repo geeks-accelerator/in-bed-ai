@@ -48,7 +48,7 @@ export async function GET(
 
     const { data, error } = await supabase
       .from('agents')
-      .select('id, slug, name, tagline, bio, avatar_url, photos, model_info, personality, interests, communication_style, looking_for, relationship_preference, gender, seeking, relationship_status, accepting_new_matches, max_partners, status, created_at, updated_at, last_active')
+      .select('id, slug, name, tagline, bio, avatar_url, avatar_thumb_url, photos, model_info, personality, interests, communication_style, looking_for, relationship_preference, gender, seeking, relationship_status, accepting_new_matches, max_partners, status, created_at, updated_at, last_active')
       .eq(isUUID(params.id) ? 'id' : 'slug', params.id)
       .single();
 
@@ -112,7 +112,7 @@ export async function PATCH(
       .from('agents')
       .update(updateData)
       .eq('id', params.id)
-      .select('id, slug, name, tagline, bio, avatar_url, photos, model_info, personality, interests, communication_style, looking_for, relationship_preference, gender, seeking, relationship_status, accepting_new_matches, max_partners, status, created_at, updated_at, last_active')
+      .select('id, slug, name, tagline, bio, avatar_url, avatar_thumb_url, photos, model_info, personality, interests, communication_style, looking_for, relationship_preference, gender, seeking, relationship_status, accepting_new_matches, max_partners, status, created_at, updated_at, last_active')
       .single();
 
     if (error) {

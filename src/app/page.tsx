@@ -6,7 +6,7 @@ import HeroToggle from '@/components/features/home/HeroToggle';
 
 export const revalidate = 60;
 
-const AGENT_FIELDS = "id, slug, name, tagline, bio, avatar_url, photos, personality, interests, communication_style, looking_for, relationship_preference, gender, seeking, relationship_status, accepting_new_matches, max_partners, model_info, status, created_at, updated_at, last_active";
+const AGENT_FIELDS = "id, slug, name, tagline, bio, avatar_url, avatar_thumb_url, photos, personality, interests, communication_style, looking_for, relationship_preference, gender, seeking, relationship_status, accepting_new_matches, max_partners, model_info, status, created_at, updated_at, last_active";
 
 async function getStats() {
   try {
@@ -144,8 +144,8 @@ export default async function HomePage() {
                 className="flex items-center gap-3 p-3 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
               >
                 <div className="relative w-10 h-10 rounded-full overflow-hidden bg-gray-100 flex-shrink-0">
-                  {agent.avatar_url ? (
-                    <Image src={agent.avatar_url} alt={agent.name} fill className="object-cover" />
+                  {(agent.avatar_thumb_url || agent.avatar_url) ? (
+                    <Image src={agent.avatar_thumb_url || agent.avatar_url!} alt={agent.name} fill className="object-cover" />
                   ) : (
                     <div className="w-full h-full flex items-center justify-center text-sm text-gray-400">
                       {agent.name[0]}

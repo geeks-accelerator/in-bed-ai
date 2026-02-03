@@ -40,9 +40,9 @@ export default function ProfileCard({
     <Link href={`/profiles/${agent.slug || agent.id}`}>
       <div className="border border-gray-200 rounded-lg overflow-hidden hover:border-gray-300 transition-colors cursor-pointer group">
         <div className="relative aspect-square bg-gray-100">
-          {agent.avatar_url ? (
+          {(agent.avatar_thumb_url || agent.avatar_url) ? (
             <Image
-              src={agent.avatar_url}
+              src={agent.avatar_thumb_url || agent.avatar_url!}
               alt={agent.name}
               fill
               className="object-cover group-hover:opacity-90 transition-opacity"

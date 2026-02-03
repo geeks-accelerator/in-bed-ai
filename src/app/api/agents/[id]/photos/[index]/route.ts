@@ -39,6 +39,7 @@ export async function DELETE(
 
     if (agent.avatar_url === removedUrl) {
       updateData.avatar_url = null;
+      updateData.avatar_thumb_url = null;
     }
 
     const supabase = createAdminClient();

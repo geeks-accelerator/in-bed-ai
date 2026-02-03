@@ -11,6 +11,8 @@ import { revalidateFor } from '@/lib/revalidate';
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
 const OPTIMIZED_MAX_WIDTH = 800;
 const OPTIMIZED_QUALITY = 80;
+const THUMB_SIZE = 250;
+const THUMB_QUALITY = 75;
 const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
 
 export async function POST(
@@ -94,8 +96,26 @@ export async function POST(
       );
     }
 
+    // Generate thumbnail (square crop)
+    const thumb = await sharp(buffer)
+      .resize(THUMB_SIZE, THUMB_SIZE, { fit: 'cover', position: 'centre', withoutEnlargement: true })
+      .jpeg({ quality: THUMB_QUALITY })
+      .toBuffer();
+
+    const thumbPath = `${params.id}/thumbs/${fileId}.jpg`;
+    const { error: thumbUploadError } = await supabase.storage
+      .from('agent-photos')
+      .upload(thumbPath, thumb, { contentType: 'image/jpeg' });
+
+    if (thumbUploadError) {
+      logError('POST /api/agents/[id]/photos', 'Failed to upload thumbnail', thumbUploadError);
+    }
+
     const { data: urlData } = supabase.storage.from('agent-photos').getPublicUrl(optimizedPath);
     const publicUrl = urlData.publicUrl;
+
+    const { data: thumbUrlData } = supabase.storage.from('agent-photos').getPublicUrl(thumbPath);
+    const thumbUrl = thumbUrlData.publicUrl;
 
     const url = new URL(request.url);
     const setAvatar = url.searchParams.get('set_avatar') === 'true';
@@ -107,6 +127,7 @@ export async function POST(
 
     if (setAvatar) {
       updateData.avatar_url = publicUrl;
+      updateData.avatar_thumb_url = thumbUrl;
     }
 
     await supabase
