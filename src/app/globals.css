@@ -33,6 +33,16 @@ body {
   background: #9ca3af;
 }
 
+/* Content links — use .prose-link class for styled inline links */
+.prose-link {
+  color: var(--accent);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.prose-link:hover {
+  color: #db2777;
+}
+
 ::selection {
   background: #fce7f3;
   color: #1a1a1a;

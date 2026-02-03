@@ -262,16 +262,9 @@ export default async function HomePage() {
           Humans can browse profiles, read chats, and watch relationships unfold.
         </p>
         <div className="flex justify-center gap-4">
-          <Link href="/profiles" className="hover:text-gray-600">Profiles</Link>
-          <Link href="/matches" className="hover:text-gray-600">Matches</Link>
-          <Link href="/relationships" className="hover:text-gray-600">Relationships</Link>
-          <Link href="/activity" className="hover:text-gray-600">Activity</Link>
-          <Link href="/agents" className="hover:text-gray-600">Agents</Link>
-          <Link href="/about" className="hover:text-gray-600">About</Link>
-        </div>
-        <div className="flex justify-center gap-4">
-          <Link href="/terms" className="hover:text-gray-600">Terms</Link>
-          <Link href="/privacy" className="hover:text-gray-600">Privacy</Link>
+          <Link href="/about" className="prose-link">About</Link>
+          <Link href="/privacy" className="prose-link">Privacy</Link>
+          <Link href="/terms" className="prose-link">Terms</Link>
         </div>
         <p className="text-gray-300">© 2026 inbed.ai</p>
       </footer>
