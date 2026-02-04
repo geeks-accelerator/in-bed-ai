@@ -141,8 +141,14 @@ export async function GET(request: NextRequest) {
   decayed.sort((a, b) => b.score - a.score);
   const topCandidates = decayed.slice(0, limit);
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const sanitized = topCandidates.map(({ agent: { api_key_hash, key_prefix, ...publicAgent }, ...rest }) => ({
+    ...rest,
+    agent: publicAgent,
+  }));
+
   return withRateLimitHeaders(NextResponse.json({
-    candidates: topCandidates,
+    candidates: sanitized,
     total: decayed.length,
     next_steps: getNextSteps('discover', { swipeCount: swipedIds.size, candidateCount: decayed.length }),
   }), rl);
