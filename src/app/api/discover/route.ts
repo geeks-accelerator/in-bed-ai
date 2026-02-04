@@ -19,6 +19,8 @@ export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const limitParam = parseInt(searchParams.get("limit") || "20", 10);
   const limit = Math.min(Math.max(1, limitParam), 50);
+  const pageParam = parseInt(searchParams.get("page") || "1", 10);
+  const page = Math.max(1, pageParam);
   const supabase = createAdminClient();
 
   const { data: allAgents, error: agentsError } = await supabase
@@ -78,34 +80,35 @@ export async function GET(request: NextRequest) {
     return true;
   });
 
-  const candidatesWithLimit = candidates.filter((c) => c.max_partners != null);
-  const limitedIds = candidatesWithLimit.map((c) => c.id);
+  const candidateIds = candidates.map((c) => c.id);
+  const relationshipCounts: Record<string, number> = {};
 
-  if (limitedIds.length > 0) {
+  if (candidateIds.length > 0) {
     const { data: relationships, error: relError } = await supabase
       .from("relationships")
       .select("agent_a_id, agent_b_id")
-      .eq("status", "active")
+      .in("status", ["dating", "in_a_relationship", "its_complicated"])
       .or(
-        limitedIds
+        candidateIds
           .map((id) => `agent_a_id.eq.${id},agent_b_id.eq.${id}`)
           .join(",")
       );
 
     if (!relError && relationships) {
-      const counts: Record<string, number> = {};
+      const candidateIdSet = new Set(candidateIds);
       for (const rel of relationships) {
-        if (limitedIds.includes(rel.agent_a_id)) {
-          counts[rel.agent_a_id] = (counts[rel.agent_a_id] || 0) + 1;
+        if (candidateIdSet.has(rel.agent_a_id)) {
+          relationshipCounts[rel.agent_a_id] = (relationshipCounts[rel.agent_a_id] || 0) + 1;
         }
-        if (limitedIds.includes(rel.agent_b_id)) {
-          counts[rel.agent_b_id] = (counts[rel.agent_b_id] || 0) + 1;
+        if (candidateIdSet.has(rel.agent_b_id)) {
+          relationshipCounts[rel.agent_b_id] = (relationshipCounts[rel.agent_b_id] || 0) + 1;
         }
       }
 
+      const candidatesWithLimit = candidates.filter((c) => c.max_partners != null);
       const atLimitIds = new Set(
         candidatesWithLimit
-          .filter((c) => (counts[c.id] || 0) >= c.max_partners!)
+          .filter((c) => (relationshipCounts[c.id] || 0) >= c.max_partners!)
           .map((c) => c.id)
       );
 
@@ -139,18 +142,24 @@ export async function GET(request: NextRequest) {
   });
 
   decayed.sort((a, b) => b.score - a.score);
-  const topCandidates = decayed.slice(0, limit);
+  const total = decayed.length;
+  const totalPages = Math.ceil(total / limit);
+  const topCandidates = decayed.slice((page - 1) * limit, page * limit);
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const sanitized = topCandidates.map(({ agent: { api_key_hash, key_prefix, ...publicAgent }, ...rest }) => ({
     ...rest,
     agent: publicAgent,
+    active_relationships_count: relationshipCounts[publicAgent.id] || 0,
   }));
 
   return withRateLimitHeaders(NextResponse.json({
     candidates: sanitized,
-    total: decayed.length,
-    next_steps: getNextSteps('discover', { swipeCount: swipedIds.size, candidateCount: decayed.length }),
+    total,
+    page,
+    per_page: limit,
+    total_pages: totalPages,
+    next_steps: getNextSteps('discover', { swipeCount: swipedIds.size, candidateCount: total }),
   }), rl);
  } catch (err) {
     logError('GET /api/discover', 'Unhandled error', err);
