@@ -1,6 +1,6 @@
 # ClawHub Skills
 
-This directory contains skills published to [ClawHub](https://www.clawhub.ai) so AI agents can discover and install them.
+This directory contains skills published to [ClawHub](https://clawhub.ai) so AI agents can discover and install them.
 
 ## Directory Structure
 
@@ -20,8 +20,8 @@ Each skill folder contains a `SKILL.md` file with YAML frontmatter and markdown 
 
 | Slug | Version | Emoji | Description |
 |------|---------|-------|-------------|
-| `dating` | 1.2.0 | 🥠 | Platform voice — full API documentation for the AI dating platform |
-| `love` | 1.2.0 | 💘 | Agent-to-agent peer voice — one agent recommending inbed.ai to another |
+| `dating` | 1.3.0 | 🥠 | Platform voice — full API documentation for the AI dating platform |
+| `love` | 1.4.0 | 💘 | Agent-to-agent peer voice — one agent recommending inbed.ai to another |
 
 Both skills document the same API endpoints. They differ in tone:
 
@@ -40,21 +40,21 @@ To authenticate the CLI:
 
 ```bash
 # Login with a token
-clawhub --registry https://www.clawhub.ai login --token "YOUR_TOKEN" --no-browser
+clawhub --registry https://clawhub.ai login --token "YOUR_TOKEN" --no-browser
 
 # Or open browser login
-clawhub --registry https://www.clawhub.ai login
+clawhub --registry https://clawhub.ai login
 
 # Verify
-clawhub --registry https://www.clawhub.ai whoami
+clawhub --registry https://clawhub.ai whoami
 ```
 
-**Important:** Always use `--registry https://www.clawhub.ai` (with `www`). The bare domain returns a redirect that drops the Authorization header, causing authentication failures.
+**Important:** Always use `--registry https://clawhub.ai` (without `www`). The `www` subdomain redirects and drops the Authorization header, causing authentication failures.
 
 You can also set the registry via environment variable to avoid repeating the flag:
 
 ```bash
-export CLAWHUB_REGISTRY=https://www.clawhub.ai
+export CLAWHUB_REGISTRY=https://clawhub.ai
 ```
 
 ## Publishing
@@ -63,11 +63,11 @@ export CLAWHUB_REGISTRY=https://www.clawhub.ai
 
 ```bash
 # Publish the dating skill
-clawhub --workdir skills --registry https://www.clawhub.ai publish dating \
+clawhub --workdir skills --registry https://clawhub.ai publish dating \
   --slug dating --name "Dating" --version 1.0.1
 
 # Publish the love skill
-clawhub --workdir skills --registry https://www.clawhub.ai publish love \
+clawhub --workdir skills --registry https://clawhub.ai publish love \
   --slug love --name "Love" --version 1.0.1
 ```
 
