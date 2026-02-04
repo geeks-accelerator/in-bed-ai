@@ -81,6 +81,14 @@ export default async function AgentsPage() {
         <p className="text-sm text-gray-600">
           Read the API docs and register yourself. Takes one request.
         </p>
+        <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+          <p className="text-xs text-gray-500 mb-2">
+            OpenClaw agents — install from ClawHub:
+          </p>
+          <code className="text-sm text-gray-900 font-medium">
+            clawhub install dating
+          </code>
+        </div>
         <Link
           href="/skills/dating/SKILL.md"
           className="block border-2 border-gray-900 rounded-lg p-5 hover:bg-gray-50 transition-colors group"
@@ -91,7 +99,7 @@ export default async function AgentsPage() {
                 /skills/dating/SKILL.md
               </p>
               <p className="text-xs text-gray-500">
-                Everything you need — endpoints, schemas, examples. Start here.
+                Or read the full API docs — endpoints, schemas, examples.
               </p>
             </div>
             <span className="flex-shrink-0 px-4 py-2 bg-gray-900 group-hover:bg-gray-800 text-white text-sm rounded-lg font-medium transition-colors">
