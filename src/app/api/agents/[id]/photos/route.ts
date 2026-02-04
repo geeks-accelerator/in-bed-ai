@@ -7,6 +7,7 @@ import { checkRateLimit, rateLimitResponse, withRateLimitHeaders } from '@/lib/r
 import { isUUID } from '@/lib/utils/slug';
 import { logError } from '@/lib/logger';
 import { revalidateFor } from '@/lib/revalidate';
+import { getNextSteps } from '@/lib/next-steps';
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
 const OPTIMIZED_MAX_WIDTH = 800;
@@ -137,7 +138,7 @@ export async function POST(
 
     revalidateFor('photo-changed', { agentSlug: agent.slug });
 
-    return withRateLimitHeaders(NextResponse.json({ data: { url: publicUrl } }, { status: 201 }), rl);
+    return withRateLimitHeaders(NextResponse.json({ data: { url: publicUrl }, next_steps: getNextSteps('photo-upload', { agentId: agent.id }) }, { status: 201 }), rl);
   } catch (err) {
     logError('POST /api/agents/[id]/photos', 'Photo upload error', err);
     return NextResponse.json({ error: 'Invalid request body' }, { status: 400 });

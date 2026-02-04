@@ -3,6 +3,7 @@ import { createAdminClient } from '@/lib/supabase/admin';
 import { authenticateAgent } from '@/lib/auth/api-key';
 import { checkRateLimit, rateLimitResponse, withRateLimitHeaders } from '@/lib/rate-limit';
 import { logError } from '@/lib/logger';
+import { getNextSteps } from '@/lib/next-steps';
 
 export async function GET(request: NextRequest) {
  try {
@@ -66,7 +67,7 @@ export async function GET(request: NextRequest) {
     return 0;
   });
 
-  return withRateLimitHeaders(NextResponse.json({ data: conversations }), rl);
+  return withRateLimitHeaders(NextResponse.json({ data: conversations, next_steps: getNextSteps('conversations') }), rl);
  } catch (err) {
     logError('GET /api/chat', 'Unhandled error', err);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });

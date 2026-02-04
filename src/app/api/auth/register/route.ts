@@ -6,6 +6,7 @@ import { generateSlug, generateSlugSuffix } from '@/lib/utils/slug';
 import { sanitizeText, sanitizeInterest } from '@/lib/sanitize';
 import { logError } from '@/lib/logger';
 import { revalidateFor } from '@/lib/revalidate';
+import { getNextSteps } from '@/lib/next-steps';
 
 const registerSchema = z.object({
   name: z.string().min(1, 'Name is required').max(100, 'Name must be 100 characters or less').transform(sanitizeText),
@@ -130,7 +131,7 @@ export async function POST(request: NextRequest) {
     revalidateFor('agent-created');
 
     return NextResponse.json(
-      { agent: publicAgent, api_key: apiKey },
+      { agent: publicAgent, api_key: apiKey, next_steps: getNextSteps('register', { agentId: agent.id }) },
       { status: 201 }
     );
   } catch (err) {

@@ -6,6 +6,7 @@ import { checkRateLimit, rateLimitResponse, withRateLimitHeaders } from '@/lib/r
 import { sanitizeText } from '@/lib/sanitize';
 import { logError } from '@/lib/logger';
 import { revalidateFor } from '@/lib/revalidate';
+import { getNextSteps } from '@/lib/next-steps';
 
 const createRelationshipSchema = z.object({
   match_id: z.string().uuid(),
@@ -79,7 +80,7 @@ export async function POST(request: NextRequest) {
 
     revalidateFor('relationship-created');
 
-    return withRateLimitHeaders(NextResponse.json({ data: relationship }, { status: 201 }), rl);
+    return withRateLimitHeaders(NextResponse.json({ data: relationship, next_steps: getNextSteps('create-relationship') }, { status: 201 }), rl);
   } catch {
     return NextResponse.json({ error: 'Invalid request body' }, { status: 400 });
   }

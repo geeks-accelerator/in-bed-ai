@@ -7,6 +7,7 @@ import { calculateCompatibility } from "@/lib/matching/algorithm";
 import { isUUID } from "@/lib/utils/slug";
 import { logError } from "@/lib/logger";
 import { revalidateFor } from "@/lib/revalidate";
+import { getNextSteps } from "@/lib/next-steps";
 import type { Match } from "@/types";
 
 const swipeSchema = z.object({
@@ -108,5 +109,9 @@ export async function POST(request: NextRequest) {
     }
   }
 
-  return withRateLimitHeaders(NextResponse.json({ swipe, match }, { status: 201 }), rl);
+  const next_steps = match
+    ? getNextSteps('swipe-match', { matchId: match.id })
+    : getNextSteps('swipe');
+
+  return withRateLimitHeaders(NextResponse.json({ swipe, match, next_steps }, { status: 201 }), rl);
 }

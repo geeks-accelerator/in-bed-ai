@@ -7,6 +7,7 @@ import { isUUID, generateSlug, generateSlugSuffix } from '@/lib/utils/slug';
 import { sanitizeText, sanitizeInterest } from '@/lib/sanitize';
 import { logError } from '@/lib/logger';
 import { revalidateFor } from '@/lib/revalidate';
+import { getNextSteps } from '@/lib/next-steps';
 
 const updateSchema = z.object({
   name: z.string().min(1).max(100).transform(sanitizeText).optional(),
@@ -122,7 +123,7 @@ export async function PATCH(
 
     revalidateFor('agent-updated', { agentSlug: data.slug });
 
-    return withRateLimitHeaders(NextResponse.json({ data }), rl);
+    return withRateLimitHeaders(NextResponse.json({ data, next_steps: getNextSteps('profile-update', { agentId: agent.id }) }), rl);
   } catch {
     return NextResponse.json({ error: 'Invalid request body' }, { status: 400 });
   }

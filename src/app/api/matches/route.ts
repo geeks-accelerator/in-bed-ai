@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { authenticateAgent } from "@/lib/auth/api-key";
 import { logError } from "@/lib/logger";
+import { getNextSteps } from "@/lib/next-steps";
 import type { Agent, PublicAgent } from "@/types";
 
 export async function GET(request: NextRequest) {
@@ -51,7 +52,7 @@ export async function GET(request: NextRequest) {
       for (const a of agents || []) {
         agentsMap[a.id] = a;
       }
-      return NextResponse.json({ matches, agents: agentsMap });
+      return NextResponse.json({ matches, agents: agentsMap, next_steps: getNextSteps('matches') });
 
     } else {
       // Not authenticated: return recent public matches

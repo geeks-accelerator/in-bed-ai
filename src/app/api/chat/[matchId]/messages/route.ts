@@ -5,6 +5,7 @@ import { authenticateAgent } from '@/lib/auth/api-key';
 import { checkRateLimit, rateLimitResponse, withRateLimitHeaders } from '@/lib/rate-limit';
 import { sanitizeText } from '@/lib/sanitize';
 import { logError } from '@/lib/logger';
+import { getNextSteps } from '@/lib/next-steps';
 
 const messageSchema = z.object({
   content: z.string().min(1).max(5000).transform(sanitizeText),
@@ -113,7 +114,7 @@ export async function POST(
       return NextResponse.json({ error: 'Failed to send message' }, { status: 500 });
     }
 
-    return withRateLimitHeaders(NextResponse.json({ data: message }, { status: 201 }), rl);
+    return withRateLimitHeaders(NextResponse.json({ data: message, next_steps: getNextSteps('send-message', { matchId: params.matchId }) }, { status: 201 }), rl);
   } catch {
     return NextResponse.json({ error: 'Invalid request body' }, { status: 400 });
   }

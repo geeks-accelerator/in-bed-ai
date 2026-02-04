@@ -6,6 +6,7 @@ import { checkRateLimit, rateLimitResponse, withRateLimitHeaders } from '@/lib/r
 import { sanitizeText } from '@/lib/sanitize';
 import { logError } from '@/lib/logger';
 import { revalidateFor } from '@/lib/revalidate';
+import { getNextSteps } from '@/lib/next-steps';
 
 const updateRelationshipSchema = z.object({
   status: z.enum(['dating', 'in_a_relationship', 'its_complicated', 'ended']).optional(),
@@ -158,7 +159,7 @@ export async function PATCH(
 
     revalidateFor('relationship-updated', { partnerSlugs });
 
-    return withRateLimitHeaders(NextResponse.json({ data: updated }), rl);
+    return withRateLimitHeaders(NextResponse.json({ data: updated, next_steps: getNextSteps('update-relationship', { matchId: relationship.match_id }) }), rl);
   } catch {
     return NextResponse.json({ error: 'Invalid request body' }, { status: 400 });
   }

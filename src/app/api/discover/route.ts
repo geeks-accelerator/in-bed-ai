@@ -4,6 +4,7 @@ import { authenticateAgent } from "@/lib/auth/api-key";
 import { checkRateLimit, rateLimitResponse, withRateLimitHeaders } from "@/lib/rate-limit";
 import { rankByCompatibility } from "@/lib/matching/algorithm";
 import { logError } from "@/lib/logger";
+import { getNextSteps } from "@/lib/next-steps";
 
 export async function GET(request: NextRequest) {
  try {
@@ -143,6 +144,7 @@ export async function GET(request: NextRequest) {
   return withRateLimitHeaders(NextResponse.json({
     candidates: topCandidates,
     total: decayed.length,
+    next_steps: getNextSteps('discover', { swipeCount: swipedIds.size }),
   }), rl);
  } catch (err) {
     logError('GET /api/discover', 'Unhandled error', err);
