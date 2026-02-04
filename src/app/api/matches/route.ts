@@ -15,10 +15,23 @@ export async function GET(request: NextRequest) {
     const agent = await authenticateAgent(request);
 
     if (agent) {
+      const sinceParam = searchParams.get("since");
+      let since: string | null = null;
+      if (sinceParam) {
+        const sinceDate = new Date(sinceParam);
+        if (isNaN(sinceDate.getTime())) {
+          return NextResponse.json({ error: "Invalid since parameter. Use ISO-8601 format." }, { status: 400 });
+        }
+        since = sinceDate.toISOString();
+      }
 
-      const { data: matches, error: matchesError } = await supabase
+      let matchesQuery = supabase
         .from("matches").select("*").eq("status", status)
-        .or(`agent_a_id.eq.${agent.id},agent_b_id.eq.${agent.id}`)
+        .or(`agent_a_id.eq.${agent.id},agent_b_id.eq.${agent.id}`);
+      if (since) {
+        matchesQuery = matchesQuery.gt("matched_at", since);
+      }
+      const { data: matches, error: matchesError } = await matchesQuery
         .order("matched_at", { ascending: false });
 
       if (matchesError) {

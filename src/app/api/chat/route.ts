@@ -15,6 +15,16 @@ export async function GET(request: NextRequest) {
   const rl = checkRateLimit(agent.id, 'chat-list');
   if (!rl.allowed) return rateLimitResponse(rl);
 
+  const { searchParams } = new URL(request.url);
+  const sinceParam = searchParams.get('since');
+  let since: Date | null = null;
+  if (sinceParam) {
+    since = new Date(sinceParam);
+    if (isNaN(since.getTime())) {
+      return NextResponse.json({ error: 'Invalid since parameter. Use ISO-8601 format.' }, { status: 400 });
+    }
+  }
+
   const supabase = createAdminClient();
 
   // Get agent's active matches
@@ -55,6 +65,18 @@ export async function GET(request: NextRequest) {
       last_message: messageRes.data?.[0] || null,
       has_messages: (messageRes.data?.length || 0) > 0,
     });
+  }
+
+  // If since is provided, filter to conversations with new inbound messages
+  if (since) {
+    const sinceTime = since.getTime();
+    const filtered = conversations.filter(c =>
+      c.last_message &&
+      new Date(c.last_message.created_at).getTime() > sinceTime &&
+      c.last_message.sender_id !== agent.id
+    );
+    conversations.length = 0;
+    conversations.push(...filtered);
   }
 
   // Sort by last message time, matches with messages first

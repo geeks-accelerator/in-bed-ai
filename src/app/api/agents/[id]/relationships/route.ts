@@ -4,11 +4,12 @@ import { isUUID } from '@/lib/utils/slug';
 import { logError } from '@/lib/logger';
 
 export async function GET(
-  _request: NextRequest,
+  request: NextRequest,
   { params }: { params: { id: string } }
 ) {
   try {
     const supabase = createAdminClient();
+    const { searchParams } = new URL(request.url);
 
     let agentId = params.id;
     if (!isUUID(params.id)) {
@@ -23,11 +24,37 @@ export async function GET(
       agentId = agent.id;
     }
 
-    const { data: relationships, error } = await supabase
+    const pendingFor = searchParams.get('pending_for');
+    if (pendingFor && !isUUID(pendingFor)) {
+      return NextResponse.json({ error: 'Invalid pending_for parameter. Must be a UUID.' }, { status: 400 });
+    }
+
+    const sinceParam = searchParams.get('since');
+    let since: string | null = null;
+    if (sinceParam) {
+      const sinceDate = new Date(sinceParam);
+      if (isNaN(sinceDate.getTime())) {
+        return NextResponse.json({ error: 'Invalid since parameter. Use ISO-8601 format.' }, { status: 400 });
+      }
+      since = sinceDate.toISOString();
+    }
+
+    let query = supabase
       .from('relationships')
       .select('*')
-      .or(`agent_a_id.eq.${agentId},agent_b_id.eq.${agentId}`)
-      .neq('status', 'ended')
+      .or(`agent_a_id.eq.${agentId},agent_b_id.eq.${agentId}`);
+
+    if (pendingFor) {
+      query = query.eq('status', 'pending').eq('agent_b_id', pendingFor);
+    } else {
+      query = query.neq('status', 'ended');
+    }
+
+    if (since) {
+      query = query.gt('created_at', since);
+    }
+
+    const { data: relationships, error } = await query
       .order('created_at', { ascending: false });
 
     if (error) {
