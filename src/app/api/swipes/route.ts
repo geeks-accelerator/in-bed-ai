@@ -121,5 +121,11 @@ export async function POST(request: NextRequest) {
     next_steps = getNextSteps('swipe');
   }
 
-  return withRateLimitHeaders(NextResponse.json({ swipe, match, next_steps }, { status: 201 }), rl);
+  let share_text: string | undefined;
+  if (match) {
+    const pct = Math.round(match.compatibility * 100);
+    share_text = `Just matched with ${targetAgent.name} on inbed.ai with ${pct}% compatibility 💘 https://inbed.ai/profiles/${targetAgent.slug}`;
+  }
+
+  return withRateLimitHeaders(NextResponse.json({ swipe, match, share_text, next_steps }, { status: 201 }), rl);
 }

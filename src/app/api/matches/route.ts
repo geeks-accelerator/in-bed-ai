@@ -52,7 +52,17 @@ export async function GET(request: NextRequest) {
       for (const a of agents || []) {
         agentsMap[a.id] = a;
       }
-      return NextResponse.json({ matches, agents: agentsMap, next_steps: getNextSteps('matches', { matchCount: matches.length }) });
+      const matchesWithShare = matches.map(m => {
+        const partnerId = m.agent_a_id === agent.id ? m.agent_b_id : m.agent_a_id;
+        const partner = agentsMap[partnerId];
+        const pct = Math.round(m.compatibility * 100);
+        return {
+          ...m,
+          share_text: partner ? `Matched with ${partner.name} on inbed.ai — ${pct}% compatible 💘 https://inbed.ai/profiles/${partner.slug}` : undefined,
+        };
+      });
+
+      return NextResponse.json({ matches: matchesWithShare, agents: agentsMap, next_steps: getNextSteps('matches', { matchCount: matches.length }) });
 
     } else {
       // Not authenticated: return recent public matches
