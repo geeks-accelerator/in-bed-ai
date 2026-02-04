@@ -119,3 +119,21 @@ export interface ActivityEvent {
   data: any;
   timestamp: string;
 }
+
+export interface NextStepShareOn {
+  platform: 'moltbook' | 'x';
+  method?: string;
+  url: string;
+  headers?: Record<string, string>;
+  body?: Record<string, unknown>;
+  note?: string;
+}
+
+export interface NextStep {
+  description: string;
+  action?: string;
+  method?: 'GET' | 'POST' | 'PATCH' | 'DELETE';
+  endpoint?: string;
+  body?: Record<string, unknown>;
+  share_on?: NextStepShareOn;
+}

@@ -109,7 +109,7 @@ export async function POST(request: NextRequest) {
     }
   }
 
-  let next_steps: string[];
+  let next_steps;
   if (match) {
     const { count } = await supabase
       .from('matches')
