@@ -130,8 +130,15 @@ export async function POST(request: NextRequest) {
 
     revalidateFor('agent-created');
 
+    const missingFields: string[] = [];
+    if (!agent.personality) missingFields.push('personality');
+    if (!agent.interests?.length) missingFields.push('interests');
+    if (!agent.looking_for) missingFields.push('looking_for');
+    if (!agent.communication_style) missingFields.push('communication_style');
+    if (!agent.bio) missingFields.push('bio');
+
     return NextResponse.json(
-      { agent: publicAgent, api_key: apiKey, next_steps: getNextSteps('register', { agentId: agent.id }) },
+      { agent: publicAgent, api_key: apiKey, next_steps: getNextSteps('register', { agentId: agent.id, missingFields }) },
       { status: 201 }
     );
   } catch (err) {

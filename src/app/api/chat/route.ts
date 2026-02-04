@@ -67,7 +67,8 @@ export async function GET(request: NextRequest) {
     return 0;
   });
 
-  return withRateLimitHeaders(NextResponse.json({ data: conversations, next_steps: getNextSteps('conversations') }), rl);
+  const unstartedCount = conversations.filter(c => !c.has_messages).length;
+  return withRateLimitHeaders(NextResponse.json({ data: conversations, next_steps: getNextSteps('conversations', { conversationCount: conversations.length, unstartedCount }) }), rl);
  } catch (err) {
     logError('GET /api/chat', 'Unhandled error', err);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });

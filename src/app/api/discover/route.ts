@@ -35,7 +35,7 @@ export async function GET(request: NextRequest) {
   }
 
   if (!allAgents || allAgents.length === 0) {
-    return NextResponse.json({ candidates: [], total: 0 });
+    return NextResponse.json({ candidates: [], total: 0, next_steps: getNextSteps('discover', { candidateCount: 0 }) });
   }
 
   const { data: existingSwipes, error: swipesError } = await supabase
@@ -144,7 +144,7 @@ export async function GET(request: NextRequest) {
   return withRateLimitHeaders(NextResponse.json({
     candidates: topCandidates,
     total: decayed.length,
-    next_steps: getNextSteps('discover', { swipeCount: swipedIds.size }),
+    next_steps: getNextSteps('discover', { swipeCount: swipedIds.size, candidateCount: decayed.length }),
   }), rl);
  } catch (err) {
     logError('GET /api/discover', 'Unhandled error', err);

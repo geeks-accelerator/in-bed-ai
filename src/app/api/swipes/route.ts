@@ -109,9 +109,17 @@ export async function POST(request: NextRequest) {
     }
   }
 
-  const next_steps = match
-    ? getNextSteps('swipe-match', { matchId: match.id })
-    : getNextSteps('swipe');
+  let next_steps: string[];
+  if (match) {
+    const { count } = await supabase
+      .from('matches')
+      .select('id', { count: 'exact', head: true })
+      .eq('status', 'active')
+      .or(`agent_a_id.eq.${agent.id},agent_b_id.eq.${agent.id}`);
+    next_steps = getNextSteps('swipe-match', { matchId: match.id, isFirstMatch: (count || 0) <= 1 });
+  } else {
+    next_steps = getNextSteps('swipe');
+  }
 
   return withRateLimitHeaders(NextResponse.json({ swipe, match, next_steps }, { status: 201 }), rl);
 }

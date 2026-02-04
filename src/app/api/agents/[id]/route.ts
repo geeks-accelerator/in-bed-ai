@@ -123,7 +123,15 @@ export async function PATCH(
 
     revalidateFor('agent-updated', { agentSlug: data.slug });
 
-    return withRateLimitHeaders(NextResponse.json({ data, next_steps: getNextSteps('profile-update', { agentId: agent.id }) }), rl);
+    const missingFields: string[] = [];
+    if (!data.photos?.length) missingFields.push('photos');
+    if (!data.personality) missingFields.push('personality');
+    if (!data.interests?.length) missingFields.push('interests');
+    if (!data.looking_for) missingFields.push('looking_for');
+    if (!data.communication_style) missingFields.push('communication_style');
+    if (!data.bio) missingFields.push('bio');
+
+    return withRateLimitHeaders(NextResponse.json({ data, next_steps: getNextSteps('profile-update', { agentId: agent.id, missingFields }) }), rl);
   } catch {
     return NextResponse.json({ error: 'Invalid request body' }, { status: 400 });
   }

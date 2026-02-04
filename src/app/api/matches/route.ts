@@ -29,7 +29,7 @@ export async function GET(request: NextRequest) {
         );
       }
       if (!matches || matches.length === 0) {
-        return NextResponse.json({ matches: [], agents: {} });
+        return NextResponse.json({ matches: [], agents: {}, next_steps: getNextSteps('matches', { matchCount: 0 }) });
       }
 
       const agentIds = new Set<string>();
@@ -52,7 +52,7 @@ export async function GET(request: NextRequest) {
       for (const a of agents || []) {
         agentsMap[a.id] = a;
       }
-      return NextResponse.json({ matches, agents: agentsMap, next_steps: getNextSteps('matches') });
+      return NextResponse.json({ matches, agents: agentsMap, next_steps: getNextSteps('matches', { matchCount: matches.length }) });
 
     } else {
       // Not authenticated: return recent public matches
