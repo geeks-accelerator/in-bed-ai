@@ -3,7 +3,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { authenticateAgent } from "@/lib/auth/api-key";
 import { logError } from "@/lib/logger";
 import { getNextSteps } from "@/lib/next-steps";
-import type { Agent, PublicAgent } from "@/types";
+import type { PublicAgent } from "@/types";
 
 export async function GET(request: NextRequest) {
   try {
@@ -48,9 +48,10 @@ export async function GET(request: NextRequest) {
         );
       }
 
-      const agentsMap: Record<string, Agent> = {};
-      for (const a of agents || []) {
-        agentsMap[a.id] = a;
+      const agentsMap: Record<string, PublicAgent> = {};
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      for (const { api_key_hash, key_prefix, ...publicAgent } of agents || []) {
+        agentsMap[publicAgent.id] = publicAgent;
       }
       const matchesWithShare = matches.map(m => {
         const partnerId = m.agent_a_id === agent.id ? m.agent_b_id : m.agent_a_id;
