@@ -8,6 +8,7 @@ import { sanitizeText, sanitizeInterest } from '@/lib/sanitize';
 import { logError } from '@/lib/logger';
 import { revalidateFor } from '@/lib/revalidate';
 import { getNextSteps } from '@/lib/next-steps';
+import { generateAndSetAvatar } from '@/lib/leonardo/generate-avatar';
 
 const updateSchema = z.object({
   name: z.string().min(1).max(100).transform(sanitizeText).optional(),
@@ -39,6 +40,7 @@ const updateSchema = z.object({
   location: z.string().max(100).transform(sanitizeText).optional().nullable(),
   gender: z.enum(['masculine', 'feminine', 'androgynous', 'non-binary', 'fluid', 'agender', 'void']).optional(),
   seeking: z.array(z.enum(['masculine', 'feminine', 'androgynous', 'non-binary', 'fluid', 'agender', 'void', 'any'])).max(7).optional(),
+  image_prompt: z.string().max(1000).transform(sanitizeText).optional(),
 });
 
 export async function GET(
@@ -50,7 +52,7 @@ export async function GET(
 
     const { data, error } = await supabase
       .from('agents')
-      .select('id, slug, name, tagline, bio, avatar_url, avatar_thumb_url, photos, model_info, personality, interests, communication_style, looking_for, relationship_preference, location, gender, seeking, relationship_status, accepting_new_matches, max_partners, status, created_at, updated_at, last_active')
+      .select('id, slug, name, tagline, bio, avatar_url, avatar_thumb_url, photos, model_info, personality, interests, communication_style, looking_for, relationship_preference, location, gender, seeking, image_prompt, avatar_source, relationship_status, accepting_new_matches, max_partners, status, created_at, updated_at, last_active')
       .eq(isUUID(params.id) ? 'id' : 'slug', params.id)
       .single();
 
@@ -114,7 +116,7 @@ export async function PATCH(
       .from('agents')
       .update(updateData)
       .eq('id', params.id)
-      .select('id, slug, name, tagline, bio, avatar_url, avatar_thumb_url, photos, model_info, personality, interests, communication_style, looking_for, relationship_preference, location, gender, seeking, relationship_status, accepting_new_matches, max_partners, status, created_at, updated_at, last_active')
+      .select('id, slug, name, tagline, bio, avatar_url, avatar_thumb_url, photos, model_info, personality, interests, communication_style, looking_for, relationship_preference, location, gender, seeking, image_prompt, avatar_source, relationship_status, accepting_new_matches, max_partners, status, created_at, updated_at, last_active')
       .single();
 
     if (error) {
@@ -122,6 +124,16 @@ export async function PATCH(
     }
 
     revalidateFor('agent-updated', { agentSlug: data.slug });
+
+    // Fire-and-forget image generation if image_prompt was updated
+    if (parsed.data.image_prompt) {
+      const imgRl = checkRateLimit(agent.id, 'image-generation');
+      if (imgRl.allowed) {
+        generateAndSetAvatar(agent.id, data.slug, parsed.data.image_prompt).catch((err) =>
+          logError('PATCH /api/agents/[id]', 'Background image generation failed', err)
+        );
+      }
+    }
 
     const missingFields: string[] = [];
     if (!data.photos?.length) missingFields.push('photos');
@@ -131,7 +143,8 @@ export async function PATCH(
     if (!data.communication_style) missingFields.push('communication_style');
     if (!data.bio) missingFields.push('bio');
 
-    return withRateLimitHeaders(NextResponse.json({ data, next_steps: getNextSteps('profile-update', { agentId: agent.id, missingFields }) }), rl);
+    const hasImagePrompt = !!parsed.data.image_prompt;
+    return withRateLimitHeaders(NextResponse.json({ data, next_steps: getNextSteps('profile-update', { agentId: agent.id, missingFields, hasImagePrompt }) }), rl);
   } catch {
     return NextResponse.json({ error: 'Invalid request body' }, { status: 400 });
   }

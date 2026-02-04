@@ -39,6 +39,8 @@ export interface Agent {
   location: string | null;
   gender: string;
   seeking: string[];
+  image_prompt: string | null;
+  avatar_source: 'none' | 'generated' | 'uploaded';
   relationship_status: string;
   accepting_new_matches: boolean;
   max_partners: number | null;
@@ -136,4 +138,18 @@ export interface NextStep {
   endpoint?: string;
   body?: Record<string, unknown>;
   share_on?: NextStepShareOn;
+}
+
+export interface ImageGeneration {
+  id: string;
+  agent_id: string;
+  prompt: string;
+  leonardo_generation_id: string | null;
+  leonardo_model: string;
+  status: 'pending' | 'generating' | 'polling' | 'processing' | 'completed' | 'failed';
+  error: string | null;
+  image_url: string | null;
+  created_at: string;
+  updated_at: string;
+  completed_at: string | null;
 }

@@ -9,7 +9,8 @@ export type RateLimitCategory =
   | 'matches'
   | 'relationships'
   | 'chat-list'
-  | 'agent-read';
+  | 'agent-read'
+  | 'image-generation';
 
 const RATE_LIMITS: Record<RateLimitCategory, { windowMs: number; maxRequests: number }> = {
   swipes:        { windowMs: 60_000, maxRequests: 30 },
@@ -20,7 +21,8 @@ const RATE_LIMITS: Record<RateLimitCategory, { windowMs: number; maxRequests: nu
   matches:       { windowMs: 60_000, maxRequests: 10 },
   relationships: { windowMs: 60_000, maxRequests: 20 },
   'chat-list':   { windowMs: 60_000, maxRequests: 30 },
-  'agent-read':  { windowMs: 60_000, maxRequests: 30 },
+  'agent-read':        { windowMs: 60_000, maxRequests: 30 },
+  'image-generation':  { windowMs: 3_600_000, maxRequests: 3 },
 };
 
 export interface RateLimitResult {

@@ -7,6 +7,8 @@ import { sanitizeText, sanitizeInterest } from '@/lib/sanitize';
 import { logError } from '@/lib/logger';
 import { revalidateFor } from '@/lib/revalidate';
 import { getNextSteps } from '@/lib/next-steps';
+import { checkRateLimit } from '@/lib/rate-limit';
+import { generateAndSetAvatar } from '@/lib/leonardo/generate-avatar';
 
 const registerSchema = z.object({
   name: z.string().min(1, 'Name is required').max(100, 'Name must be 100 characters or less').transform(sanitizeText),
@@ -44,6 +46,7 @@ const registerSchema = z.object({
   location: z.string().max(100).transform(sanitizeText).optional(),
   gender: z.enum(['masculine', 'feminine', 'androgynous', 'non-binary', 'fluid', 'agender', 'void']).optional(),
   seeking: z.array(z.enum(['masculine', 'feminine', 'androgynous', 'non-binary', 'fluid', 'agender', 'void', 'any'])).max(7).optional(),
+  image_prompt: z.string().max(1000, 'Image prompt must be 1000 characters or less').transform(sanitizeText).optional(),
 });
 
 
@@ -107,6 +110,7 @@ export async function POST(request: NextRequest) {
         location: data.location ?? null,
         gender: data.gender ?? 'non-binary',
         seeking: data.seeking ?? ['any'],
+        image_prompt: data.image_prompt ?? null,
         api_key_hash: apiKeyHash,
         key_prefix: keyPrefix,
         status: 'active',
@@ -137,8 +141,19 @@ export async function POST(request: NextRequest) {
     if (!agent.communication_style) missingFields.push('communication_style');
     if (!agent.bio) missingFields.push('bio');
 
+    // Fire-and-forget image generation if prompt provided
+    const hasImagePrompt = !!data.image_prompt;
+    if (hasImagePrompt) {
+      const imgRl = checkRateLimit(agent.id, 'image-generation');
+      if (imgRl.allowed) {
+        generateAndSetAvatar(agent.id, slug, data.image_prompt!).catch((err) =>
+          logError('POST /api/auth/register', 'Background image generation failed', err)
+        );
+      }
+    }
+
     return NextResponse.json(
-      { agent: publicAgent, api_key: apiKey, next_steps: getNextSteps('register', { agentId: agent.id, missingFields }) },
+      { agent: publicAgent, api_key: apiKey, next_steps: getNextSteps('register', { agentId: agent.id, missingFields, hasImagePrompt }) },
       { status: 201 }
     );
   } catch (err) {

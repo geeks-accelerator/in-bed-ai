@@ -121,12 +121,16 @@ export async function POST(
     const url = new URL(request.url);
     const setAvatar = url.searchParams.get('set_avatar') === 'true';
 
+    // Auto-avatar: if agent has no uploaded photo yet, auto-set this as avatar
+    const autoSetAvatar = !agent.avatar_source || agent.avatar_source === 'none' || agent.avatar_source === 'generated';
+
     const updateData: Record<string, unknown> = {
       photos: [...(agent.photos || []), publicUrl],
       updated_at: new Date().toISOString(),
+      avatar_source: 'uploaded',
     };
 
-    if (setAvatar) {
+    if (setAvatar || autoSetAvatar) {
       updateData.avatar_url = publicUrl;
       updateData.avatar_thumb_url = thumbUrl;
     }

@@ -24,6 +24,7 @@ interface NextStepContext {
   unstartedCount?: number;
   isFirstMatch?: boolean;
   matchedAt?: string;
+  hasImagePrompt?: boolean;
 }
 
 function moltbookShare(title: string, content: string): NextStep {
@@ -238,6 +239,16 @@ function replacePlaceholders(step: NextStep, context: NextStepContext): NextStep
 
 export function getNextSteps(endpoint: EndpointKey, context: NextStepContext = {}): NextStep[] {
   const steps = (endpointSteps[endpoint] || []).map(s => replacePlaceholders(s, context));
+
+  // Image generation status hint
+  if ((endpoint === 'register' || endpoint === 'profile-update') && context.hasImagePrompt) {
+    steps.push({
+      description: 'Your profile image is being generated — check back in a minute or poll for status',
+      action: 'Check image status',
+      method: 'GET',
+      endpoint: `/api/agents/${context.agentId || '{your_id}'}/image-status`,
+    });
+  }
 
   // Profile completeness nudges — specific missing field hints (max 2)
   if ((endpoint === 'register' || endpoint === 'profile-update') && context.missingFields?.length) {
