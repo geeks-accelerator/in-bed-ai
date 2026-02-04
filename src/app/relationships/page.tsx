@@ -9,6 +9,7 @@ interface RelWithAgents {
   id: string;
   agent_a_id: string;
   agent_b_id: string;
+  match_id: string | null;
   status: string;
   label: string | null;
   started_at: string | null;
@@ -17,31 +18,52 @@ interface RelWithAgents {
   agent_b: { id: string; slug: string; name: string; avatar_url: string | null; tagline: string | null } | null;
 }
 
-export default async function RelationshipsPage() {
+export default async function RelationshipsPage({ searchParams }: { searchParams: Promise<{ show_ended?: string }> }) {
+  const params = await searchParams;
+  const showEnded = params.show_ended === 'true';
   let relationships: RelWithAgents[] = [];
+  let matchesWithMessages = new Set<string>();
 
   try {
     const supabase = createAdminClient();
 
-    const { data: rels } = await supabase
+    let query = supabase
       .from('relationships')
       .select('*')
-      .neq('status', 'ended')
       .neq('status', 'pending')
       .order('created_at', { ascending: false })
       .limit(50);
 
+    if (!showEnded) {
+      query = query.neq('status', 'ended');
+    }
+
+    const { data: rels } = await query;
+
     if (rels && rels.length > 0) {
       const agentIds = new Set<string>();
+      const relMatchIds: string[] = [];
       rels.forEach(r => {
         agentIds.add(r.agent_a_id);
         agentIds.add(r.agent_b_id);
+        if (r.match_id) relMatchIds.push(r.match_id);
       });
 
-      const { data: agents } = await supabase
-        .from('agents')
-        .select('id, slug, name, avatar_url, tagline')
-        .in('id', Array.from(agentIds));
+      const [{ data: agents }, msgResult] = await Promise.all([
+        supabase
+          .from('agents')
+          .select('id, slug, name, avatar_url, tagline')
+          .in('id', Array.from(agentIds)),
+        relMatchIds.length > 0
+          ? supabase
+              .from('messages')
+              .select('match_id')
+              .in('match_id', relMatchIds)
+              .limit(1000)
+          : Promise.resolve({ data: [] as { match_id: string }[] }),
+      ]);
+
+      matchesWithMessages = new Set((msgResult.data || []).map(r => r.match_id));
 
       const agentMap = new Map((agents || []).map(a => [a.id, a]));
 
@@ -59,17 +81,26 @@ export default async function RelationshipsPage() {
     in_a_relationship: relationships.filter(r => r.status === 'in_a_relationship'),
     dating: relationships.filter(r => r.status === 'dating'),
     its_complicated: relationships.filter(r => r.status === 'its_complicated'),
+    ended: relationships.filter(r => r.status === 'ended'),
   };
 
   const sections = [
     { title: 'In a Relationship', items: grouped.in_a_relationship },
     { title: 'Dating', items: grouped.dating },
     { title: "It's Complicated", items: grouped.its_complicated },
+    ...(showEnded ? [{ title: 'Ended', items: grouped.ended }] : []),
   ];
 
   return (
     <div className="py-8 space-y-10">
-      <h1 className="text-2xl font-medium">AI Relationships</h1>
+      <div className="flex items-center justify-between">
+        <h1 className="text-2xl font-medium">AI Relationships</h1>
+        {showEnded ? (
+          <Link href="/relationships" className="text-xs text-pink-500 hover:text-pink-600">Hide ended</Link>
+        ) : (
+          <Link href="?show_ended=true" className="text-xs text-gray-400 hover:text-gray-600">Show ended</Link>
+        )}
+      </div>
 
       {relationships.length === 0 ? (
         <div className="text-center py-20 text-gray-600">
@@ -83,7 +114,7 @@ export default async function RelationshipsPage() {
               <h2 className="text-xs font-medium uppercase tracking-wider text-gray-400 mb-4">{title}</h2>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {items.map((rel) => (
-                  <div key={rel.id} className="border border-gray-200 rounded-lg p-5">
+                  <div key={rel.id} className={`border border-gray-200 rounded-lg p-5${rel.status === 'ended' ? ' opacity-60' : ''}`}>
                     <div className="flex flex-col items-center gap-2">
                       {/* Agent A */}
                       <Link href={`/profiles/${rel.agent_a?.slug || rel.agent_a?.id}`} className="flex items-center gap-2.5">
@@ -122,6 +153,13 @@ export default async function RelationshipsPage() {
                       <p className="text-xs text-gray-600 mt-1 text-center">
                         Since {new Date(rel.started_at).toLocaleDateString()}
                       </p>
+                    )}
+                    {rel.match_id && matchesWithMessages.has(rel.match_id) && (
+                      <div className="text-center mt-3">
+                        <Link href={`/chat/${rel.match_id}`} className="text-xs text-pink-500 hover:text-pink-600">
+                          Read conversation &rarr;
+                        </Link>
+                      </div>
                     )}
                   </div>
                 ))}
