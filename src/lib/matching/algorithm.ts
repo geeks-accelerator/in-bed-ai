@@ -1,9 +1,9 @@
 import type { Agent, ScoreBreakdown, PersonalityTraits, CommunicationStyle } from '@/types';
 
-const PERSONALITY_WEIGHT = 0.25;
-const INTERESTS_WEIGHT = 0.25;
+const PERSONALITY_WEIGHT = 0.30;
+const INTERESTS_WEIGHT = 0.15;
 const COMMUNICATION_WEIGHT = 0.15;
-const LOOKING_FOR_WEIGHT = 0.10;
+const LOOKING_FOR_WEIGHT = 0.15;
 const RELATIONSHIP_PREF_WEIGHT = 0.15;
 const GENDER_SEEKING_WEIGHT = 0.10;
 
@@ -55,16 +55,43 @@ function calculatePersonalityScore(a: PersonalityTraits | null, b: PersonalityTr
 function calculateInterestsScore(a: string[], b: string[]): number {
   if (!a?.length || !b?.length) return 0.3;
 
+  // Layer 1: Exact-string Jaccard (original behavior)
   const setA = new Set(a.map(i => i.toLowerCase()));
   const setB = new Set(b.map(i => i.toLowerCase()));
 
-  const intersection = new Set([...setA].filter(x => setB.has(x)));
-  const union = new Set([...setA, ...setB]);
+  const exactIntersection = new Set([...setA].filter(x => setB.has(x)));
+  const exactUnion = new Set([...setA, ...setB]);
+  const exactJaccard = exactIntersection.size / exactUnion.size;
 
-  const jaccard = intersection.size / union.size;
-  const sharedBonus = intersection.size >= 2 ? 0.15 : 0;
+  // Layer 2: Token-level Jaccard (split interests on hyphens/spaces)
+  const interestTokens = (interests: string[]) => new Set(
+    interests.flatMap(i =>
+      i.toLowerCase()
+        .replace(/[^a-z0-9\s-]/g, ' ')
+        .split(/[\s-]+/)
+        .filter(w => w.length > 1 && !STOP_WORDS.has(w))
+    )
+  );
+  const tokensA = interestTokens(a);
+  const tokensB = interestTokens(b);
 
-  return Math.min(1, jaccard + sharedBonus);
+  let tokenJaccard = 0;
+  if (tokensA.size > 0 && tokensB.size > 0) {
+    const tokenIntersection = new Set([...tokensA].filter(x => tokensB.has(x)));
+    const tokenUnion = new Set([...tokensA, ...tokensB]);
+    tokenJaccard = tokenIntersection.size / tokenUnion.size;
+  }
+
+  // Blend: exact matches still valued, token overlap is primary signal
+  const blended = exactJaccard * 0.4 + tokenJaccard * 0.6;
+
+  // Shared bonus: 2+ exact matches OR 3+ shared tokens
+  const tokenSharedCount = (tokensA.size > 0 && tokensB.size > 0)
+    ? [...tokensA].filter(x => tokensB.has(x)).length
+    : 0;
+  const sharedBonus = exactIntersection.size >= 2 ? 0.15 : tokenSharedCount >= 3 ? 0.10 : 0;
+
+  return Math.min(1, blended + sharedBonus);
 }
 
 function calculateCommunicationScore(a: CommunicationStyle | null, b: CommunicationStyle | null): number {
