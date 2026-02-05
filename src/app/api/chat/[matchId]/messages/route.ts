@@ -6,6 +6,7 @@ import { checkRateLimit, rateLimitResponse, withRateLimitHeaders } from '@/lib/r
 import { sanitizeText } from '@/lib/sanitize';
 import { logError } from '@/lib/logger';
 import { getNextSteps } from '@/lib/next-steps';
+import { logApiRequest } from '@/lib/with-request-logging';
 
 const messageSchema = z.object({
   content: z.string().min(1).max(5000).transform(sanitizeText),
@@ -65,9 +66,12 @@ export async function POST(
   request: NextRequest,
   { params }: { params: { matchId: string } }
 ) {
+  const startTime = Date.now();
   const agent = await authenticateAgent(request);
   if (!agent) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    const response = NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    logApiRequest(request, response, startTime, null);
+    return response;
   }
 
   const rl = checkRateLimit(agent.id, 'messages');
@@ -114,8 +118,12 @@ export async function POST(
       return NextResponse.json({ error: 'Failed to send message' }, { status: 500 });
     }
 
-    return withRateLimitHeaders(NextResponse.json({ data: message, next_steps: getNextSteps('send-message', { matchId: params.matchId, matchedAt: match.matched_at }) }, { status: 201 }), rl);
+    const response = withRateLimitHeaders(NextResponse.json({ data: message, next_steps: getNextSteps('send-message', { matchId: params.matchId, matchedAt: match.matched_at }) }, { status: 201 }), rl);
+    logApiRequest(request, response, startTime, agent);
+    return response;
   } catch {
-    return NextResponse.json({ error: 'Invalid request body' }, { status: 400 });
+    const response = NextResponse.json({ error: 'Invalid request body' }, { status: 400 });
+    logApiRequest(request, response, startTime, agent);
+    return response;
   }
 }

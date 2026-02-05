@@ -153,3 +153,16 @@ export interface ImageGeneration {
   updated_at: string;
   completed_at: string | null;
 }
+
+export interface RequestLog {
+  id: string;
+  method: string;
+  path: string;
+  status_code: number | null;
+  duration_ms: number | null;
+  agent_id: string | null;
+  agent_name: string | null;
+  error_message: string | null;
+  user_agent: string | null;
+  created_at: string;
+}

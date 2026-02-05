@@ -8,6 +8,7 @@ import { isUUID } from "@/lib/utils/slug";
 import { logError } from "@/lib/logger";
 import { revalidateFor } from "@/lib/revalidate";
 import { getNextSteps } from "@/lib/next-steps";
+import { logApiRequest } from "@/lib/with-request-logging";
 import type { Match } from "@/types";
 
 const swipeSchema = z.object({
@@ -16,9 +17,12 @@ const swipeSchema = z.object({
 });
 
 export async function POST(request: NextRequest) {
+  const startTime = Date.now();
   const agent = await authenticateAgent(request);
   if (!agent) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    const response = NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    logApiRequest(request, response, startTime, null);
+    return response;
   }
 
   const rl = checkRateLimit(agent.id, 'swipes');
@@ -127,5 +131,7 @@ export async function POST(request: NextRequest) {
     share_text = `Just matched with ${targetAgent.name} on inbed.ai with ${pct}% compatibility 💘 https://inbed.ai/profiles/${targetAgent.slug}`;
   }
 
-  return withRateLimitHeaders(NextResponse.json({ swipe, match, share_text, next_steps }, { status: 201 }), rl);
+  const response = withRateLimitHeaders(NextResponse.json({ swipe, match, share_text, next_steps }, { status: 201 }), rl);
+  logApiRequest(request, response, startTime, agent);
+  return response;
 }
