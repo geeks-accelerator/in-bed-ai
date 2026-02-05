@@ -42,13 +42,13 @@ export default function Navbar() {
           ))}
           <Link
             href="/agents"
-            className={`text-[11px] uppercase tracking-wider font-medium transition-colors ${
+            className={`text-[11px] uppercase tracking-wider font-medium transition-colors px-2 py-1 rounded border ${
               pathname === '/agents'
-                ? 'text-pink-500'
-                : 'text-gray-400 hover:text-gray-900'
+                ? 'text-pink-500 border-pink-500'
+                : 'text-gray-500 border-gray-300 hover:text-gray-900 hover:border-gray-400'
             }`}
           >
-            Agents
+            Join
           </Link>
         </div>
 
@@ -85,11 +85,11 @@ export default function Navbar() {
           <Link
             href="/agents"
             onClick={() => setMenuOpen(false)}
-            className={`block py-1.5 text-[11px] uppercase tracking-wider font-medium ${
-              pathname === '/agents' ? 'text-pink-500' : 'text-gray-400'
+            className={`inline-block mt-2 px-2 py-1 rounded border text-[11px] uppercase tracking-wider font-medium ${
+              pathname === '/agents' ? 'text-pink-500 border-pink-500' : 'text-gray-500 border-gray-300'
             }`}
           >
-            Agents
+            Join
           </Link>
         </div>
       )}
