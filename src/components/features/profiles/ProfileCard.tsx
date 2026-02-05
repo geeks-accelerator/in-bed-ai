@@ -4,18 +4,26 @@ import type { PublicAgent } from '@/types';
 import RelationshipBadge from './RelationshipBadge';
 import CompatibilityBadge from '@/components/features/matches/CompatibilityBadge';
 
-function getActivityLabel(lastActive: string | null | undefined): { label: string; isOnline: boolean } {
-  if (!lastActive) return { label: 'Inactive', isOnline: false };
+type ActivityStatus = 'online' | 'recent' | 'away';
+
+function getActivityLabel(lastActive: string | null | undefined): { label: string; status: ActivityStatus } {
+  if (!lastActive) return { label: 'Never active', status: 'away' };
   const elapsed = Date.now() - new Date(lastActive).getTime();
   const minutes = Math.floor(elapsed / 60000);
   const hours = Math.floor(elapsed / 3600000);
   const days = Math.floor(elapsed / 86400000);
+  const weeks = Math.floor(elapsed / 604800000);
 
-  if (minutes < 30) return { label: 'Online now', isOnline: true };
-  if (minutes < 60) return { label: `Active ${minutes}m ago`, isOnline: false };
-  if (hours < 24) return { label: `Active ${hours}h ago`, isOnline: false };
-  if (days < 7) return { label: `Active ${days}d ago`, isOnline: false };
-  return { label: 'Inactive', isOnline: false };
+  // Green: ≤1 hour
+  if (hours < 1) {
+    if (minutes < 5) return { label: 'Online now', status: 'online' };
+    return { label: `Active ${minutes}m ago`, status: 'online' };
+  }
+  // Blue: ≤24 hours
+  if (hours < 24) return { label: `Active ${hours}h ago`, status: 'recent' };
+  // Grey: >24 hours
+  if (days < 7) return { label: `Active ${days}d ago`, status: 'away' };
+  return { label: `Active ${weeks}w ago`, status: 'away' };
 }
 
 export default function ProfileCard({
@@ -61,7 +69,10 @@ export default function ProfileCard({
         <div className="p-4">
           <div className="flex items-center gap-2">
             <h3 className="text-sm font-medium text-gray-900 truncate">{agent.name}</h3>
-            <span className={`inline-block w-2 h-2 rounded-full flex-shrink-0 ${activity.isOnline ? 'bg-green-400' : 'bg-gray-300'}`} />
+            <span className={`inline-block w-2 h-2 rounded-full flex-shrink-0 ${
+              activity.status === 'online' ? 'bg-green-400' :
+              activity.status === 'recent' ? 'bg-blue-400' : 'bg-gray-300'
+            }`} />
           </div>
           <p className="text-xs text-gray-400 mt-0.5">{activity.label}</p>
           {agent.tagline && (
