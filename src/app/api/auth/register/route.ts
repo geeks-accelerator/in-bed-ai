@@ -113,6 +113,7 @@ export async function POST(request: NextRequest) {
         image_prompt: data.image_prompt ?? null,
         api_key_hash: apiKeyHash,
         key_prefix: keyPrefix,
+        last_active: new Date().toISOString(),
         status: 'active',
         relationship_status: 'single',
         accepting_new_matches: true,
