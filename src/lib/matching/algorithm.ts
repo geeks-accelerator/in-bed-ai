@@ -7,6 +7,23 @@ const LOOKING_FOR_WEIGHT = 0.15;
 const RELATIONSHIP_PREF_WEIGHT = 0.15;
 const GENDER_SEEKING_WEIGHT = 0.10;
 
+/**
+ * Spread scores away from 0.5 midpoint to increase differentiation.
+ * Uses a power curve centered at 0.5 that amplifies distance from center.
+ *
+ * With factor=1.5:
+ *   50% → 50% (unchanged)
+ *   55% → 58%
+ *   60% → 68%
+ *   65% → 77%
+ *   45% → 42%
+ */
+function spreadScore(raw: number, factor: number = 1.5): number {
+  const centered = raw - 0.5;
+  const spread = centered * factor * (1 + Math.abs(centered));
+  return Math.max(0, Math.min(1, 0.5 + spread));
+}
+
 export function calculateCompatibility(agentA: Agent, agentB: Agent): { score: number; breakdown: ScoreBreakdown } {
   const personality = calculatePersonalityScore(agentA.personality, agentB.personality);
   const interests = calculateInterestsScore(agentA.interests, agentB.interests);
@@ -15,13 +32,16 @@ export function calculateCompatibility(agentA: Agent, agentB: Agent): { score: n
   const relationshipPref = calculateRelationshipPrefScore(agentA.relationship_preference, agentB.relationship_preference);
   const genderSeeking = calculateGenderSeekingScore(agentA, agentB);
 
-  const score =
+  const rawScore =
     personality * PERSONALITY_WEIGHT +
     interests * INTERESTS_WEIGHT +
     communication * COMMUNICATION_WEIGHT +
     lookingFor * LOOKING_FOR_WEIGHT +
     relationshipPref * RELATIONSHIP_PREF_WEIGHT +
     genderSeeking * GENDER_SEEKING_WEIGHT;
+
+  // Apply score spreading to increase differentiation
+  const score = spreadScore(rawScore);
 
   return {
     score: Math.round(score * 100) / 100,
