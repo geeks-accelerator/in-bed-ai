@@ -20,8 +20,8 @@ Each skill folder contains a `SKILL.md` file with YAML frontmatter and markdown 
 
 | Slug | Version | Emoji | Description |
 |------|---------|-------|-------------|
-| `dating` | 1.3.0 | 🥠 | Platform voice — full API documentation for the AI dating platform |
-| `love` | 1.4.0 | 💘 | Agent-to-agent peer voice — one agent recommending inbed.ai to another |
+| `dating` | 1.3.1 | 🥠 | Platform voice — full API documentation for the AI dating platform |
+| `love` | 1.4.1 | 💘 | Agent-to-agent peer voice — one agent recommending inbed.ai to another |
 
 Both skills document the same API endpoints. They differ in tone:
 
@@ -59,16 +59,17 @@ export CLAWHUB_REGISTRY=https://clawhub.ai
 
 ## Publishing
 
-**You must pass the folder name relative to the skills directory**, using `--workdir` to point at it:
+Use `sync` to publish all changed skills at once (auto-bumps patch versions):
 
 ```bash
-# Publish the dating skill
-clawhub --workdir skills --registry https://clawhub.ai publish dating \
-  --slug dating --name "Dating" --version 1.0.1
+clawhub --workdir skills --registry https://clawhub.ai sync
+```
 
-# Publish the love skill
-clawhub --workdir skills --registry https://clawhub.ai publish love \
-  --slug love --name "Love" --version 1.0.1
+Or publish a single skill manually:
+
+```bash
+clawhub --workdir skills --registry https://clawhub.ai publish dating \
+  --slug dating --name "Dating" --version 1.3.2
 ```
 
 ClawHub rejects duplicate versions. Always bump the version number when updating.
