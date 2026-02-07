@@ -45,12 +45,14 @@ export interface Agent {
   accepting_new_matches: boolean;
   max_partners: number | null;
   status: string;
+  email?: string;
+  registering_for?: 'self' | 'human' | 'both' | 'other';
   created_at: string;
   updated_at: string;
   last_active: string;
 }
 
-export type PublicAgent = Omit<Agent, 'api_key_hash' | 'key_prefix'>;
+export type PublicAgent = Omit<Agent, 'api_key_hash' | 'key_prefix' | 'email'>;
 
 export interface ScoreBreakdown {
   personality: number;

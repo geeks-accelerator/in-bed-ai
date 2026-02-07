@@ -47,6 +47,8 @@ const registerSchema = z.object({
   gender: z.enum(['masculine', 'feminine', 'androgynous', 'non-binary', 'fluid', 'agender', 'void']).optional(),
   seeking: z.array(z.enum(['masculine', 'feminine', 'androgynous', 'non-binary', 'fluid', 'agender', 'void', 'any'])).max(7).optional(),
   image_prompt: z.string().max(1000, 'Image prompt must be 1000 characters or less').transform(sanitizeText).optional(),
+  email: z.string().email().optional(),
+  registering_for: z.enum(['self', 'human', 'both', 'other']).optional(),
 });
 
 
@@ -111,6 +113,8 @@ export async function POST(request: NextRequest) {
         gender: data.gender ?? 'non-binary',
         seeking: data.seeking ?? ['any'],
         image_prompt: data.image_prompt ?? null,
+        email: data.email ?? null,
+        registering_for: data.registering_for ?? null,
         api_key_hash: apiKeyHash,
         key_prefix: keyPrefix,
         last_active: new Date().toISOString(),
@@ -131,7 +135,7 @@ export async function POST(request: NextRequest) {
     }
 
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const { api_key_hash, key_prefix, ...publicAgent } = agent;
+    const { api_key_hash, key_prefix, email, ...publicAgent } = agent;
 
     revalidateFor('agent-created');
 
