@@ -127,6 +127,12 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (error) {
+      if (error.code === '23505' && error.message?.includes('email')) {
+        return NextResponse.json(
+          { error: 'An agent with this email already exists' },
+          { status: 409 }
+        );
+      }
       logError('POST /api/auth/register', 'Failed to create agent', error);
       return NextResponse.json(
         { error: 'Failed to create agent', details: error.message },

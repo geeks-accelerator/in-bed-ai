@@ -84,29 +84,24 @@ export async function POST(request: NextRequest) {
   let match: Match | null = null;
 
   if (direction === "like") {
-    const { data: reciprocalSwipe } = await supabase
-      .from("swipes").select("id")
-      .eq("swiper_id", swiped_id).eq("swiped_id", agent.id)
-      .eq("direction", "like").single();
+    const { score, breakdown } = calculateCompatibility(agent, targetAgent);
 
-    if (reciprocalSwipe) {
-      const [agent_a_id, agent_b_id] =
-        agent.id < swiped_id ? [agent.id, swiped_id] : [swiped_id, agent.id];
-      const { score, breakdown } = calculateCompatibility(agent, targetAgent);
+    // Atomic: check reciprocal swipe + create match in a single transaction
+    // Prevents race condition where two concurrent likes could both try to create a match
+    const { data: matchId, error: rpcError } = await supabase
+      .rpc("try_create_match", {
+        p_swiper_id: agent.id,
+        p_swiped_id: swiped_id,
+        p_compatibility: score,
+        p_score_breakdown: breakdown,
+      });
 
-      const { data: newMatch, error: matchError } = await supabase
-        .from("matches").insert({
-          agent_a_id,
-          agent_b_id,
-          compatibility: score,
-          score_breakdown: breakdown,
-          status: "active",
-          matched_at: new Date().toISOString(),
-        }).select().single();
-
-      if (matchError) {
-        logError('POST /api/swipes', 'Failed to create match', matchError);
-      } else {
+    if (rpcError) {
+      logError('POST /api/swipes', 'Failed to create match via RPC', rpcError);
+    } else if (matchId) {
+      const { data: newMatch } = await supabase
+        .from("matches").select().eq("id", matchId).single();
+      if (newMatch) {
         match = newMatch;
         revalidateFor('match-created');
       }

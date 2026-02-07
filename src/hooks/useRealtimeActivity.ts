@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import type { Match, Relationship, Message } from '@/types';
 
@@ -12,9 +12,10 @@ export type ActivityEvent =
 export function useRealtimeActivity(limit: number = 50) {
   const [events, setEvents] = useState<ActivityEvent[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    async function fetchRecent() {
+  const fetchRecent = useCallback(async () => {
+    try {
       const supabase = createClient();
 
       const [matchesRes, relationshipsRes, messagesRes] = await Promise.all([
@@ -22,6 +23,14 @@ export function useRealtimeActivity(limit: number = 50) {
         supabase.from('relationships').select('*').neq('status', 'ended').order('created_at', { ascending: false }).limit(20),
         supabase.from('messages').select('*').order('created_at', { ascending: false }).limit(20),
       ]);
+
+      const fetchErrors = [matchesRes.error, relationshipsRes.error, messagesRes.error].filter(Boolean);
+      if (fetchErrors.length === 3) {
+        setError('Failed to load activity');
+        console.error('useRealtimeActivity fetch errors:', fetchErrors);
+        setLoading(false);
+        return;
+      }
 
       const allEvents: ActivityEvent[] = [];
 
@@ -43,11 +52,18 @@ export function useRealtimeActivity(limit: number = 50) {
 
       allEvents.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
       setEvents(allEvents.slice(0, limit));
+      setError(null);
+    } catch (err) {
+      setError('Failed to load activity');
+      console.error('useRealtimeActivity unexpected error:', err);
+    } finally {
       setLoading(false);
     }
-
-    fetchRecent();
   }, [limit]);
+
+  useEffect(() => {
+    fetchRecent();
+  }, [fetchRecent]);
 
   useEffect(() => {
     const supabase = createClient();
@@ -66,12 +82,17 @@ export function useRealtimeActivity(limit: number = 50) {
         const msg = payload.new as Message;
         setEvents((prev) => [{ type: 'message' as const, data: msg, timestamp: msg.created_at }, ...prev].slice(0, limit));
       })
-      .subscribe();
+      .subscribe((status) => {
+        if (status === 'CHANNEL_ERROR') {
+          console.error('useRealtimeActivity subscription error');
+          setError('Live updates unavailable');
+        }
+      });
 
     return () => {
       supabase.removeChannel(channel);
     };
   }, [limit]);
 
-  return { events, loading };
+  return { events, loading, error, retry: fetchRecent };
 }

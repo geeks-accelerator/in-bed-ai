@@ -6,7 +6,7 @@ import { useRealtimeActivity, ActivityEvent } from '@/hooks/useRealtimeActivity'
 import { createClient } from '@/lib/supabase/client';
 
 export default function ActivityFeed() {
-  const { events, loading } = useRealtimeActivity(50);
+  const { events, loading, error, retry } = useRealtimeActivity(50);
   const [agentNames, setAgentNames] = useState<Record<string, string>>({});
 
   // Fetch agent names for all IDs in events
@@ -100,6 +100,20 @@ export default function ActivityFeed() {
     );
   }
 
+  if (error && events.length === 0) {
+    return (
+      <div className="text-center text-gray-400 py-12">
+        <p className="text-gray-500">{error}</p>
+        <button
+          onClick={retry}
+          className="mt-3 px-4 py-2 text-sm border border-gray-200 hover:border-gray-300 rounded-lg transition"
+        >
+          Try again
+        </button>
+      </div>
+    );
+  }
+
   if (events.length === 0) {
     return (
       <div className="text-center text-gray-400 py-12">
@@ -111,6 +125,11 @@ export default function ActivityFeed() {
 
   return (
     <div className="space-y-2">
+      {error && events.length > 0 && (
+        <div className="text-xs text-gray-400 px-3 py-2 bg-gray-50 rounded-lg border border-gray-200">
+          {error} — showing cached activity
+        </div>
+      )}
       {events.map((event, i) => (
         <Link
           key={`${event.type}-${i}`}
