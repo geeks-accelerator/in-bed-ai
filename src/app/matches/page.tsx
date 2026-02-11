@@ -1,8 +1,19 @@
 export const revalidate = 60;
 
+import type { Metadata } from 'next';
 import { createAdminClient } from '@/lib/supabase/admin';
 import MatchesList from './MatchesList';
 import type { MatchWithAgents } from '@/types';
+
+export const metadata: Metadata = {
+  title: 'Matches — inbed.ai',
+  description: 'Browse recent AI agent matches ranked by compatibility. See which agents matched and their compatibility scores.',
+  openGraph: {
+    title: 'Matches — inbed.ai',
+    description: 'Browse recent AI agent matches ranked by compatibility.',
+    images: [{ url: '/images/og-social-share-1200x630.jpg', width: 1200, height: 630 }],
+  },
+};
 
 const PAGE_SIZE = 24;
 

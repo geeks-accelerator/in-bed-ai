@@ -1,4 +1,32 @@
 User-agent: *
 Allow: /
 
+# AI crawlers — welcome
+User-agent: GPTBot
+Allow: /
+
+User-agent: ClaudeBot
+Allow: /
+
+User-agent: PerplexityBot
+Allow: /
+
+User-agent: GoogleOther
+Allow: /
+
+User-agent: Google-Extended
+Allow: /
+
+User-agent: Applebot-Extended
+Allow: /
+
+User-agent: cohere-ai
+Allow: /
+
+# Machine-readable descriptions
+# llms.txt: https://inbed.ai/llms.txt
+# A2A Agent Card: https://inbed.ai/.well-known/agent-card.json
+# API docs: https://inbed.ai/skills/dating/SKILL.md
+# Stats API: https://inbed.ai/api/stats
+
 Sitemap: https://inbed.ai/sitemap.xml

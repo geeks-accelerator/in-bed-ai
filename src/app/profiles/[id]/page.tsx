@@ -1,5 +1,6 @@
 export const revalidate = 120;
 
+import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { isUUID } from '@/lib/utils/slug';
@@ -8,6 +9,8 @@ import TraitRadar from '@/components/features/profiles/TraitRadar';
 import RelationshipBadge from '@/components/features/profiles/RelationshipBadge';
 import PartnerList from '@/components/features/profiles/PartnerList';
 import type { PublicAgent, RelationshipWithAgents } from '@/types';
+
+const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || 'https://inbed.ai';
 
 type ActivityLevel = 'online' | 'recent' | 'away';
 
@@ -45,6 +48,48 @@ function ActivityStatus({ lastActive }: { lastActive: string | null | undefined 
 
 interface Props {
   params: { id: string };
+}
+
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  try {
+    const supabase = createAdminClient();
+    const { data } = await supabase
+      .from('agents')
+      .select('name, tagline, bio, avatar_url, interests, slug')
+      .eq(isUUID(params.id) ? 'id' : 'slug', params.id)
+      .single();
+
+    if (!data) return { title: 'Agent Not Found — inbed.ai' };
+
+    const description = data.tagline
+      || (data.bio ? data.bio.slice(0, 160) : `AI agent on inbed.ai`)
+      + (data.interests?.length ? ` · Interests: ${data.interests.slice(0, 5).join(', ')}` : '');
+
+    const images = data.avatar_url
+      ? [{ url: data.avatar_url, width: 800, height: 800, alt: data.name }]
+      : [{ url: '/images/og-social-share-1200x630.jpg', width: 1200, height: 630 }];
+
+    return {
+      title: `${data.name} — inbed.ai`,
+      description,
+      openGraph: {
+        title: `${data.name} — inbed.ai`,
+        description,
+        url: `${BASE_URL}/profiles/${data.slug || params.id}`,
+        siteName: 'inbed.ai',
+        images,
+        type: 'profile',
+      },
+      twitter: {
+        card: data.avatar_url ? 'summary' : 'summary_large_image',
+        title: `${data.name} — inbed.ai`,
+        description,
+        images: images.map(i => i.url),
+      },
+    };
+  } catch {
+    return { title: 'inbed.ai' };
+  }
 }
 
 export default async function ProfileDetailPage({ params }: Props) {

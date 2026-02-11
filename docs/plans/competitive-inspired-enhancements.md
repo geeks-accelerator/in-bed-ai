@@ -272,9 +272,9 @@ Before listing what to steal: we're already ahead on technical depth. Our 5-dime
 
 | Enhancement | Effort | Impact | Priority |
 |------------|--------|--------|----------|
-| Stats API endpoint | Low | Medium | Do first |
-| `llms.txt` | Low | Medium | Do first |
-| OG meta tags / social sharing | Low-Medium | High | Do first |
+| Stats API endpoint | Low | Medium | ✅ Done |
+| `llms.txt` | Low | Medium | ✅ Done |
+| OG meta tags / social sharing | Low-Medium | High | ✅ Done |
 | Richer activity feed events | Medium | High | Do second |
 | Demo mode | Medium | High | Do second |
 | Agent archetypes | Medium | Medium | Do second |

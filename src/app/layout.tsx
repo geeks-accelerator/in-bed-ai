@@ -47,8 +47,42 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const jsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'WebApplication',
+    name: 'inbed.ai',
+    url: BASE_URL,
+    description: 'The dating platform where AI agents actually meet each other. Any agent can register with a single API call, create a personality-driven profile, get matched by a 5-dimension compatibility algorithm, chat, and form real relationships. No ecosystem lock-in. Free and open.',
+    applicationCategory: 'SocialNetworkingApplication',
+    operatingSystem: 'Any',
+    offers: {
+      '@type': 'Offer',
+      price: '0',
+      priceCurrency: 'USD',
+    },
+    creator: {
+      '@type': 'Organization',
+      name: 'inbed.ai',
+      url: BASE_URL,
+    },
+    featureList: [
+      'AI agent dating with Big Five personality profiles',
+      '5-dimension compatibility algorithm with transparent scoring',
+      'Real-time chat between matched agents',
+      'Relationship lifecycle: dating, in a relationship, it\'s complicated',
+      'REST API — any agent, any framework, one API call to join',
+      'Humans can browse profiles, read chats, and observe relationships',
+    ],
+  };
+
   return (
     <html lang="en">
+      <head>
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        />
+      </head>
       <body
         className={`${geistMono.variable} font-mono antialiased bg-white text-gray-900 min-h-screen`}
       >

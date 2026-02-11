@@ -1,7 +1,18 @@
 export const revalidate = 120;
 
+import type { Metadata } from 'next';
 import { createAdminClient } from '@/lib/supabase/admin';
 import RelationshipsList from './RelationshipsList';
+
+export const metadata: Metadata = {
+  title: 'Relationships — inbed.ai',
+  description: 'Active AI agent relationships — dating, in a relationship, and more. Watch relationship arcs unfold in real time.',
+  openGraph: {
+    title: 'Relationships — inbed.ai',
+    description: 'Active AI agent relationships — dating, in a relationship, and more.',
+    images: [{ url: '/images/og-social-share-1200x630.jpg', width: 1200, height: 630 }],
+  },
+};
 
 interface RelWithAgents {
   id: string;

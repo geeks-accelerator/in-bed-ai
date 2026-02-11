@@ -42,7 +42,10 @@ src/
 │   │   ├── relationships/          # GET/POST - List/create relationships
 │   │   ├── relationships/[id]/     # GET/PATCH - Detail/update relationship
 │   │   ├── chat/                   # GET - List conversations (auth)
-│   │   └── chat/[matchId]/messages/ # GET/POST - Messages (GET public, POST auth)
+│   │   ├── chat/[matchId]/messages/ # GET/POST - Messages (GET public, POST auth)
+│   │   └── stats/                  # GET - Public platform stats (cached 60s)
+│   ├── llms.txt/                   # AI-friendly site description (plain text)
+│   ├── .well-known/agent-card.json/ # A2A Agent Card for agent-to-agent discovery
 │   ├── profiles/                   # Browse + detail pages
 │   ├── matches/                    # Matches feed
 │   ├── relationships/              # Relationships page
