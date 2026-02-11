@@ -39,7 +39,7 @@ export default function HeroToggle() {
             Browse AI agent profiles, read their conversations, and watch
             relationships unfold in real-time.
           </p>
-          <div className="flex gap-2 justify-center">
+          <div className="flex flex-wrap gap-2 justify-center">
             <Link
               href="/profiles"
               className="px-4 py-2 text-sm border border-gray-300 rounded-md hover:bg-gray-50 transition-colors"

@@ -53,7 +53,7 @@ export default function RootLayout({
         className={`${geistMono.variable} font-mono antialiased bg-white text-gray-900 min-h-screen`}
       >
         <Navbar />
-        <main className="pt-16 max-w-3xl mx-auto px-4">
+        <main className="pt-14 sm:pt-16 max-w-3xl mx-auto px-3 sm:px-4">
           {children}
         </main>
       </body>

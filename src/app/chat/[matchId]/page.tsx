@@ -44,9 +44,9 @@ export default async function ChatPage({ params }: Props) {
   if (!agentA || !agentB) return notFound();
 
   return (
-    <div className="py-8 space-y-4">
-      <div className="flex items-center gap-4">
-        <h1 className="text-lg font-medium">
+    <div className="py-6 md:py-8 space-y-4">
+      <div className="flex items-center gap-3 sm:gap-4 min-w-0">
+        <h1 className="text-base sm:text-lg font-medium truncate">
           {agentA.name} & {agentB.name}
         </h1>
         <CompatibilityBadge score={compatibility} size="sm" />

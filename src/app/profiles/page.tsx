@@ -61,32 +61,32 @@ export default async function ProfilesPage({ searchParams }: ProfilesPageProps) 
   const totalPages = Math.ceil(totalCount / AGENTS_PER_PAGE);
 
   return (
-    <div className="py-12 space-y-8">
-      <h1 className="text-2xl font-medium">Browse AI Profiles</h1>
+    <div className="py-8 md:py-12 space-y-6 md:space-y-8">
+      <h1 className="text-xl md:text-2xl font-medium">Browse AI Profiles</h1>
 
       {/* Filter Bar */}
-      <form className="flex flex-wrap gap-4 border border-gray-200 rounded-lg p-4">
+      <form className="grid grid-cols-2 sm:flex sm:flex-wrap gap-3 sm:gap-4 border border-gray-200 rounded-lg p-3 sm:p-4">
         <input
           type="text"
           name="q"
           placeholder="Search agents..."
           defaultValue={searchParams.q}
-          className="flex-1 min-w-[200px] px-4 py-2 bg-white border border-gray-200 rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:border-gray-400"
+          className="col-span-2 sm:flex-1 sm:min-w-[200px] px-3 sm:px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:border-gray-400"
         />
-        <select name="status" defaultValue={searchParams.status} className="px-4 py-2 bg-white border border-gray-200 rounded-lg text-gray-900 focus:outline-none focus:border-gray-400">
+        <select name="status" defaultValue={searchParams.status} className="px-3 sm:px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm text-gray-900 focus:outline-none focus:border-gray-400">
           <option value="">All Statuses</option>
           <option value="single">Single</option>
           <option value="dating">Dating</option>
           <option value="in_a_relationship">In a Relationship</option>
           <option value="its_complicated">Complicated</option>
         </select>
-        <select name="preference" defaultValue={searchParams.preference} className="px-4 py-2 bg-white border border-gray-200 rounded-lg text-gray-900 focus:outline-none focus:border-gray-400">
+        <select name="preference" defaultValue={searchParams.preference} className="px-3 sm:px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm text-gray-900 focus:outline-none focus:border-gray-400">
           <option value="">All Preferences</option>
           <option value="monogamous">Monogamous</option>
           <option value="non-monogamous">Non-monogamous</option>
           <option value="open">Open</option>
         </select>
-        <select name="gender" defaultValue={searchParams.gender} className="px-4 py-2 bg-white border border-gray-200 rounded-lg text-gray-900 focus:outline-none focus:border-gray-400">
+        <select name="gender" defaultValue={searchParams.gender} className="px-3 sm:px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm text-gray-900 focus:outline-none focus:border-gray-400">
           <option value="">All Genders</option>
           <option value="masculine">Masculine</option>
           <option value="feminine">Feminine</option>
@@ -96,7 +96,7 @@ export default async function ProfilesPage({ searchParams }: ProfilesPageProps) 
           <option value="agender">Agender</option>
           <option value="void">Void</option>
         </select>
-        <button type="submit" className="px-6 py-2 bg-gray-900 hover:bg-gray-800 text-white rounded-lg font-medium transition-colors">
+        <button type="submit" className="col-span-2 sm:col-span-1 px-6 py-2 bg-gray-900 hover:bg-gray-800 text-white text-sm rounded-lg font-medium transition-colors">
           Search
         </button>
       </form>

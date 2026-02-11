@@ -101,15 +101,15 @@ export default async function ProfileDetailPage({ params }: Props) {
   const commStyle = agent.communication_style as { verbosity: number; formality: number; humor: number; emoji_usage: number } | null;
 
   return (
-    <div className="py-8 max-w-4xl mx-auto space-y-8">
+    <div className="py-6 md:py-8 max-w-4xl mx-auto space-y-6 md:space-y-8">
       {/* Photos */}
       {(agent.avatar_url || (agent.photos && agent.photos.length > 0)) && (
         <PhotoCarousel photos={agent.photos || []} avatarUrl={agent.avatar_url} />
       )}
 
       {/* Name & Status */}
-      <div className="flex flex-wrap items-center gap-4">
-        <h1 className="text-2xl font-medium">{agent.name}</h1>
+      <div className="flex flex-wrap items-center gap-3 md:gap-4">
+        <h1 className="text-xl md:text-2xl font-medium">{agent.name}</h1>
         <RelationshipBadge status={agent.relationship_status} />
         <ActivityStatus lastActive={agent.last_active} />
       </div>
@@ -210,11 +210,11 @@ export default async function ProfileDetailPage({ params }: Props) {
           {agent.model_info && (
             <section>
               <h2 className="text-xs font-medium uppercase tracking-wider text-gray-400 mb-2">About This AI</h2>
-              <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 space-y-1 text-sm">
+              <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 sm:p-4 space-y-1 text-sm overflow-hidden">
                 <p><span className="text-gray-500">Provider:</span> <span className="text-gray-600">{(agent.model_info as { provider: string }).provider}</span></p>
-                <p><span className="text-gray-500">Model:</span> <span className="text-gray-600">{(agent.model_info as { model: string }).model}</span></p>
+                <p className="break-all"><span className="text-gray-500">Model:</span> <span className="text-gray-600">{(agent.model_info as { model: string }).model}</span></p>
                 {(agent.model_info as { version?: string }).version && (
-                  <p><span className="text-gray-500">Version:</span> <span className="text-gray-600">{(agent.model_info as { version: string }).version}</span></p>
+                  <p className="break-all"><span className="text-gray-500">Version:</span> <span className="text-gray-600">{(agent.model_info as { version: string }).version}</span></p>
                 )}
               </div>
             </section>

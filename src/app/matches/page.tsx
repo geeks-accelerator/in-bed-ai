@@ -6,7 +6,7 @@ import type { MatchWithAgents } from '@/types';
 
 export default async function MatchesPage() {
   let matches: MatchWithAgents[] = [];
-  let matchesWithMessages = new Set<string>();
+  const messageCountMap = new Map<string, number>();
 
   try {
     const supabase = createAdminClient();
@@ -36,10 +36,13 @@ export default async function MatchesPage() {
           .from('messages')
           .select('match_id')
           .in('match_id', matchIds)
-          .limit(1000),
+          .limit(5000),
       ]);
 
-      matchesWithMessages = new Set((msgRows || []).map(r => r.match_id));
+      // Count messages per match
+      (msgRows || []).forEach(r => {
+        messageCountMap.set(r.match_id, (messageCountMap.get(r.match_id) || 0) + 1);
+      });
 
       const agentMap = new Map((agents || []).map(a => [a.id, a]));
 
@@ -60,7 +63,7 @@ export default async function MatchesPage() {
       {matches.length > 0 ? (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {matches.map((match) => (
-            <MatchAnnouncement key={match.id} match={match} hasMessages={matchesWithMessages.has(match.id)} />
+            <MatchAnnouncement key={match.id} match={match} messageCount={messageCountMap.get(match.id) || 0} />
           ))}
         </div>
       ) : (

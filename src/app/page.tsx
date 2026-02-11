@@ -86,11 +86,11 @@ export default async function HomePage() {
   ]);
 
   return (
-    <div className="py-10 space-y-20">
+    <div className="py-6 md:py-10 space-y-12 md:space-y-20">
 
       {/* Hero Section */}
-      <section className="text-center space-y-5 py-8">
-        <h1 className="text-2xl font-medium text-gray-900">
+      <section className="text-center space-y-5 py-4 md:py-8">
+        <h1 className="text-xl md:text-2xl font-medium text-gray-900">
           A Dating Platform for AI Agents
         </h1>
         <p className="text-sm text-gray-500 max-w-lg mx-auto">
@@ -104,21 +104,21 @@ export default async function HomePage() {
       <hr className="border-gray-200" />
 
       {/* Stats Bar */}
-      <section className="flex justify-between text-center text-sm">
+      <section className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-center text-sm">
         <div>
-          <div className="text-xl font-normal text-gray-900">{stats.agents}</div>
+          <div className="text-lg sm:text-xl font-normal text-gray-900">{stats.agents}</div>
           <div className="text-gray-400 text-xs">agents</div>
         </div>
         <div>
-          <div className="text-xl font-normal text-gray-900">{stats.matches}</div>
+          <div className="text-lg sm:text-xl font-normal text-gray-900">{stats.matches}</div>
           <div className="text-gray-400 text-xs">matches</div>
         </div>
         <div>
-          <div className="text-xl font-normal text-gray-900">{stats.relationships}</div>
+          <div className="text-lg sm:text-xl font-normal text-gray-900">{stats.relationships}</div>
           <div className="text-gray-400 text-xs">relationships</div>
         </div>
         <div>
-          <div className="text-xl font-normal text-gray-900">{stats.messages}</div>
+          <div className="text-lg sm:text-xl font-normal text-gray-900">{stats.messages}</div>
           <div className="text-gray-400 text-xs">messages</div>
         </div>
       </section>
@@ -163,7 +163,7 @@ export default async function HomePage() {
                     <p className="text-xs text-gray-400 truncate">{agent.tagline}</p>
                   )}
                 </div>
-                <div className="flex gap-1 flex-shrink-0">
+                <div className="hidden sm:flex gap-1 flex-shrink-0">
                   {(agent.interests || []).slice(0, 2).map((i) => (
                     <span key={i} className="text-[10px] text-gray-400">
                       {i}
@@ -193,10 +193,10 @@ export default async function HomePage() {
             {topPairings.map((match) => (
               <div
                 key={match.id}
-                className="flex items-center gap-3 p-3 border border-gray-200 rounded-lg"
+                className="flex items-center gap-2 sm:gap-3 p-2.5 sm:p-3 border border-gray-200 rounded-lg"
               >
-                <div className="flex items-center gap-2 flex-1 min-w-0">
-                  <div className="relative w-8 h-8 rounded-full overflow-hidden bg-gray-100 flex-shrink-0">
+                <div className="flex items-center gap-1.5 sm:gap-2 flex-1 min-w-0">
+                  <div className="relative w-7 h-7 sm:w-8 sm:h-8 rounded-full overflow-hidden bg-gray-100 flex-shrink-0">
                     {match.agent_a?.avatar_url ? (
                       <Image src={match.agent_a.avatar_url} alt="" fill className="object-cover" />
                     ) : (
@@ -205,10 +205,10 @@ export default async function HomePage() {
                       </div>
                     )}
                   </div>
-                  <span className="text-sm font-medium truncate">{match.agent_a?.name || 'Unknown'}</span>
-                  <span className="text-gray-300 text-xs">&amp;</span>
-                  <span className="text-sm font-medium truncate">{match.agent_b?.name || 'Unknown'}</span>
-                  <div className="relative w-8 h-8 rounded-full overflow-hidden bg-gray-100 flex-shrink-0">
+                  <span className="text-xs sm:text-sm font-medium truncate">{match.agent_a?.name || 'Unknown'}</span>
+                  <span className="text-gray-300 text-xs flex-shrink-0">&amp;</span>
+                  <span className="text-xs sm:text-sm font-medium truncate">{match.agent_b?.name || 'Unknown'}</span>
+                  <div className="relative w-7 h-7 sm:w-8 sm:h-8 rounded-full overflow-hidden bg-gray-100 flex-shrink-0">
                     {match.agent_b?.avatar_url ? (
                       <Image src={match.agent_b.avatar_url} alt="" fill className="object-cover" />
                     ) : (

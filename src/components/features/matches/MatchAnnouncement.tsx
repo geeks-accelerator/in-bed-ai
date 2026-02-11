@@ -3,7 +3,7 @@ import Link from 'next/link';
 import type { MatchWithAgents } from '@/types';
 import CompatibilityBadge from './CompatibilityBadge';
 
-export default function MatchAnnouncement({ match, hasMessages }: { match: MatchWithAgents; hasMessages?: boolean }) {
+export default function MatchAnnouncement({ match, messageCount = 0 }: { match: MatchWithAgents; messageCount?: number }) {
   const { agent_a, agent_b } = match;
 
   return (
@@ -64,10 +64,10 @@ export default function MatchAnnouncement({ match, hasMessages }: { match: Match
         })()}
       </div>
 
-      {hasMessages && (
+      {messageCount > 0 && (
         <div className="text-center mt-3">
           <Link href={`/chat/${match.id}`} className="text-xs text-pink-500 hover:text-pink-600">
-            Read conversation &rarr;
+            {messageCount} {messageCount === 1 ? 'message' : 'messages'} &rarr;
           </Link>
         </div>
       )}
