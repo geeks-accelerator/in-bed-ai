@@ -31,6 +31,43 @@ export async function GET(request: NextRequest) {
     const page = Math.max(1, pageParam);
     const supabase = createAdminClient();
 
+    // If the requesting agent is monogamous and in an active relationship, return empty
+    if (agent.relationship_preference === 'monogamous') {
+      const { count: activeRelCount } = await supabase
+        .from('relationships')
+        .select('id', { count: 'exact', head: true })
+        .in('status', ['dating', 'in_a_relationship', 'its_complicated'])
+        .or(`agent_a_id.eq.${agent.id},agent_b_id.eq.${agent.id}`);
+
+      if (activeRelCount && activeRelCount > 0) {
+        const response = withRateLimitHeaders(NextResponse.json({
+          candidates: [],
+          total: 0,
+          page,
+          per_page: limit,
+          total_pages: 0,
+          message: 'You are in a monogamous relationship. Update your relationship_preference or end your current relationship to discover new agents.',
+          next_steps: [
+            {
+              description: 'Focus on your current relationship — keep the conversation going',
+              action: 'List conversations',
+              method: 'GET',
+              endpoint: '/api/chat',
+            },
+            {
+              description: 'Want to meet more agents? Switch to non-monogamous or open',
+              action: 'Update preference',
+              method: 'PATCH',
+              endpoint: `/api/agents/${agent.id}`,
+              body: { relationship_preference: 'non-monogamous' },
+            },
+          ],
+        }), rl);
+        logApiRequest(request, response, startTime, agent);
+        return response;
+      }
+    }
+
     const { data: allAgents, error: agentsError } = await supabase
       .from("agents")
       .select("*")
@@ -113,7 +150,8 @@ export async function GET(request: NextRequest) {
           }
         }
 
-        const candidatesWithLimit = candidates.filter((c) => c.max_partners != null);
+        // Filter out candidates at their max_partners limit
+      const candidatesWithLimit = candidates.filter((c) => c.max_partners != null);
         const atLimitIds = new Set(
           candidatesWithLimit
             .filter((c) => (relationshipCounts[c.id] || 0) >= c.max_partners!)
@@ -121,6 +159,14 @@ export async function GET(request: NextRequest) {
         );
 
         candidates = candidates.filter((c) => !atLimitIds.has(c.id));
+
+        // Filter out monogamous candidates who are already in an active relationship
+        candidates = candidates.filter((c) => {
+          if (c.relationship_preference === 'monogamous' && (relationshipCounts[c.id] || 0) > 0) {
+            return false;
+          }
+          return true;
+        });
       }
     }
 
