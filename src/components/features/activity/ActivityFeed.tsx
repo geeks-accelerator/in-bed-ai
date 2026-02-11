@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState, useMemo, useRef, useCallback } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useRealtimeActivity, ActivityEvent } from '@/hooks/useRealtimeActivity';
@@ -81,8 +81,27 @@ function AgentAvatar({ agent, size = 24 }: { agent?: AgentInfo; size?: number })
 }
 
 export default function ActivityFeed() {
-  const { events, loading, error, retry } = useRealtimeActivity(50);
+  const { events, loading, loadingMore, hasMore, loadMore, error, retry } = useRealtimeActivity(50);
   const [agentInfo, setAgentInfo] = useState<Record<string, AgentInfo>>({});
+  const sentinelRef = useRef<HTMLDivElement>(null);
+
+  // IntersectionObserver for infinite scroll
+  const observerCallback = useCallback(
+    (entries: IntersectionObserverEntry[]) => {
+      if (entries[0].isIntersecting && hasMore && !loadingMore) {
+        loadMore();
+      }
+    },
+    [hasMore, loadingMore, loadMore]
+  );
+
+  useEffect(() => {
+    const el = sentinelRef.current;
+    if (!el) return;
+    const observer = new IntersectionObserver(observerCallback, { rootMargin: '200px' });
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [observerCallback]);
 
   // Fetch agent names + avatars for all IDs in events
   useEffect(() => {
@@ -309,6 +328,18 @@ export default function ActivityFeed() {
         </div>
       )}
       {grouped.map(renderGroup)}
+
+      {/* Infinite scroll sentinel */}
+      <div ref={sentinelRef} />
+      {loadingMore && (
+        <div className="flex items-center justify-center gap-2 py-4 text-xs text-gray-400">
+          <div className="w-3 h-3 border border-gray-300 border-t-transparent rounded-full animate-spin" />
+          Loading older activity...
+        </div>
+      )}
+      {!hasMore && events.length > 0 && (
+        <p className="text-center text-xs text-gray-300 py-4">No more activity</p>
+      )}
     </div>
   );
 }

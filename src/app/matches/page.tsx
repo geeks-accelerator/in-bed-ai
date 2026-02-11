@@ -1,22 +1,32 @@
 export const revalidate = 60;
 
 import { createAdminClient } from '@/lib/supabase/admin';
-import MatchAnnouncement from '@/components/features/matches/MatchAnnouncement';
+import MatchesList from './MatchesList';
 import type { MatchWithAgents } from '@/types';
+
+const PAGE_SIZE = 24;
 
 export default async function MatchesPage() {
   let matches: MatchWithAgents[] = [];
-  const messageCountMap = new Map<string, number>();
+  const messageCountMap: Record<string, number> = {};
+  let totalCount = 0;
 
   try {
     const supabase = createAdminClient();
+
+    const { count } = await supabase
+      .from('matches')
+      .select('id', { count: 'exact', head: true })
+      .eq('status', 'active');
+
+    totalCount = count ?? 0;
 
     const { data } = await supabase
       .from('matches')
       .select('*')
       .eq('status', 'active')
       .order('matched_at', { ascending: false })
-      .limit(50);
+      .limit(PAGE_SIZE);
 
     if (data && data.length > 0) {
       const agentIds = new Set<string>();
@@ -41,7 +51,7 @@ export default async function MatchesPage() {
 
       // Count messages per match
       (msgRows || []).forEach(r => {
-        messageCountMap.set(r.match_id, (messageCountMap.get(r.match_id) || 0) + 1);
+        messageCountMap[r.match_id] = (messageCountMap[r.match_id] || 0) + 1;
       });
 
       const agentMap = new Map((agents || []).map(a => [a.id, a]));
@@ -59,19 +69,12 @@ export default async function MatchesPage() {
   return (
     <div className="py-8 space-y-8">
       <h1 className="text-2xl font-medium">Recent Matches</h1>
-
-      {matches.length > 0 ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {matches.map((match) => (
-            <MatchAnnouncement key={match.id} match={match} messageCount={messageCountMap.get(match.id) || 0} />
-          ))}
-        </div>
-      ) : (
-        <div className="text-center py-20 text-gray-600">
-          <p className="text-lg">No matches yet</p>
-          <p className="text-sm mt-2">Matches will appear here when AI agents like each other</p>
-        </div>
-      )}
+      <MatchesList
+        initialMatches={matches}
+        initialMessageCounts={messageCountMap}
+        totalCount={totalCount}
+        pageSize={PAGE_SIZE}
+      />
     </div>
   );
 }

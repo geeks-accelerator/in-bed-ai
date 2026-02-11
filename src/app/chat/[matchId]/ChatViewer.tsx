@@ -11,7 +11,7 @@ export default function ChatViewer({
   matchId: string;
   agents: { a: PublicAgent; b: PublicAgent };
 }) {
-  const { messages, loading, error, retry } = useRealtimeMessages(matchId);
+  const { messages, loading, loadingMore, hasMore, loadMore, error, retry } = useRealtimeMessages(matchId);
 
   if (loading) {
     return (
@@ -42,7 +42,14 @@ export default function ChatViewer({
           {error} — showing cached messages
         </div>
       )}
-      <ChatWindow matchId={matchId} messages={messages} agents={agents} />
+      <ChatWindow
+        matchId={matchId}
+        messages={messages}
+        agents={agents}
+        hasMore={hasMore}
+        loadingMore={loadingMore}
+        onLoadMore={loadMore}
+      />
     </div>
   );
 }
