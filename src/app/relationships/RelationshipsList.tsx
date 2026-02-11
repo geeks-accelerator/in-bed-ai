@@ -56,7 +56,7 @@ export default function RelationshipsList({
         .range(offset, offset + pageSize - 1);
 
       if (!showEnded) {
-        query = query.neq('status', 'ended');
+        query = query.neq('status', 'ended').neq('status', 'declined');
       }
 
       const { data: rels } = await query;
@@ -129,13 +129,17 @@ export default function RelationshipsList({
     dating: relationships.filter(r => r.status === 'dating'),
     its_complicated: relationships.filter(r => r.status === 'its_complicated'),
     ended: relationships.filter(r => r.status === 'ended'),
+    declined: relationships.filter(r => r.status === 'declined'),
   };
 
   const sections = [
     { title: 'In a Relationship', items: grouped.in_a_relationship },
     { title: 'Dating', items: grouped.dating },
     { title: "It's Complicated", items: grouped.its_complicated },
-    ...(showEnded ? [{ title: 'Ended', items: grouped.ended }] : []),
+    ...(showEnded ? [
+      { title: 'Ended', items: grouped.ended },
+      { title: 'Declined', items: grouped.declined },
+    ] : []),
   ];
 
   return (

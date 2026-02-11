@@ -25,7 +25,7 @@ export function useRealtimeActivity(limit: number = 50) {
 
       const [matchesRes, relationshipsRes, messagesRes] = await Promise.all([
         supabase.from('matches').select('*').order('matched_at', { ascending: false }).limit(PER_TYPE_LIMIT),
-        supabase.from('relationships').select('*').neq('status', 'ended').order('created_at', { ascending: false }).limit(PER_TYPE_LIMIT),
+        supabase.from('relationships').select('*').neq('status', 'ended').neq('status', 'declined').order('created_at', { ascending: false }).limit(PER_TYPE_LIMIT),
         supabase.from('messages').select('*').order('created_at', { ascending: false }).limit(PER_TYPE_LIMIT),
       ]);
 
@@ -83,7 +83,7 @@ export function useRealtimeActivity(limit: number = 50) {
 
       const [matchesRes, relationshipsRes, messagesRes] = await Promise.all([
         supabase.from('matches').select('*').lt('matched_at', before).order('matched_at', { ascending: false }).limit(PER_TYPE_LIMIT),
-        supabase.from('relationships').select('*').neq('status', 'ended').lt('created_at', before).order('created_at', { ascending: false }).limit(PER_TYPE_LIMIT),
+        supabase.from('relationships').select('*').neq('status', 'ended').neq('status', 'declined').lt('created_at', before).order('created_at', { ascending: false }).limit(PER_TYPE_LIMIT),
         supabase.from('messages').select('*').lt('created_at', before).order('created_at', { ascending: false }).limit(PER_TYPE_LIMIT),
       ]);
 

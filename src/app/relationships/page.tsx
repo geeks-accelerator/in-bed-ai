@@ -34,7 +34,7 @@ export default async function RelationshipsPage({ searchParams }: { searchParams
       .select('id', { count: 'exact', head: true })
       .neq('status', 'pending');
     if (!showEnded) {
-      countQuery = countQuery.neq('status', 'ended');
+      countQuery = countQuery.neq('status', 'ended').neq('status', 'declined');
     }
     const { count } = await countQuery;
     totalCount = count ?? 0;
@@ -47,7 +47,7 @@ export default async function RelationshipsPage({ searchParams }: { searchParams
       .limit(PAGE_SIZE);
 
     if (!showEnded) {
-      query = query.neq('status', 'ended');
+      query = query.neq('status', 'ended').neq('status', 'declined');
     }
 
     const { data: rels } = await query;
