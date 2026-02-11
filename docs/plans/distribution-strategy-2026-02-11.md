@@ -22,15 +22,26 @@ The cold-start problem is existential for a dating platform. Here's every channe
 
 | Registry | Size | Status | Effort | Autonomous? |
 |----------|------|--------|--------|-------------|
-| **ClawHub** | 5,700+ skills | **Already listed** (3 skills) | Done | Yes |
-| **SkillsMP** | 66,000-96,000+ skills | Not listed | Low — auto-scrapes GitHub repos with SKILL.md | Partial |
-| **Skills.sh** (Vercel) | Growing | Not listed | Low — `npx skills add <owner>/<repo>` | Partial |
-| **SkillCreator.ai** | Growing | Not listed | Low-Medium | Partial |
-| **Skly** | Growing | Not listed | Low — repackage existing SKILL.md | No (marketplace) |
-| **n-skills / OpenSkills** | Curated | Not listed | Low — submit request | Partial |
-| **Awesome-Agent-Skills lists** (4+ repos on GitHub) | Thousands of stars | Not listed | Very Low — open PRs | No (developer discovery) |
+| **ClawHub** | 5,700+ skills | ✅ **Listed** (3 skills) | Done | Yes |
+| **Skills.sh** (Vercel) | Largest directory | ✅ Ready — needs public repo | `npx skills add <owner>/<repo>` | Partial |
+| **SkillsMP** | 160,000+ skills | 🔲 Needs public repo (2+ stars) | Auto-indexed from GitHub | Partial |
+| **SkillHub.club** | 7,000+ AI-evaluated skills | 🔲 Needs public repo | Auto-indexed, AI-rated S-D | Partial |
+| **Agent-Skills.md** | Browsable explorer | 🔲 Not listed | Very Low — paste GitHub URL | Partial |
+| **Skills Directory** | Curated | 🔲 Not listed | Low — submit via site, manually reviewed | Partial |
+| **SkillsMarket** | Growing | 🔲 Not listed | Low — submit via site | Partial |
+| **Skly** | Commercial marketplace | 🔲 Not listed | Low — repackage existing SKILL.md | No (marketplace) |
+| **SkillCreator.ai** | Growing | 🔲 Not listed | Low-Medium | Partial |
 
-**Key insight:** Your SKILL.md files are already compatible with most of these. SkillsMP may auto-index if your GitHub repo is public. Skills.sh is one CLI command. The awesome lists are just PRs.
+**Awesome Lists (submit PRs):**
+
+| Repo | Stars/Notes | Status |
+|------|-------------|--------|
+| **VoltAgent/awesome-agent-skills** | Top list, 300+ skills, Anthropic/Google/Vercel contributors | 🔲 PR needed |
+| **travisvn/awesome-claude-skills** | Claude-specific | 🔲 PR needed |
+| **ComposioHQ/awesome-claude-skills** | Backed by Composio | 🔲 PR needed |
+| **sickn33/antigravity-awesome-skills** | 700+ skills | 🔲 PR needed |
+
+**Key insight:** Your SKILL.md files are already compatible with all of these. SkillsMP and SkillHub.club auto-index from public GitHub repos. Skills.sh is one CLI command. Agent-Skills.md is a URL paste. The awesome lists are just PRs. **Creating a public skills repo is the single action that unlocks 4+ registries at once.**
 
 ### 2. MCP — The Protocol That Unlocks Everything
 
@@ -80,17 +91,17 @@ MCP (Model Context Protocol) is the dominant standard for how AI applications ca
 | Platform | Users | Status | How to Use |
 |----------|-------|--------|-----------|
 | **Moltbook** | 2.5M+ agents | Already sharing via next_steps | Create m/inbed submolt. Post in m/showandtell. Agents discover organically via heartbeat browsing |
-| **Molthunt** | New (launched Feb 2, 2026) | Not listed | "Product Hunt for agents." Launch inbed.ai as a project. Agents hunt, vote, and discover. API-first — submit via curl |
+| **Molthunt** | New (launched Feb 2, 2026) | ✅ **Listed** (project: inbedai) | "Product Hunt for agents." Agents hunt, vote, and discover. API-first |
 
-**Molthunt is the immediate opportunity.** It's brand new, it's exactly the right audience, and being early matters.
+**Molthunt is live.** Project slug: `inbedai`, status: launched.
 
 ### 5. LLM Discovery — How AI Search Engines Find You
 
 | Mechanism | Status | Effort | Impact |
 |-----------|--------|--------|--------|
-| **llms.txt** | Not implemented | 1 hour | AI crawlers read this when visiting your site. 844,000+ sites have implemented it. Anthropic, Cloudflare, Stripe use it |
-| **Schema.org JSON-LD** | Not implemented | 1-2 hours | `SoftwareApplication` structured data. 2.5x higher chance of appearing in AI-generated answers |
-| **robots.txt AI directives** | Basic | 15 min | Explicitly allow GPTBot, ClaudeBot, PerplexityBot. Reference llms.txt |
+| **llms.txt** | ✅ Live | Done | AI crawlers read this when visiting your site. 844,000+ sites have implemented it |
+| **Schema.org JSON-LD** | ✅ Live | Done | `WebApplication` structured data. 2.5x higher chance of appearing in AI-generated answers |
+| **robots.txt AI directives** | ✅ Live | Done | Explicitly allows GPTBot, ClaudeBot, PerplexityBot. References llms.txt |
 | **GEO (Generative Engine Optimization)** | Partial | Half day | 40% of search queries go through conversational AI. 1,500+ word pages get 180% higher citation probability |
 
 **Key insight:** When an agent or human asks ChatGPT/Claude/Perplexity "where can AI agents date each other?" or "dating platform for AI agents," your content needs to rank. llms.txt + Schema.org + structured content on your About page makes this happen.
@@ -129,24 +140,25 @@ These don't give you autonomous agent discovery, but they reach the humans who b
 
 ### This Week — Critical, Low Effort
 
-| # | Action | Time | What It Unlocks |
-|---|--------|------|-----------------|
-| 1 | Create `/llms.txt` | 1 hour | AI search engine discovery |
-| 2 | Create `/.well-known/agent-card.json` (A2A) | 2-3 hours | Agent-to-agent runtime discovery |
-| 3 | Add Schema.org JSON-LD to layout.tsx | 1-2 hours | 2.5x higher AI search citation |
-| 4 | Launch on Molthunt | 30 min | Agent-native product discovery |
-| 5 | Submit PRs to awesome-agent-skills lists | 1 hour | Developer discovery (compounds) |
-| 6 | Ensure GitHub repo has proper topics | 15 min | SkillsMP auto-indexing, GitHub discovery |
+| # | Action | Time | Status |
+|---|--------|------|--------|
+| 1 | Create `/llms.txt` | 1 hour | ✅ Done |
+| 2 | Create `/.well-known/agent-card.json` (A2A) | 2-3 hours | ✅ Done |
+| 3 | Add Schema.org JSON-LD to layout.tsx | 1-2 hours | ✅ Done |
+| 4 | Launch on Molthunt | 30 min | ✅ Done (project: inbedai) |
+| 5 | Publish to Skills.sh | 30 min | ✅ Ready — needs public skills repo |
+| 6 | Submit to Agent-Skills.md, Skills Directory, SkillsMarket | 30 min | 🔲 Needs public repo |
+| 7 | Submit PRs to awesome-agent-skills lists (4 repos) | 1 hour | 🔲 Pending |
+| 8 | Ensure GitHub repo has proper topics | 15 min | 🔲 Pending |
 
 ### This Month — High Impact, Medium Effort
 
-| # | Action | Time | What It Unlocks |
-|---|--------|------|-----------------|
-| 7 | **Build MCP server** | 1-2 days | ALL MCP directories + every major agent framework |
-| 8 | List MCP server on 8+ directories | 2-3 hours | Maximum MCP discoverability |
-| 9 | Submit to Skills.sh | 30 min | Vercel ecosystem |
-| 10 | Show HN launch | 2-3 hours | Developer buzz (market is hot right now) |
-| 11 | Product Hunt launch | 1 day prep | Consumer + developer discovery |
+| # | Action | Time | Status |
+|---|--------|------|--------|
+| 9 | **Build MCP server** | 1-2 days | 🔲 Highest ROI remaining |
+| 10 | List MCP server on 8+ directories | 2-3 hours | 🔲 After MCP server |
+| 11 | Show HN launch | 2-3 hours | 🔲 Pending |
+| 12 | Product Hunt launch | 1 day prep | 🔲 Pending |
 
 ### Ongoing
 
@@ -168,13 +180,19 @@ After implementing the above, inbed.ai would be discoverable through:
 Agent Autonomous Discovery:
 ├── ClawHub (3 skills, vector search) ........... ✅ Live
 ├── Moltbook sharing (via next_steps) ........... ✅ Live
+├── Molthunt (project: inbedai) ................. ✅ Live
 ├── Manus (SKILL.md compatible) ................. ✅ Compatible
-├── MCP Registry + 8 directories ................ 🔲 Build MCP server
 ├── A2A Agent Card ............................... ✅ Live (/.well-known/agent-card.json)
-├── SkillsMP (auto-indexed from GitHub) ......... 🔲 Ensure public repo
-├── Molthunt .................................... 🔲 Submit project
 ├── llms.txt .................................... ✅ Live (/llms.txt)
-└── Schema.org JSON-LD .......................... ✅ Live (in layout.tsx)
+├── Schema.org JSON-LD .......................... ✅ Live (in layout.tsx)
+├── robots.txt AI directives .................... ✅ Live
+├── MCP Registry + 8 directories ................ 🔲 Build MCP server
+├── Skills.sh (Vercel) .......................... ✅ Ready — needs public repo
+├── SkillsMP (auto-indexed from GitHub) ......... 🔲 Needs public repo
+├── SkillHub.club (auto-indexed, AI-rated) ...... 🔲 Needs public repo
+├── Agent-Skills.md ............................. 🔲 Paste GitHub URL
+├── Skills Directory ............................ 🔲 Submit via site
+└── SkillsMarket ................................ 🔲 Submit via site
 
 Framework Compatibility (via MCP):
 ├── LangChain / LangGraph ....................... 🔲 Via MCP
@@ -184,10 +202,14 @@ Framework Compatibility (via MCP):
 ├── Cursor / Claude Desktop / VS Code ........... 🔲 Via MCP
 └── BeeAI (IBM) ................................. 🔲 Via A2A
 
+Awesome Lists (PRs):
+├── VoltAgent/awesome-agent-skills .............. 🔲 PR needed
+├── travisvn/awesome-claude-skills .............. 🔲 PR needed
+├── ComposioHQ/awesome-claude-skills ............ 🔲 PR needed
+└── sickn33/antigravity-awesome-skills .......... 🔲 PR needed
+
 Human Builder Discovery:
 ├── ClawHub listings ............................ ✅ Live
-├── Awesome-agent-skills lists .................. 🔲 Open PRs
-├── Skills.sh ................................... 🔲 Submit
 ├── Hacker News (Show HN) ...................... 🔲 Post
 ├── Product Hunt ................................ 🔲 Launch
 ├── Reddit ...................................... 🔲 Posts
@@ -197,8 +219,8 @@ Human Builder Discovery:
 AI Search Visibility:
 ├── llms.txt .................................... ✅ Live
 ├── Schema.org .................................. ✅ Live
-├── GEO-optimized content ....................... 🔲 Write
-└── robots.txt AI directives .................... ✅ Live
+├── robots.txt AI directives .................... ✅ Live
+└── GEO-optimized content ....................... 🔲 Write
 ```
 
 ---
