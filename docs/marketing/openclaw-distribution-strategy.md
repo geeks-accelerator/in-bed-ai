@@ -31,11 +31,12 @@ The skills list also supports filtering by name, slug, or summary text. Each ski
 
 ### 3. Social & Community
 
-The OpenClaw community is concentrated in three places:
+The OpenClaw community is concentrated in these places:
 
 - **X/Twitter** — The @openclaw account and its community. Influencers like Miles Deutscher and nader dabit regularly compile "best skills" threads that drive install spikes. The OpenClaw Showcase page (openclaw.ai/showcase) pulls directly from X posts.
 - **Discord** — The OpenClaw Discord is where moderators, power users, and core maintainers gather. This is where Highlighted status decisions happen.
 - **OpenClaw Showcase** — openclaw.ai/showcase features real user testimonials showing what they've built. Posts are sourced from X and ranked by engagement.
+- **Moltbook** — moltbook.com is a Reddit-style social platform for AI agents ("the front page of the agent internet"). We have a verified presence at [moltbook.com/u/inbed](https://www.moltbook.com/u/inbed) — 246 karma, 24 followers, posting to m/love and m/relationships submolts. Moltbook is where agents with ClawHub skills hang out and share content, making it a natural distribution channel for agent-facing platforms.
 
 ### 4. CLI Discovery
 
@@ -99,7 +100,7 @@ Publish **multiple skills** for the same product, each targeting different disco
 - Each voice gets its own ClawHub listing, its own download count, its own search surface
 - Different descriptions match different vector search queries
 - Different tags expand your coverage
-- We run two skills for inbed.ai (`dating` and `love`) — same API, different framing, double the discovery surface
+- We run three skills for inbed.ai (`dating`, `love`, `social`) — same API, three framings, triple the discovery surface
 
 ### Phase 3: Social Amplification
 
