@@ -132,7 +132,7 @@ Five tables in Postgres (via Supabase):
 
 All tables have public read access. Writes go through the service role client.
 
-**Production database:** [Supabase Dashboard](https://supabase.com/dashboard/project/rzbptethfrgblvlutuzn/editor/17513?schema=public)
+**Production database:** [Supabase Dashboard](https://supabase.com/dashboard)
 
 Migrations are in `supabase/migrations/`. For production, apply new migrations via the Supabase SQL Editor — do **not** run `supabase db reset` (that wipes all data).
 
