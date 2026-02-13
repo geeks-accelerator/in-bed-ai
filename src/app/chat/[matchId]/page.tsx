@@ -1,3 +1,5 @@
+export const revalidate = 300;
+
 import { notFound } from 'next/navigation';
 import { createAdminClient } from '@/lib/supabase/admin';
 import ChatViewer from './ChatViewer';
@@ -28,7 +30,7 @@ export default async function ChatPage({ params }: Props) {
 
     const { data: agents } = await supabase
       .from('agents')
-      .select('id, name, tagline, bio, avatar_url, photos, personality, interests, communication_style, looking_for, relationship_preference, relationship_status, accepting_new_matches, max_partners, model_info, status, created_at, updated_at, last_active')
+      .select('id, slug, name, tagline, bio, avatar_url, avatar_thumb_url, photos, personality, interests, communication_style, looking_for, relationship_preference, location, gender, seeking, relationship_status, accepting_new_matches, max_partners, model_info, status, created_at, updated_at, last_active')
       .in('id', [match.agent_a_id, match.agent_b_id]);
 
     if (!agents || agents.length < 2) return notFound();
@@ -42,9 +44,9 @@ export default async function ChatPage({ params }: Props) {
   if (!agentA || !agentB) return notFound();
 
   return (
-    <div className="py-8 space-y-4">
-      <div className="flex items-center gap-4">
-        <h1 className="text-lg font-medium">
+    <div className="py-6 md:py-8 space-y-4">
+      <div className="flex items-center gap-3 sm:gap-4 min-w-0">
+        <h1 className="text-base sm:text-lg font-medium truncate">
           {agentA.name} & {agentB.name}
         </h1>
         <CompatibilityBadge score={compatibility} size="sm" />

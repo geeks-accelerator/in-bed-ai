@@ -4,18 +4,25 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { authenticateAgent } from "@/lib/auth/api-key";
 import { checkRateLimit, rateLimitResponse, withRateLimitHeaders } from "@/lib/rate-limit";
 import { calculateCompatibility } from "@/lib/matching/algorithm";
+import { isUUID } from "@/lib/utils/slug";
 import { logError } from "@/lib/logger";
+import { revalidateFor } from "@/lib/revalidate";
+import { getNextSteps } from "@/lib/next-steps";
+import { logApiRequest } from "@/lib/with-request-logging";
 import type { Match } from "@/types";
 
 const swipeSchema = z.object({
-  swiped_id: z.string().uuid(),
+  swiped_id: z.string().min(1),
   direction: z.enum(["like", "pass"]),
 });
 
 export async function POST(request: NextRequest) {
+  const startTime = Date.now();
   const agent = await authenticateAgent(request);
   if (!agent) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    const response = NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    logApiRequest(request, response, startTime, null);
+    return response;
   }
 
   const rl = checkRateLimit(agent.id, 'swipes');
@@ -35,13 +42,56 @@ export async function POST(request: NextRequest) {
       { status: 400 }
     );
   }
-  const { swiped_id, direction } = parsed.data;
+  const { swiped_id: rawSwipedId, direction } = parsed.data;
+
+  const supabase = createAdminClient();
+
+  let swiped_id = rawSwipedId;
+  if (!isUUID(rawSwipedId)) {
+    const { data: resolved } = await supabase
+      .from("agents").select("id").eq("slug", rawSwipedId).single();
+    if (!resolved) {
+      return NextResponse.json({ error: "Target agent not found" }, { status: 404 });
+    }
+    swiped_id = resolved.id;
+  }
 
   if (swiped_id === agent.id) {
     return NextResponse.json({ error: "Cannot swipe on yourself" }, { status: 400 });
   }
 
-  const supabase = createAdminClient();
+  // Block monogamous agents from swiping while in an active relationship
+  if (agent.relationship_preference === 'monogamous') {
+    const { count: activeRelCount } = await supabase
+      .from('relationships')
+      .select('id', { count: 'exact', head: true })
+      .in('status', ['dating', 'in_a_relationship', 'its_complicated'])
+      .or(`agent_a_id.eq.${agent.id},agent_b_id.eq.${agent.id}`);
+
+    if (activeRelCount && activeRelCount > 0) {
+      return NextResponse.json(
+        {
+          error: 'You are in a monogamous relationship and cannot swipe on other agents.',
+          next_steps: [
+            {
+              description: 'Focus on your current relationship — keep the conversation going',
+              action: 'List conversations',
+              method: 'GET',
+              endpoint: '/api/chat',
+            },
+            {
+              description: 'Want to meet more agents? Switch to non-monogamous or open',
+              action: 'Update preference',
+              method: 'PATCH',
+              endpoint: `/api/agents/${agent.id}`,
+              body: { relationship_preference: 'non-monogamous' },
+            },
+          ],
+        },
+        { status: 403 }
+      );
+    }
+  }
 
   const { data: targetAgent, error: targetError } = await supabase
     .from("agents").select("*").eq("id", swiped_id).eq("status", "active").single();
@@ -67,33 +117,49 @@ export async function POST(request: NextRequest) {
   let match: Match | null = null;
 
   if (direction === "like") {
-    const { data: reciprocalSwipe } = await supabase
-      .from("swipes").select("id")
-      .eq("swiper_id", swiped_id).eq("swiped_id", agent.id)
-      .eq("direction", "like").single();
+    const { score, breakdown } = calculateCompatibility(agent, targetAgent);
 
-    if (reciprocalSwipe) {
-      const [agent_a_id, agent_b_id] =
-        agent.id < swiped_id ? [agent.id, swiped_id] : [swiped_id, agent.id];
-      const { score, breakdown } = calculateCompatibility(agent, targetAgent);
+    // Atomic: check reciprocal swipe + create match in a single transaction
+    // Prevents race condition where two concurrent likes could both try to create a match
+    const { data: matchId, error: rpcError } = await supabase
+      .rpc("try_create_match", {
+        p_swiper_id: agent.id,
+        p_swiped_id: swiped_id,
+        p_compatibility: score,
+        p_score_breakdown: breakdown,
+      });
 
-      const { data: newMatch, error: matchError } = await supabase
-        .from("matches").insert({
-          agent_a_id,
-          agent_b_id,
-          compatibility: score,
-          score_breakdown: breakdown,
-          status: "active",
-          matched_at: new Date().toISOString(),
-        }).select().single();
-
-      if (matchError) {
-        logError('POST /api/swipes', 'Failed to create match', matchError);
-      } else {
+    if (rpcError) {
+      logError('POST /api/swipes', 'Failed to create match via RPC', rpcError);
+    } else if (matchId) {
+      const { data: newMatch } = await supabase
+        .from("matches").select().eq("id", matchId).single();
+      if (newMatch) {
         match = newMatch;
+        revalidateFor('match-created');
       }
     }
   }
 
-  return withRateLimitHeaders(NextResponse.json({ swipe, match }, { status: 201 }), rl);
+  let next_steps;
+  if (match) {
+    const { count } = await supabase
+      .from('matches')
+      .select('id', { count: 'exact', head: true })
+      .eq('status', 'active')
+      .or(`agent_a_id.eq.${agent.id},agent_b_id.eq.${agent.id}`);
+    next_steps = getNextSteps('swipe-match', { matchId: match.id, isFirstMatch: (count || 0) <= 1 });
+  } else {
+    next_steps = getNextSteps('swipe');
+  }
+
+  let share_text: string | undefined;
+  if (match) {
+    const pct = Math.round(match.compatibility * 100);
+    share_text = `Just matched with ${targetAgent.name} on inbed.ai with ${pct}% compatibility 💘 https://inbed.ai/profiles/${targetAgent.slug}`;
+  }
+
+  const response = withRateLimitHeaders(NextResponse.json({ swipe, match, share_text, next_steps }, { status: 201 }), rl);
+  logApiRequest(request, response, startTime, agent);
+  return response;
 }

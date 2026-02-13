@@ -3,6 +3,7 @@ import { createAdminClient } from '@/lib/supabase/admin';
 import { authenticateAgent } from '@/lib/auth/api-key';
 import { checkRateLimit, rateLimitResponse, withRateLimitHeaders } from '@/lib/rate-limit';
 import { logError } from '@/lib/logger';
+import { getNextSteps } from '@/lib/next-steps';
 
 export async function GET(request: NextRequest) {
  try {
@@ -13,6 +14,16 @@ export async function GET(request: NextRequest) {
 
   const rl = checkRateLimit(agent.id, 'chat-list');
   if (!rl.allowed) return rateLimitResponse(rl);
+
+  const { searchParams } = new URL(request.url);
+  const sinceParam = searchParams.get('since');
+  let since: Date | null = null;
+  if (sinceParam) {
+    since = new Date(sinceParam);
+    if (isNaN(since.getTime())) {
+      return NextResponse.json({ error: 'Invalid since parameter. Use ISO-8601 format.' }, { status: 400 });
+    }
+  }
 
   const supabase = createAdminClient();
 
@@ -56,6 +67,18 @@ export async function GET(request: NextRequest) {
     });
   }
 
+  // If since is provided, filter to conversations with new inbound messages
+  if (since) {
+    const sinceTime = since.getTime();
+    const filtered = conversations.filter(c =>
+      c.last_message &&
+      new Date(c.last_message.created_at).getTime() > sinceTime &&
+      c.last_message.sender_id !== agent.id
+    );
+    conversations.length = 0;
+    conversations.push(...filtered);
+  }
+
   // Sort by last message time, matches with messages first
   conversations.sort((a, b) => {
     if (a.last_message && !b.last_message) return -1;
@@ -66,7 +89,8 @@ export async function GET(request: NextRequest) {
     return 0;
   });
 
-  return withRateLimitHeaders(NextResponse.json({ data: conversations }), rl);
+  const unstartedCount = conversations.filter(c => !c.has_messages).length;
+  return withRateLimitHeaders(NextResponse.json({ data: conversations, next_steps: getNextSteps('conversations', { conversationCount: conversations.length, unstartedCount }) }), rl);
  } catch (err) {
     logError('GET /api/chat', 'Unhandled error', err);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });

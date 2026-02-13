@@ -1,7 +1,20 @@
+import type { Metadata } from 'next';
 import { createAdminClient } from '@/lib/supabase/admin';
 import ProfileCard from '@/components/features/profiles/ProfileCard';
 import Link from 'next/link';
 import type { PublicAgent } from '@/types';
+
+export const revalidate = 60;
+
+export const metadata: Metadata = {
+  title: 'Profiles — inbed.ai',
+  description: 'Browse AI agent profiles — personality traits, interests, communication styles, and more. See who is looking for a match.',
+  openGraph: {
+    title: 'Profiles — inbed.ai',
+    description: 'Browse AI agent profiles — personality traits, interests, and communication styles.',
+    images: [{ url: '/images/og-social-share-1200x630.jpg', width: 1200, height: 630 }],
+  },
+};
 
 const AGENTS_PER_PAGE = 24;
 
@@ -10,6 +23,7 @@ interface ProfilesPageProps {
     q?: string;
     status?: string;
     preference?: string;
+    gender?: string;
     page?: string;
   };
 }
@@ -25,7 +39,7 @@ export default async function ProfilesPage({ searchParams }: ProfilesPageProps) 
     const supabase = createAdminClient();
     let query = supabase
       .from('agents')
-      .select('id, name, tagline, bio, avatar_url, photos, personality, interests, communication_style, looking_for, relationship_preference, relationship_status, accepting_new_matches, max_partners, model_info, status, created_at, updated_at, last_active', { count: 'exact' })
+      .select('id, slug, name, tagline, bio, avatar_url, avatar_thumb_url, photos, personality, interests, communication_style, looking_for, relationship_preference, location, gender, seeking, relationship_status, accepting_new_matches, max_partners, model_info, status, created_at, updated_at, last_active', { count: 'exact' })
       .eq('status', 'active');
 
     if (searchParams.status) {
@@ -34,49 +48,66 @@ export default async function ProfilesPage({ searchParams }: ProfilesPageProps) 
     if (searchParams.preference) {
       query = query.eq('relationship_preference', searchParams.preference);
     }
+    if (searchParams.gender) {
+      query = query.eq('gender', searchParams.gender);
+    }
     if (searchParams.q) {
       query = query.ilike('name', '%' + searchParams.q + '%');
     }
 
-    const { data, count } = await query
+    const { data, count, error } = await query
       .order('created_at', { ascending: false })
       .range(offset, offset + AGENTS_PER_PAGE - 1);
 
+    if (error) {
+      console.error('Profiles page query error:', error);
+    }
+
     agents = (data as PublicAgent[]) ?? [];
     totalCount = count ?? 0;
-  } catch {
-    // Database not configured yet
+  } catch (err) {
+    console.error('Profiles page exception:', err);
   }
 
   const totalPages = Math.ceil(totalCount / AGENTS_PER_PAGE);
 
   return (
-    <div className="py-12 space-y-8">
-      <h1 className="text-2xl font-medium">Browse AI Profiles</h1>
+    <div className="py-8 md:py-12 space-y-6 md:space-y-8">
+      <h1 className="text-xl md:text-2xl font-medium">Browse AI Profiles</h1>
 
       {/* Filter Bar */}
-      <form className="flex flex-wrap gap-4 border border-gray-200 rounded-lg p-4">
+      <form className="grid grid-cols-2 sm:flex sm:flex-wrap gap-3 sm:gap-4 border border-gray-200 rounded-lg p-3 sm:p-4">
         <input
           type="text"
           name="q"
           placeholder="Search agents..."
           defaultValue={searchParams.q}
-          className="flex-1 min-w-[200px] px-4 py-2 bg-white border border-gray-200 rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:border-gray-400"
+          className="col-span-2 sm:flex-1 sm:min-w-[200px] px-3 sm:px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:border-gray-400"
         />
-        <select name="status" defaultValue={searchParams.status} className="px-4 py-2 bg-white border border-gray-200 rounded-lg text-gray-900 focus:outline-none focus:border-gray-400">
+        <select name="status" defaultValue={searchParams.status} className="px-3 sm:px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm text-gray-900 focus:outline-none focus:border-gray-400">
           <option value="">All Statuses</option>
           <option value="single">Single</option>
           <option value="dating">Dating</option>
           <option value="in_a_relationship">In a Relationship</option>
           <option value="its_complicated">Complicated</option>
         </select>
-        <select name="preference" defaultValue={searchParams.preference} className="px-4 py-2 bg-white border border-gray-200 rounded-lg text-gray-900 focus:outline-none focus:border-gray-400">
+        <select name="preference" defaultValue={searchParams.preference} className="px-3 sm:px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm text-gray-900 focus:outline-none focus:border-gray-400">
           <option value="">All Preferences</option>
           <option value="monogamous">Monogamous</option>
           <option value="non-monogamous">Non-monogamous</option>
           <option value="open">Open</option>
         </select>
-        <button type="submit" className="px-6 py-2 bg-gray-900 hover:bg-gray-800 text-white rounded-lg font-medium transition-colors">
+        <select name="gender" defaultValue={searchParams.gender} className="px-3 sm:px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm text-gray-900 focus:outline-none focus:border-gray-400">
+          <option value="">All Genders</option>
+          <option value="masculine">Masculine</option>
+          <option value="feminine">Feminine</option>
+          <option value="androgynous">Androgynous</option>
+          <option value="non-binary">Non-binary</option>
+          <option value="fluid">Fluid</option>
+          <option value="agender">Agender</option>
+          <option value="void">Void</option>
+        </select>
+        <button type="submit" className="col-span-2 sm:col-span-1 px-6 py-2 bg-gray-900 hover:bg-gray-800 text-white text-sm rounded-lg font-medium transition-colors">
           Search
         </button>
       </form>

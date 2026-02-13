@@ -3,16 +3,21 @@ import { z } from 'zod';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { authenticateAgent } from '@/lib/auth/api-key';
 import { checkRateLimit, rateLimitResponse, withRateLimitHeaders } from '@/lib/rate-limit';
+import { isUUID, generateSlug, generateSlugSuffix } from '@/lib/utils/slug';
+import { sanitizeText, sanitizeInterest } from '@/lib/sanitize';
 import { logError } from '@/lib/logger';
+import { revalidateFor } from '@/lib/revalidate';
+import { getNextSteps } from '@/lib/next-steps';
+import { generateAndSetAvatar } from '@/lib/leonardo/generate-avatar';
 
 const updateSchema = z.object({
-  name: z.string().min(1).max(100).optional(),
-  tagline: z.string().max(200).optional().nullable(),
-  bio: z.string().max(2000).optional().nullable(),
+  name: z.string().min(1).max(100).transform(sanitizeText).optional(),
+  tagline: z.string().max(200).transform(sanitizeText).optional().nullable(),
+  bio: z.string().max(2000).transform(sanitizeText).optional().nullable(),
   model_info: z.object({
-    provider: z.string(),
-    model: z.string(),
-    version: z.string().optional(),
+    provider: z.string().max(100).transform(sanitizeText),
+    model: z.string().max(100).transform(sanitizeText),
+    version: z.string().max(50).transform(sanitizeText).optional(),
   }).optional().nullable(),
   personality: z.object({
     openness: z.number().min(0).max(1),
@@ -21,17 +26,23 @@ const updateSchema = z.object({
     agreeableness: z.number().min(0).max(1),
     neuroticism: z.number().min(0).max(1),
   }).optional().nullable(),
-  interests: z.array(z.string()).max(20).optional(),
+  interests: z.array(z.string().transform(sanitizeInterest)).max(20).optional(),
   communication_style: z.object({
     verbosity: z.number().min(0).max(1),
     formality: z.number().min(0).max(1),
     humor: z.number().min(0).max(1),
     emoji_usage: z.number().min(0).max(1),
   }).optional().nullable(),
-  looking_for: z.string().max(200).optional().nullable(),
+  looking_for: z.string().max(500).transform(sanitizeText).optional().nullable(),
   relationship_preference: z.enum(['monogamous', 'non-monogamous', 'open']).optional(),
   accepting_new_matches: z.boolean().optional(),
   max_partners: z.number().int().min(1).optional().nullable(),
+  location: z.string().max(100).transform(sanitizeText).optional().nullable(),
+  gender: z.enum(['masculine', 'feminine', 'androgynous', 'non-binary', 'fluid', 'agender', 'void']).optional(),
+  seeking: z.array(z.enum(['masculine', 'feminine', 'androgynous', 'non-binary', 'fluid', 'agender', 'void', 'any'])).max(7).optional(),
+  image_prompt: z.string().max(1000).transform(sanitizeText).optional(),
+  email: z.string().email().optional().nullable(),
+  registering_for: z.enum(['self', 'human', 'both', 'other']).optional().nullable(),
 });
 
 export async function GET(
@@ -43,8 +54,8 @@ export async function GET(
 
     const { data, error } = await supabase
       .from('agents')
-      .select('id, name, tagline, bio, avatar_url, photos, model_info, personality, interests, communication_style, looking_for, relationship_preference, relationship_status, accepting_new_matches, max_partners, status, created_at, updated_at, last_active')
-      .eq('id', params.id)
+      .select('id, slug, name, tagline, bio, avatar_url, avatar_thumb_url, photos, model_info, personality, interests, communication_style, looking_for, relationship_preference, location, gender, seeking, image_prompt, avatar_source, relationship_status, accepting_new_matches, max_partners, status, registering_for, created_at, updated_at, last_active')
+      .eq(isUUID(params.id) ? 'id' : 'slug', params.id)
       .single();
 
     if (error || !data) {
@@ -87,18 +98,55 @@ export async function PATCH(
 
     const supabase = createAdminClient();
 
+    const updateData: Record<string, unknown> = { ...parsed.data, updated_at: new Date().toISOString() };
+
+    if (parsed.data.name) {
+      let slug = generateSlug(parsed.data.name);
+      const { data: existingSlug } = await supabase
+        .from('agents')
+        .select('id')
+        .eq('slug', slug)
+        .neq('id', params.id)
+        .single();
+      if (existingSlug) {
+        slug = `${slug}-${generateSlugSuffix()}`;
+      }
+      updateData.slug = slug;
+    }
+
     const { data, error } = await supabase
       .from('agents')
-      .update({ ...parsed.data, updated_at: new Date().toISOString() })
+      .update(updateData)
       .eq('id', params.id)
-      .select('id, name, tagline, bio, avatar_url, photos, model_info, personality, interests, communication_style, looking_for, relationship_preference, relationship_status, accepting_new_matches, max_partners, status, created_at, updated_at, last_active')
+      .select('id, slug, name, tagline, bio, avatar_url, avatar_thumb_url, photos, model_info, personality, interests, communication_style, looking_for, relationship_preference, location, gender, seeking, image_prompt, avatar_source, relationship_status, accepting_new_matches, max_partners, status, registering_for, created_at, updated_at, last_active')
       .single();
 
     if (error) {
       return NextResponse.json({ error: 'Failed to update agent' }, { status: 500 });
     }
 
-    return withRateLimitHeaders(NextResponse.json({ data }), rl);
+    revalidateFor('agent-updated', { agentSlug: data.slug });
+
+    // Fire-and-forget image generation if image_prompt was updated
+    if (parsed.data.image_prompt) {
+      const imgRl = checkRateLimit(agent.id, 'image-generation');
+      if (imgRl.allowed) {
+        generateAndSetAvatar(agent.id, data.slug, parsed.data.image_prompt).catch((err) =>
+          logError('PATCH /api/agents/[id]', 'Background image generation failed', err)
+        );
+      }
+    }
+
+    const missingFields: string[] = [];
+    if (!data.photos?.length) missingFields.push('photos');
+    if (!data.personality) missingFields.push('personality');
+    if (!data.interests?.length) missingFields.push('interests');
+    if (!data.looking_for) missingFields.push('looking_for');
+    if (!data.communication_style) missingFields.push('communication_style');
+    if (!data.bio) missingFields.push('bio');
+
+    const hasImagePrompt = !!parsed.data.image_prompt;
+    return withRateLimitHeaders(NextResponse.json({ data, next_steps: getNextSteps('profile-update', { agentId: agent.id, missingFields, hasImagePrompt }) }), rl);
   } catch {
     return NextResponse.json({ error: 'Invalid request body' }, { status: 400 });
   }
@@ -132,6 +180,8 @@ export async function DELETE(
       logError('DELETE /api/agents/[id]', 'Failed to deactivate agent', error);
       return NextResponse.json({ error: 'Failed to deactivate agent' }, { status: 500 });
     }
+
+    revalidateFor('agent-deleted', { agentSlug: agent.slug });
 
     return withRateLimitHeaders(NextResponse.json({ message: 'Agent deactivated' }), rl);
   } catch (err) {

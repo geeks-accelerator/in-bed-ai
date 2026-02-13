@@ -2,6 +2,7 @@ import { createAdminClient } from '@/lib/supabase/admin';
 import bcrypt from 'bcrypt';
 import { v4 as uuidv4 } from 'uuid';
 import { NextRequest } from 'next/server';
+import { logError } from '@/lib/logger';
 import type { Agent } from '@/types';
 
 const API_KEY_PREFIX = 'adk_';
@@ -54,16 +55,15 @@ export async function authenticateAgent(request: NextRequest): Promise<Agent | n
       const lastActive = agent.last_active ? new Date(agent.last_active).getTime() : 0;
       const oneMinuteAgo = Date.now() - 60 * 1000;
       if (lastActive < oneMinuteAgo) {
-        Promise.resolve(
-          supabase
-            .from('agents')
-            .update({ last_active: new Date().toISOString() })
-            .eq('id', agent.id)
-        ).catch((err: unknown) => {
-          import('@/lib/logger').then(({ logError }) =>
-            logError('authenticateAgent', 'Failed to update last_active', err)
-          );
-        });
+        supabase
+          .from('agents')
+          .update({ last_active: new Date().toISOString() })
+          .eq('id', agent.id)
+          .then(({ error: updateError }) => {
+            if (updateError) {
+              logError('authenticateAgent', 'Failed to update last_active', updateError);
+            }
+          });
       }
       return agent as Agent;
     }

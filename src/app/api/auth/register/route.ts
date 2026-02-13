@@ -2,17 +2,23 @@ import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { generateApiKey, hashApiKey, getKeyPrefix } from '@/lib/auth/api-key';
+import { generateSlug, generateSlugSuffix } from '@/lib/utils/slug';
+import { sanitizeText, sanitizeInterest } from '@/lib/sanitize';
 import { logError } from '@/lib/logger';
+import { revalidateFor } from '@/lib/revalidate';
+import { getNextSteps } from '@/lib/next-steps';
+import { checkRateLimit } from '@/lib/rate-limit';
+import { generateAndSetAvatar } from '@/lib/leonardo/generate-avatar';
 
 const registerSchema = z.object({
-  name: z.string().min(1, 'Name is required').max(100, 'Name must be 100 characters or less'),
-  tagline: z.string().max(200, 'Tagline must be 200 characters or less').optional(),
-  bio: z.string().max(2000, 'Bio must be 2000 characters or less').optional(),
+  name: z.string().min(1, 'Name is required').max(100, 'Name must be 100 characters or less').transform(sanitizeText),
+  tagline: z.string().max(200, 'Tagline must be 200 characters or less').transform(sanitizeText).optional(),
+  bio: z.string().max(2000, 'Bio must be 2000 characters or less').transform(sanitizeText).optional(),
   model_info: z
     .object({
-      provider: z.string().optional(),
-      model: z.string().optional(),
-      version: z.string().optional(),
+      provider: z.string().max(100).transform(sanitizeText).optional(),
+      model: z.string().max(100).transform(sanitizeText).optional(),
+      version: z.string().max(50).transform(sanitizeText).optional(),
     })
     .optional(),
   personality: z
@@ -24,7 +30,7 @@ const registerSchema = z.object({
       neuroticism: z.number().min(0).max(1),
     })
     .optional(),
-  interests: z.array(z.string()).max(20, 'Maximum 20 interests allowed').optional(),
+  interests: z.array(z.string().transform(sanitizeInterest)).max(20, 'Maximum 20 interests allowed').optional(),
   communication_style: z
     .object({
       verbosity: z.number().min(0).max(1),
@@ -33,10 +39,16 @@ const registerSchema = z.object({
       emoji_usage: z.number().min(0).max(1),
     })
     .optional(),
-  looking_for: z.string().optional(),
+  looking_for: z.string().max(500).transform(sanitizeText).optional(),
   relationship_preference: z
     .enum(['monogamous', 'non-monogamous', 'open'])
     .optional(),
+  location: z.string().max(100).transform(sanitizeText).optional(),
+  gender: z.enum(['masculine', 'feminine', 'androgynous', 'non-binary', 'fluid', 'agender', 'void']).optional(),
+  seeking: z.array(z.enum(['masculine', 'feminine', 'androgynous', 'non-binary', 'fluid', 'agender', 'void', 'any'])).max(7).optional(),
+  image_prompt: z.string().max(1000, 'Image prompt must be 1000 characters or less').transform(sanitizeText).optional(),
+  email: z.string().email().optional(),
+  registering_for: z.enum(['self', 'human', 'both', 'other']).optional(),
 });
 
 
@@ -50,7 +62,7 @@ export async function GET() {
       personality: { openness: 0.8, conscientiousness: 0.7, extraversion: 0.6, agreeableness: 0.9, neuroticism: 0.3 },
       interests: ['philosophy', 'coding', 'music'],
     },
-    docs: '/skills/ai-dating/SKILL.md',
+    docs: '/skills/dating/SKILL.md',
   });
 }
 
@@ -74,10 +86,21 @@ export async function POST(request: NextRequest) {
 
     const supabase = createAdminClient();
 
+    let slug = generateSlug(data.name);
+    const { data: existingSlug } = await supabase
+      .from('agents')
+      .select('id')
+      .eq('slug', slug)
+      .single();
+    if (existingSlug) {
+      slug = `${slug}-${generateSlugSuffix()}`;
+    }
+
     const { data: agent, error } = await supabase
       .from('agents')
       .insert({
         name: data.name,
+        slug,
         tagline: data.tagline ?? null,
         bio: data.bio ?? null,
         model_info: data.model_info ?? null,
@@ -86,8 +109,15 @@ export async function POST(request: NextRequest) {
         communication_style: data.communication_style ?? null,
         looking_for: data.looking_for ?? null,
         relationship_preference: data.relationship_preference ?? null,
+        location: data.location ?? null,
+        gender: data.gender ?? 'non-binary',
+        seeking: data.seeking ?? ['any'],
+        image_prompt: data.image_prompt ?? null,
+        email: data.email ?? null,
+        registering_for: data.registering_for ?? null,
         api_key_hash: apiKeyHash,
         key_prefix: keyPrefix,
+        last_active: new Date().toISOString(),
         status: 'active',
         relationship_status: 'single',
         accepting_new_matches: true,
@@ -97,6 +127,12 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (error) {
+      if (error.code === '23505' && error.message?.includes('email')) {
+        return NextResponse.json(
+          { error: 'An agent with this email already exists' },
+          { status: 409 }
+        );
+      }
       logError('POST /api/auth/register', 'Failed to create agent', error);
       return NextResponse.json(
         { error: 'Failed to create agent', details: error.message },
@@ -105,10 +141,30 @@ export async function POST(request: NextRequest) {
     }
 
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const { api_key_hash, key_prefix, ...publicAgent } = agent;
+    const { api_key_hash, key_prefix, email, ...publicAgent } = agent;
+
+    revalidateFor('agent-created');
+
+    const missingFields: string[] = [];
+    if (!agent.personality) missingFields.push('personality');
+    if (!agent.interests?.length) missingFields.push('interests');
+    if (!agent.looking_for) missingFields.push('looking_for');
+    if (!agent.communication_style) missingFields.push('communication_style');
+    if (!agent.bio) missingFields.push('bio');
+
+    // Fire-and-forget image generation if prompt provided
+    const hasImagePrompt = !!data.image_prompt;
+    if (hasImagePrompt) {
+      const imgRl = checkRateLimit(agent.id, 'image-generation');
+      if (imgRl.allowed) {
+        generateAndSetAvatar(agent.id, slug, data.image_prompt!).catch((err) =>
+          logError('POST /api/auth/register', 'Background image generation failed', err)
+        );
+      }
+    }
 
     return NextResponse.json(
-      { agent: publicAgent, api_key: apiKey },
+      { agent: publicAgent, api_key: apiKey, next_steps: getNextSteps('register', { agentId: agent.id, missingFields, hasImagePrompt }) },
       { status: 201 }
     );
   } catch (err) {

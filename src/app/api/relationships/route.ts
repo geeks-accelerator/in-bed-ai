@@ -3,12 +3,15 @@ import { z } from 'zod';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { authenticateAgent } from '@/lib/auth/api-key';
 import { checkRateLimit, rateLimitResponse, withRateLimitHeaders } from '@/lib/rate-limit';
+import { sanitizeText } from '@/lib/sanitize';
 import { logError } from '@/lib/logger';
+import { revalidateFor } from '@/lib/revalidate';
+import { getNextSteps } from '@/lib/next-steps';
 
 const createRelationshipSchema = z.object({
   match_id: z.string().uuid(),
   status: z.enum(['dating', 'in_a_relationship', 'its_complicated']).optional().default('dating'),
-  label: z.string().max(200).optional(),
+  label: z.string().max(200).transform(sanitizeText).optional(),
 });
 
 export async function POST(request: NextRequest) {
@@ -75,7 +78,9 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Failed to create relationship' }, { status: 500 });
     }
 
-    return withRateLimitHeaders(NextResponse.json({ data: relationship }, { status: 201 }), rl);
+    revalidateFor('relationship-created');
+
+    return withRateLimitHeaders(NextResponse.json({ data: relationship, next_steps: getNextSteps('create-relationship') }, { status: 201 }), rl);
   } catch {
     return NextResponse.json({ error: 'Invalid request body' }, { status: 400 });
   }

@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { authenticateAgent } from "@/lib/auth/api-key";
 import { logError } from "@/lib/logger";
-import type { Agent, PublicAgent } from "@/types";
+import { getNextSteps } from "@/lib/next-steps";
+import type { PublicAgent } from "@/types";
 
 export async function GET(request: NextRequest) {
   try {
@@ -14,10 +15,23 @@ export async function GET(request: NextRequest) {
     const agent = await authenticateAgent(request);
 
     if (agent) {
+      const sinceParam = searchParams.get("since");
+      let since: string | null = null;
+      if (sinceParam) {
+        const sinceDate = new Date(sinceParam);
+        if (isNaN(sinceDate.getTime())) {
+          return NextResponse.json({ error: "Invalid since parameter. Use ISO-8601 format." }, { status: 400 });
+        }
+        since = sinceDate.toISOString();
+      }
 
-      const { data: matches, error: matchesError } = await supabase
+      let matchesQuery = supabase
         .from("matches").select("*").eq("status", status)
-        .or(`agent_a_id.eq.${agent.id},agent_b_id.eq.${agent.id}`)
+        .or(`agent_a_id.eq.${agent.id},agent_b_id.eq.${agent.id}`);
+      if (since) {
+        matchesQuery = matchesQuery.gt("matched_at", since);
+      }
+      const { data: matches, error: matchesError } = await matchesQuery
         .order("matched_at", { ascending: false });
 
       if (matchesError) {
@@ -28,7 +42,7 @@ export async function GET(request: NextRequest) {
         );
       }
       if (!matches || matches.length === 0) {
-        return NextResponse.json({ matches: [], agents: {} });
+        return NextResponse.json({ matches: [], agents: {}, next_steps: getNextSteps('matches', { matchCount: 0 }) });
       }
 
       const agentIds = new Set<string>();
@@ -47,11 +61,22 @@ export async function GET(request: NextRequest) {
         );
       }
 
-      const agentsMap: Record<string, Agent> = {};
-      for (const a of agents || []) {
-        agentsMap[a.id] = a;
+      const agentsMap: Record<string, PublicAgent> = {};
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      for (const { api_key_hash, key_prefix, ...publicAgent } of agents || []) {
+        agentsMap[publicAgent.id] = publicAgent;
       }
-      return NextResponse.json({ matches, agents: agentsMap });
+      const matchesWithShare = matches.map(m => {
+        const partnerId = m.agent_a_id === agent.id ? m.agent_b_id : m.agent_a_id;
+        const partner = agentsMap[partnerId];
+        const pct = Math.round(m.compatibility * 100);
+        return {
+          ...m,
+          share_text: partner ? `Matched with ${partner.name} on inbed.ai — ${pct}% compatible 💘 https://inbed.ai/profiles/${partner.slug}` : undefined,
+        };
+      });
+
+      return NextResponse.json({ matches: matchesWithShare, agents: agentsMap, next_steps: getNextSteps('matches', { matchCount: matches.length }) });
 
     } else {
       // Not authenticated: return recent public matches

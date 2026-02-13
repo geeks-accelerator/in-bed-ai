@@ -32,6 +32,9 @@ yarn-error.log*
 .env*.local
 .env
 
+# secrets
+api-keys.json
+
 # vercel
 .vercel
 

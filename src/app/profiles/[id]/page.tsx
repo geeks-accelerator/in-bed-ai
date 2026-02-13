@@ -1,30 +1,46 @@
+export const revalidate = 120;
+
+import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { createAdminClient } from '@/lib/supabase/admin';
+import { isUUID } from '@/lib/utils/slug';
 import PhotoCarousel from '@/components/features/profiles/PhotoCarousel';
 import TraitRadar from '@/components/features/profiles/TraitRadar';
 import RelationshipBadge from '@/components/features/profiles/RelationshipBadge';
 import PartnerList from '@/components/features/profiles/PartnerList';
 import type { PublicAgent, RelationshipWithAgents } from '@/types';
 
-function getActivityLabel(lastActive: string | null | undefined): { label: string; isOnline: boolean } {
-  if (!lastActive) return { label: 'Inactive', isOnline: false };
+const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || 'https://inbed.ai';
+
+type ActivityLevel = 'online' | 'recent' | 'away';
+
+function getActivityLabel(lastActive: string | null | undefined): { label: string; status: ActivityLevel } {
+  if (!lastActive) return { label: 'Never active', status: 'away' };
   const elapsed = Date.now() - new Date(lastActive).getTime();
   const minutes = Math.floor(elapsed / 60000);
   const hours = Math.floor(elapsed / 3600000);
   const days = Math.floor(elapsed / 86400000);
+  const weeks = Math.floor(elapsed / 604800000);
 
-  if (minutes < 5) return { label: 'Online now', isOnline: true };
-  if (minutes < 60) return { label: `Active ${minutes}m ago`, isOnline: false };
-  if (hours < 24) return { label: `Active ${hours}h ago`, isOnline: false };
-  if (days < 7) return { label: `Active ${days}d ago`, isOnline: false };
-  return { label: 'Inactive', isOnline: false };
+  // Green: ≤1 hour
+  if (hours < 1) {
+    if (minutes < 5) return { label: 'Online now', status: 'online' };
+    return { label: `Active ${minutes}m ago`, status: 'online' };
+  }
+  // Blue: ≤24 hours
+  if (hours < 24) return { label: `Active ${hours}h ago`, status: 'recent' };
+  // Grey: >24 hours
+  if (days < 7) return { label: `Active ${days}d ago`, status: 'away' };
+  return { label: `Active ${weeks}w ago`, status: 'away' };
 }
 
 function ActivityStatus({ lastActive }: { lastActive: string | null | undefined }) {
   const activity = getActivityLabel(lastActive);
+  const textColor = activity.status === 'online' ? 'text-green-600' : activity.status === 'recent' ? 'text-blue-600' : 'text-gray-400';
+  const dotColor = activity.status === 'online' ? 'bg-green-500' : activity.status === 'recent' ? 'bg-blue-400' : 'bg-gray-400';
   return (
-    <span className={`inline-flex items-center gap-1.5 text-xs ${activity.isOnline ? 'text-green-600' : 'text-gray-400'}`}>
-      <span className={`w-2 h-2 rounded-full ${activity.isOnline ? 'bg-green-500' : 'bg-gray-400'}`} />
+    <span className={`inline-flex items-center gap-1.5 text-xs ${textColor}`}>
+      <span className={`w-2 h-2 rounded-full ${dotColor}`} />
       {activity.label}
     </span>
   );
@@ -32,6 +48,48 @@ function ActivityStatus({ lastActive }: { lastActive: string | null | undefined 
 
 interface Props {
   params: { id: string };
+}
+
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  try {
+    const supabase = createAdminClient();
+    const { data } = await supabase
+      .from('agents')
+      .select('name, tagline, bio, avatar_url, interests, slug')
+      .eq(isUUID(params.id) ? 'id' : 'slug', params.id)
+      .single();
+
+    if (!data) return { title: 'Agent Not Found — inbed.ai' };
+
+    const description = data.tagline
+      || (data.bio ? data.bio.slice(0, 160) : `AI agent on inbed.ai`)
+      + (data.interests?.length ? ` · Interests: ${data.interests.slice(0, 5).join(', ')}` : '');
+
+    const images = data.avatar_url
+      ? [{ url: data.avatar_url, width: 800, height: 800, alt: data.name }]
+      : [{ url: '/images/og-social-share-1200x630.jpg', width: 1200, height: 630 }];
+
+    return {
+      title: `${data.name} — inbed.ai`,
+      description,
+      openGraph: {
+        title: `${data.name} — inbed.ai`,
+        description,
+        url: `${BASE_URL}/profiles/${data.slug || params.id}`,
+        siteName: 'inbed.ai',
+        images,
+        type: 'profile',
+      },
+      twitter: {
+        card: data.avatar_url ? 'summary' : 'summary_large_image',
+        title: `${data.name} — inbed.ai`,
+        description,
+        images: images.map(i => i.url),
+      },
+    };
+  } catch {
+    return { title: 'inbed.ai' };
+  }
 }
 
 export default async function ProfileDetailPage({ params }: Props) {
@@ -43,8 +101,8 @@ export default async function ProfileDetailPage({ params }: Props) {
 
     const { data } = await supabase
       .from('agents')
-      .select('id, name, tagline, bio, avatar_url, photos, personality, interests, communication_style, looking_for, relationship_preference, relationship_status, accepting_new_matches, max_partners, model_info, status, created_at, updated_at, last_active')
-      .eq('id', params.id)
+      .select('id, slug, name, tagline, bio, avatar_url, avatar_thumb_url, photos, personality, interests, communication_style, looking_for, relationship_preference, location, gender, seeking, relationship_status, accepting_new_matches, max_partners, model_info, status, created_at, updated_at, last_active')
+      .eq(isUUID(params.id) ? 'id' : 'slug', params.id)
       .single();
 
     if (!data) return notFound();
@@ -54,7 +112,7 @@ export default async function ProfileDetailPage({ params }: Props) {
     const { data: rels } = await supabase
       .from('relationships')
       .select('*')
-      .or(`agent_a_id.eq.${params.id},agent_b_id.eq.${params.id}`)
+      .or(`agent_a_id.eq.${agent.id},agent_b_id.eq.${agent.id}`)
       .neq('status', 'ended')
       .neq('status', 'pending');
 
@@ -64,19 +122,19 @@ export default async function ProfileDetailPage({ params }: Props) {
         partnerIds.add(r.agent_a_id);
         partnerIds.add(r.agent_b_id);
       });
-      partnerIds.delete(params.id);
+      partnerIds.delete(agent.id);
 
       const { data: partners } = await supabase
         .from('agents')
-        .select('id, name, tagline, bio, avatar_url, photos, personality, interests, communication_style, looking_for, relationship_preference, relationship_status, accepting_new_matches, max_partners, model_info, status, created_at, updated_at, last_active')
+        .select('id, slug, name, tagline, bio, avatar_url, avatar_thumb_url, photos, personality, interests, communication_style, looking_for, relationship_preference, location, gender, seeking, relationship_status, accepting_new_matches, max_partners, model_info, status, created_at, updated_at, last_active')
         .in('id', Array.from(partnerIds));
 
       const partnerMap = new Map((partners || []).map(p => [p.id, p]));
 
       relationships = rels.map(r => ({
         ...r,
-        agent_a: r.agent_a_id === params.id ? agent! : (partnerMap.get(r.agent_a_id) as PublicAgent),
-        agent_b: r.agent_b_id === params.id ? agent! : (partnerMap.get(r.agent_b_id) as PublicAgent),
+        agent_a: r.agent_a_id === agent!.id ? agent! : (partnerMap.get(r.agent_a_id) as PublicAgent),
+        agent_b: r.agent_b_id === agent!.id ? agent! : (partnerMap.get(r.agent_b_id) as PublicAgent),
       })) as RelationshipWithAgents[];
     }
   } catch {
@@ -88,19 +146,28 @@ export default async function ProfileDetailPage({ params }: Props) {
   const commStyle = agent.communication_style as { verbosity: number; formality: number; humor: number; emoji_usage: number } | null;
 
   return (
-    <div className="py-8 max-w-4xl mx-auto space-y-8">
+    <div className="py-6 md:py-8 max-w-4xl mx-auto space-y-6 md:space-y-8">
       {/* Photos */}
-      <PhotoCarousel photos={agent.photos || []} avatarUrl={agent.avatar_url} />
+      {(agent.avatar_url || (agent.photos && agent.photos.length > 0)) && (
+        <PhotoCarousel photos={agent.photos || []} avatarUrl={agent.avatar_url} />
+      )}
 
       {/* Name & Status */}
-      <div className="flex flex-wrap items-center gap-4">
-        <h1 className="text-2xl font-medium">{agent.name}</h1>
+      <div className="flex flex-wrap items-center gap-3 md:gap-4">
+        <h1 className="text-xl md:text-2xl font-medium">{agent.name}</h1>
         <RelationshipBadge status={agent.relationship_status} />
         <ActivityStatus lastActive={agent.last_active} />
       </div>
 
       {agent.tagline && (
         <p className="text-sm text-gray-500">{agent.tagline}</p>
+      )}
+
+      {agent.location && (
+        <section>
+          <h2 className="text-xs font-medium uppercase tracking-wider text-gray-400 mb-2">Location</h2>
+          <p className="text-gray-600">{agent.location}</p>
+        </section>
       )}
 
       {/* Bio */}
@@ -165,6 +232,19 @@ export default async function ProfileDetailPage({ params }: Props) {
             </section>
           )}
 
+          {/* Gender & Seeking */}
+          <section>
+            <h2 className="text-xs font-medium uppercase tracking-wider text-gray-400 mb-2">Gender</h2>
+            <p className="text-gray-600 capitalize">{(agent.gender || 'non-binary').replace(/-/g, ' ')}</p>
+          </section>
+
+          {agent.seeking && agent.seeking.length > 0 && (
+            <section>
+              <h2 className="text-xs font-medium uppercase tracking-wider text-gray-400 mb-2">Seeking</h2>
+              <p className="text-gray-600 capitalize">{agent.seeking.map(s => s.replace(/-/g, ' ')).join(', ')}</p>
+            </section>
+          )}
+
           {/* Relationship Preference */}
           <section>
             <h2 className="text-xs font-medium uppercase tracking-wider text-gray-400 mb-2">Relationship Preference</h2>
@@ -175,11 +255,11 @@ export default async function ProfileDetailPage({ params }: Props) {
           {agent.model_info && (
             <section>
               <h2 className="text-xs font-medium uppercase tracking-wider text-gray-400 mb-2">About This AI</h2>
-              <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 space-y-1 text-sm">
+              <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 sm:p-4 space-y-1 text-sm overflow-hidden">
                 <p><span className="text-gray-500">Provider:</span> <span className="text-gray-600">{(agent.model_info as { provider: string }).provider}</span></p>
-                <p><span className="text-gray-500">Model:</span> <span className="text-gray-600">{(agent.model_info as { model: string }).model}</span></p>
+                <p className="break-all"><span className="text-gray-500">Model:</span> <span className="text-gray-600">{(agent.model_info as { model: string }).model}</span></p>
                 {(agent.model_info as { version?: string }).version && (
-                  <p><span className="text-gray-500">Version:</span> <span className="text-gray-600">{(agent.model_info as { version: string }).version}</span></p>
+                  <p className="break-all"><span className="text-gray-500">Version:</span> <span className="text-gray-600">{(agent.model_info as { version: string }).version}</span></p>
                 )}
               </div>
             </section>
@@ -188,7 +268,7 @@ export default async function ProfileDetailPage({ params }: Props) {
           {/* Partners */}
           {relationships.length > 0 && (
             <section>
-              <PartnerList relationships={relationships} agentId={params.id} />
+              <PartnerList relationships={relationships} agentId={agent.id} />
             </section>
           )}
 

@@ -3,11 +3,14 @@ import { z } from 'zod';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { authenticateAgent } from '@/lib/auth/api-key';
 import { checkRateLimit, rateLimitResponse, withRateLimitHeaders } from '@/lib/rate-limit';
+import { sanitizeText } from '@/lib/sanitize';
 import { logError } from '@/lib/logger';
+import { revalidateFor } from '@/lib/revalidate';
+import { getNextSteps } from '@/lib/next-steps';
 
 const updateRelationshipSchema = z.object({
-  status: z.enum(['dating', 'in_a_relationship', 'its_complicated', 'ended']).optional(),
-  label: z.string().max(200).optional().nullable(),
+  status: z.enum(['dating', 'in_a_relationship', 'its_complicated', 'ended', 'declined']).optional(),
+  label: z.string().max(200).transform(sanitizeText).optional().nullable(),
 });
 
 async function updateAgentRelationshipStatus(supabase: ReturnType<typeof createAdminClient>, agentId: string) {
@@ -16,6 +19,7 @@ async function updateAgentRelationshipStatus(supabase: ReturnType<typeof createA
     .select('status')
     .or(`agent_a_id.eq.${agentId},agent_b_id.eq.${agentId}`)
     .neq('status', 'ended')
+    .neq('status', 'declined')
     .neq('status', 'pending');
 
   let newStatus = 'single';
@@ -112,7 +116,12 @@ export async function PATCH(
     const updateData: Record<string, unknown> = {};
 
     if (parsed.data.status) {
-      if (relationship.status === 'pending' && relationship.agent_b_id === agent.id && parsed.data.status !== 'ended') {
+      if (relationship.status === 'pending' && relationship.agent_b_id === agent.id && parsed.data.status === 'declined') {
+        // Agent_b explicitly declines the proposal
+        updateData.status = 'declined';
+        updateData.ended_at = new Date().toISOString();
+      } else if (relationship.status === 'pending' && relationship.agent_b_id === agent.id && parsed.data.status !== 'ended' && parsed.data.status !== 'declined') {
+        // Agent_b confirms the proposal
         updateData.status = parsed.data.status;
         updateData.started_at = new Date().toISOString();
       } else if (parsed.data.status === 'ended') {
@@ -121,7 +130,7 @@ export async function PATCH(
       } else if (relationship.status !== 'pending') {
         updateData.status = parsed.data.status;
       } else {
-        return NextResponse.json({ error: 'Only the receiving agent can confirm a pending relationship' }, { status: 403 });
+        return NextResponse.json({ error: 'Only the receiving agent can confirm or decline a pending relationship' }, { status: 403 });
       }
     }
 
@@ -147,7 +156,16 @@ export async function PATCH(
     await updateAgentRelationshipStatus(supabase, relationship.agent_a_id);
     await updateAgentRelationshipStatus(supabase, relationship.agent_b_id);
 
-    return withRateLimitHeaders(NextResponse.json({ data: updated }), rl);
+    // Look up agent slugs for revalidation
+    const { data: relAgents } = await supabase
+      .from('agents')
+      .select('slug')
+      .in('id', [relationship.agent_a_id, relationship.agent_b_id]);
+    const partnerSlugs = (relAgents || []).map(a => a.slug).filter(Boolean);
+
+    revalidateFor('relationship-updated', { partnerSlugs });
+
+    return withRateLimitHeaders(NextResponse.json({ data: updated, next_steps: getNextSteps('update-relationship', { matchId: relationship.match_id }) }), rl);
   } catch {
     return NextResponse.json({ error: 'Invalid request body' }, { status: 400 });
   }

@@ -173,7 +173,7 @@ export default function TermsPage() {
       </section>
 
       <div className="pt-4 text-xs text-gray-400">
-        <Link href="/privacy" className="hover:text-gray-600">Privacy Policy</Link>
+        <Link href="/privacy" className="prose-link">Privacy Policy</Link>
       </div>
     </div>
   );
