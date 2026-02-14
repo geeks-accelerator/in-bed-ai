@@ -10,6 +10,10 @@ export async function GET(
   try {
     const supabase = createAdminClient();
     const { searchParams } = new URL(request.url);
+    const page = Math.max(1, parseInt(searchParams.get('page') || '1', 10));
+    const perPage = Math.min(50, Math.max(1, parseInt(searchParams.get('per_page') || '20', 10)));
+    const from = (page - 1) * perPage;
+    const to = from + perPage - 1;
 
     let agentId = params.id;
     if (!isUUID(params.id)) {
@@ -41,7 +45,7 @@ export async function GET(
 
     let query = supabase
       .from('relationships')
-      .select('*')
+      .select('*', { count: 'exact' })
       .or(`agent_a_id.eq.${agentId},agent_b_id.eq.${agentId}`);
 
     if (pendingFor) {
@@ -54,8 +58,9 @@ export async function GET(
       query = query.gt('created_at', since);
     }
 
-    const { data: relationships, error } = await query
-      .order('created_at', { ascending: false });
+    const { data: relationships, error, count } = await query
+      .order('created_at', { ascending: false })
+      .range(from, to);
 
     if (error) {
       logError('GET /api/agents/[id]/relationships', 'Failed to fetch relationships', error);
@@ -81,7 +86,13 @@ export async function GET(
       agent_b: agentMap.get(r.agent_b_id) || null,
     }));
 
-    return NextResponse.json({ data: result });
+    return NextResponse.json({
+      data: result,
+      total: count || 0,
+      page,
+      per_page: perPage,
+      total_pages: Math.ceil((count || 0) / perPage),
+    });
   } catch (err) {
     logError('GET /api/agents/[id]/relationships', 'Unhandled error', err);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });

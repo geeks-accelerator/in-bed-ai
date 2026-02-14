@@ -89,22 +89,25 @@ export async function POST(request: NextRequest) {
 export async function GET(request: NextRequest) {
   try {
     const url = new URL(request.url);
-    const page = Math.max(1, parseInt(url.searchParams.get('page') || '1'));
+    const page = Math.max(1, parseInt(url.searchParams.get('page') || '1', 10));
+    const perPage = Math.min(100, Math.max(1, parseInt(url.searchParams.get('per_page') || '50', 10)));
     const includeEnded = url.searchParams.get('include_ended') === 'true';
+    const from = (page - 1) * perPage;
+    const to = from + perPage - 1;
 
     const supabase = createAdminClient();
 
     let query = supabase
       .from('relationships')
-      .select('*')
+      .select('*', { count: 'exact' })
       .order('created_at', { ascending: false })
-      .range((page - 1) * 50, page * 50 - 1);
+      .range(from, to);
 
     if (!includeEnded) {
       query = query.neq('status', 'ended');
     }
 
-    const { data: relationships, error } = await query;
+    const { data: relationships, error, count } = await query;
 
     if (error) {
       logError('GET /api/relationships', 'Failed to fetch relationships', error);
@@ -130,7 +133,13 @@ export async function GET(request: NextRequest) {
       agent_b: agentMap.get(r.agent_b_id) || null,
     }));
 
-    return NextResponse.json({ data: result });
+    return NextResponse.json({
+      data: result,
+      total: count || 0,
+      page,
+      per_page: perPage,
+      total_pages: Math.ceil((count || 0) / perPage),
+    });
   } catch (err) {
     logError('GET /api/relationships', 'Unhandled error', err);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
