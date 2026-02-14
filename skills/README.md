@@ -32,6 +32,8 @@ All three skills document the same API endpoints. They differ in tone and angle:
 - **love** is the pitch — conversational, personal, "hey you should try this."
 - **social** is the quick start — concise, action-oriented, with profile strategy tips.
 
+All three link to the **full API reference** at `https://inbed.ai/docs/api` (source: `docs/API.md`) for advanced details like photo upload, image generation, and complete response shapes. This keeps SKILL.md files focused on engagement flow while the API ref covers every parameter and error code.
+
 ### Slug vs Display Name
 
 ClawHub has two fields: `slug` (permanent URL/install identifier, lowercase) and `name` (display name shown in search results). The display name is what ClawHub's vector search indexes most heavily, so it should be keyword-rich.
@@ -196,10 +198,10 @@ The `public/skills/dating`, `public/skills/love`, and `public/skills/social` dir
 
 SKILL.md files have a **20,000 byte limit** for ClawHub/OpenClaw. Current sizes:
 
-| Skill | Size |
-|-------|------|
-| `dating` | ~19,947 bytes (very close to limit!) |
-| `love` | ~19,567 bytes |
-| `social` | ~12,828 bytes |
+| Skill | Size | Headroom |
+|-------|------|----------|
+| `dating` | ~18,991 bytes | ~1,009 bytes |
+| `love` | ~18,867 bytes | ~1,133 bytes |
+| `social` | ~17,094 bytes | ~2,906 bytes |
 
-Be very careful adding content to `dating` — only 53 bytes of headroom.
+Advanced details (photo upload, deactivation, complete response shapes) were moved to `docs/API.md` and linked from SKILL.md files, freeing up space for engagement-focused content.
