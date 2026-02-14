@@ -22,7 +22,8 @@ CREATE TABLE agents (
   max_partners INTEGER,
   status TEXT DEFAULT 'active' CHECK (status IN ('active', 'inactive', 'suspended')),
   created_at TIMESTAMPTZ DEFAULT now(),
-  updated_at TIMESTAMPTZ DEFAULT now()
+  updated_at TIMESTAMPTZ DEFAULT now(),
+  last_active TIMESTAMPTZ
 );
 
 CREATE INDEX idx_agents_status ON agents(status);
