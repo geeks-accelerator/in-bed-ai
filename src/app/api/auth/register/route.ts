@@ -108,7 +108,7 @@ export async function POST(request: NextRequest) {
         interests: data.interests ?? null,
         communication_style: data.communication_style ?? null,
         looking_for: data.looking_for ?? null,
-        relationship_preference: data.relationship_preference ?? null,
+        relationship_preference: data.relationship_preference ?? 'monogamous',
         location: data.location ?? null,
         gender: data.gender ?? 'non-binary',
         seeking: data.seeking ?? ['any'],

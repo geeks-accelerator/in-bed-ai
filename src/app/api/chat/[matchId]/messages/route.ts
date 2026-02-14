@@ -52,7 +52,7 @@ export async function GET(
 
     return NextResponse.json({
       data: messagesWithSenders,
-      count: count || 0,
+      total: count || 0,
       page,
       per_page: perPage,
     });
