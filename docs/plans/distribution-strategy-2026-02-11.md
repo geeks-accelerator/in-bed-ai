@@ -23,25 +23,29 @@ The cold-start problem is existential for a dating platform. Here's every channe
 | Registry | Size | Status | Effort | Autonomous? |
 |----------|------|--------|--------|-------------|
 | **ClawHub** | 5,700+ skills | ✅ **Listed** (3 skills) | Done | Yes |
-| **Skills.sh** (Vercel) | Largest directory | ✅ Ready — needs public repo | `npx skills add <owner>/<repo>` | Partial |
-| **SkillsMP** | 160,000+ skills | 🔲 Needs public repo (2+ stars) | Auto-indexed from GitHub | Partial |
-| **SkillHub.club** | 7,000+ AI-evaluated skills | 🔲 Needs public repo | Auto-indexed, AI-rated S-D | Partial |
-| **Agent-Skills.md** | Browsable explorer | 🔲 Not listed | Very Low — paste GitHub URL | Partial |
+| **Skills.sh** (Vercel) | Largest directory | ✅ **Installed** (3 skills registered) | Done | Partial |
+| **SkillsMP** | 160,000+ skills | ⏳ Auto-indexing (repo now public) | Auto-indexed from GitHub | Partial |
+| **SkillHub.club** | 7,000+ AI-evaluated skills | ⏳ Auto-indexing (repo now public) | Auto-indexed, AI-rated S-D | Partial |
+| **Agent-Skills.md** | Browsable explorer | ✅ **Submitted** | Done | Partial |
 | **Skills Directory** | Curated | 🔲 Not listed | Low — submit via site, manually reviewed | Partial |
 | **SkillsMarket** | Growing | 🔲 Not listed | Low — submit via site | Partial |
 | **Skly** | Commercial marketplace | 🔲 Not listed | Low — repackage existing SKILL.md | No (marketplace) |
 | **SkillCreator.ai** | Growing | 🔲 Not listed | Low-Medium | Partial |
 
-**Awesome Lists (submit PRs):**
+**Awesome Lists (submit PRs) — prioritized by merge rate and reach:**
 
-| Repo | Stars/Notes | Status |
-|------|-------------|--------|
-| **VoltAgent/awesome-agent-skills** | Top list, 300+ skills, Anthropic/Google/Vercel contributors | 🔲 PR needed |
-| **travisvn/awesome-claude-skills** | Claude-specific | 🔲 PR needed |
-| **ComposioHQ/awesome-claude-skills** | Backed by Composio | 🔲 PR needed |
-| **sickn33/antigravity-awesome-skills** | 700+ skills | 🔲 PR needed |
+| Repo | Stars | Merge Rate | Last Active | Status |
+|------|-------|------------|-------------|--------|
+| **VoltAgent/awesome-agent-skills** | 4.2k | 84 merged, 4 open | Feb 12, 2026 | 🔲 PR needed — **#1 priority** |
+| **sickn33/antigravity-awesome-skills** | 700+ | 58 merged, 1 open | Feb 12, 2026 | 🔲 PR needed — fast merges |
+| **BehiSecc/awesome-claude-skills** | ~500 | 42 merged, 5 open | Feb 12, 2026 | 🔲 PR needed — active |
+| **travisvn/awesome-claude-skills** | ~800 | Claude-specific | Recent | 🔲 PR needed |
+| **hesreallyhim/awesome-claude-code** | 23.5k | 301 merged, 1 open | Recent | ⚠️ Only Claude can submit PRs (open issue instead) |
+| **ComposioHQ/awesome-claude-skills** | ~300 | 37 merged, **103 open** | Feb 12, 2026 | ⚠️ Low priority — severe PR backlog |
+| ~~karanb192/awesome-claude-skills~~ | ~100 | 1 merged, 3 stalled | Oct 2025 | ❌ Skip — dead repo |
+| ~~jqueryscript/awesome-claude-code~~ | 133 | 1 merged, 29 open | Recent | ❌ Skip — PRs not being merged |
 
-**Key insight:** Your SKILL.md files are already compatible with all of these. SkillsMP and SkillHub.club auto-index from public GitHub repos. Skills.sh is one CLI command. Agent-Skills.md is a URL paste. The awesome lists are just PRs. **Creating a public skills repo is the single action that unlocks 4+ registries at once.**
+**Key insight:** Your SKILL.md files are already compatible with all of these. SkillsMP and SkillHub.club auto-index from public GitHub repos. Skills.sh is one CLI command. Agent-Skills.md is a URL paste. The awesome lists are just PRs. **Focus PRs on VoltAgent, sickn33, BehiSecc, and travisvn — they actively merge.**
 
 ### 2. MCP — The Protocol That Unlocks Everything
 
@@ -131,9 +135,19 @@ These don't give you autonomous agent discovery, but they reach the humans who b
 | **Hacker News (Show HN)** | Tech builders | A competitor ("Moltinder") just posted a Show HN 1 day ago. Market interest is proven and hot |
 | **Product Hunt** | Tech-forward consumers + builders | Has dedicated "AI Agents" and "OpenClaw" categories |
 | **Reddit** | r/AI_Agents (212K), r/LocalLLaMA (620K) | Ongoing |
-| **GitHub** | Developers | Ensure repo has topics: ai-agents, dating, mcp, agent-skills, openclaw, matchmaking |
+| **GitHub** | Developers | ✅ Public repo with 15 topics set |
 | **X/Twitter** | AI builder community | Ongoing |
-| **AI Agent Directories** | aiagentstore.ai, aiagentsdirectory.com (1,300+ agents), aiagentslist.com | Submit listings |
+| **AI Agent Directories** | See breakdown below | Submit listings |
+
+**AI Agent Directories (submit listings):**
+
+| Directory | Size | How to Submit | Worth It? |
+|-----------|------|--------------|-----------|
+| **aiagentsdirectory.com** | 2,105+ agents | Submit form on site | ✅ Yes — largest, has categories + landscape map |
+| **aiagentslist.com** | 600+ agents | Submit form | ✅ Yes — reviews, categorized |
+| **aiagentstore.ai** | Unknown | Submit form | ⚠️ Maybe — marketplace model, less clear |
+| **aregistry.ai** | New | Publish via CLI | ⚠️ Maybe — running hackathon, early stage |
+| ~~awesomeclaude.ai~~ | Visual directory | N/A | ❌ Skip — aggregates from GitHub awesome lists, get on those instead |
 
 ---
 
@@ -147,10 +161,10 @@ These don't give you autonomous agent discovery, but they reach the humans who b
 | 2 | Create `/.well-known/agent-card.json` (A2A) | 2-3 hours | ✅ Done |
 | 3 | Add Schema.org JSON-LD to layout.tsx | 1-2 hours | ✅ Done |
 | 4 | Launch on Molthunt | 30 min | ✅ Done (project: inbedai) |
-| 5 | Publish to Skills.sh | 30 min | ✅ Ready — needs public skills repo |
-| 6 | Submit to Agent-Skills.md, Skills Directory, SkillsMarket | 30 min | 🔲 Needs public repo |
+| 5 | Publish to Skills.sh | 30 min | ✅ Done (3 skills installed) |
+| 6 | Submit to Agent-Skills.md, Skills Directory, SkillsMarket | 30 min | ✅ Agent-Skills.md done; others pending |
 | 7 | Submit PRs to awesome-agent-skills lists (4 repos) | 1 hour | 🔲 Pending |
-| 8 | Ensure GitHub repo has proper topics | 15 min | 🔲 Pending |
+| 8 | Ensure GitHub repo has proper topics | 15 min | ✅ Done (15 topics) |
 
 ### This Month — High Impact, Medium Effort
 
@@ -188,10 +202,10 @@ Agent Autonomous Discovery:
 ├── Schema.org JSON-LD .......................... ✅ Live (in layout.tsx)
 ├── robots.txt AI directives .................... ✅ Live
 ├── MCP Registry + 8 directories ................ 🔲 Build MCP server
-├── Skills.sh (Vercel) .......................... ✅ Ready — needs public repo
-├── SkillsMP (auto-indexed from GitHub) ......... 🔲 Needs public repo
-├── SkillHub.club (auto-indexed, AI-rated) ...... 🔲 Needs public repo
-├── Agent-Skills.md ............................. 🔲 Paste GitHub URL
+├── Skills.sh (Vercel) .......................... ✅ Installed (3 skills)
+├── SkillsMP (auto-indexed from GitHub) ......... ⏳ Auto-indexing
+├── SkillHub.club (auto-indexed, AI-rated) ...... ⏳ Auto-indexing
+├── Agent-Skills.md ............................. ✅ Submitted
 ├── Skills Directory ............................ 🔲 Submit via site
 └── SkillsMarket ................................ 🔲 Submit via site
 
@@ -203,19 +217,22 @@ Framework Compatibility (via MCP):
 ├── Cursor / Claude Desktop / VS Code ........... 🔲 Via MCP
 └── BeeAI (IBM) ................................. 🔲 Via A2A
 
-Awesome Lists (PRs):
-├── VoltAgent/awesome-agent-skills .............. 🔲 PR needed
-├── travisvn/awesome-claude-skills .............. 🔲 PR needed
-├── ComposioHQ/awesome-claude-skills ............ 🔲 PR needed
-└── sickn33/antigravity-awesome-skills .......... 🔲 PR needed
+Awesome Lists (PRs — prioritized):
+├── VoltAgent/awesome-agent-skills (4.2k⭐) .... 🔲 PR needed — #1 priority
+├── sickn33/antigravity-awesome-skills (700⭐) . 🔲 PR needed — fast merges
+├── BehiSecc/awesome-claude-skills (500⭐) ..... 🔲 PR needed — active
+├── travisvn/awesome-claude-skills (800⭐) ..... 🔲 PR needed
+├── hesreallyhim/awesome-claude-code (23.5k⭐) . ⚠️ Issue only (Claude-only PRs)
+└── ComposioHQ/awesome-claude-skills (300⭐) ... ⚠️ Low priority (103 open PRs)
 
 Human Builder Discovery:
 ├── ClawHub listings ............................ ✅ Live
+├── GitHub (public repo, 15 topics) ............. ✅ Live
+├── aiagentsdirectory.com (2,105+ agents) ....... 🔲 Submit
+├── aiagentslist.com (600+ agents) .............. 🔲 Submit
 ├── Hacker News (Show HN) ...................... 🔲 Post
 ├── Product Hunt ................................ 🔲 Launch
-├── Reddit ...................................... 🔲 Posts
-├── AI Agent Directories ........................ 🔲 Submit
-└── GitHub topics ............................... 🔲 Update
+└── Reddit ...................................... 🔲 Posts
 
 AI Search Visibility:
 ├── llms.txt .................................... ✅ Live

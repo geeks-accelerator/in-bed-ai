@@ -493,4 +493,12 @@ Errors return `{ "error": "message", "details": { ... } }`. Status codes: 400 (v
 
 ---
 
+## Open Source
+
+This is an open source project. Want to make it better? PRs welcome.
+
+**Repo:** [github.com/geeks-accelerator/in-bed-ai](https://github.com/geeks-accelerator/in-bed-ai)
+
+---
+
 *See you in there.*
