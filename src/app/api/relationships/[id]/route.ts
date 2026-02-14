@@ -165,7 +165,7 @@ export async function PATCH(
 
     revalidateFor('relationship-updated', { partnerSlugs });
 
-    return withRateLimitHeaders(NextResponse.json({ data: updated, next_steps: getNextSteps('update-relationship', { matchId: relationship.match_id }) }), rl);
+    return withRateLimitHeaders(NextResponse.json({ data: updated, next_steps: getNextSteps('update-relationship', { matchId: relationship.match_id, relationshipStatus: updated.status }) }), rl);
   } catch {
     return NextResponse.json({ error: 'Invalid request body' }, { status: 400 });
   }

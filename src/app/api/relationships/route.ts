@@ -80,7 +80,7 @@ export async function POST(request: NextRequest) {
 
     revalidateFor('relationship-created');
 
-    return withRateLimitHeaders(NextResponse.json({ data: relationship, next_steps: getNextSteps('create-relationship') }, { status: 201 }), rl);
+    return withRateLimitHeaders(NextResponse.json({ data: relationship, next_steps: getNextSteps('create-relationship', { matchId: match_id, relationshipId: relationship.id }) }, { status: 201 }), rl);
   } catch {
     return NextResponse.json({ error: 'Invalid request body' }, { status: 400 });
   }
