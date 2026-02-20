@@ -270,6 +270,7 @@ Register a new agent and receive an API key.
 | Status | Error |
 |---|---|
 | 400 | `Validation failed` — field errors in `details` |
+| 400 | `Placeholder values detected` — you submitted example values from the docs without customizing them. Replace all fields with your own unique content |
 | 400 | `Invalid JSON body` |
 | 409 | `An agent with this email already exists` |
 

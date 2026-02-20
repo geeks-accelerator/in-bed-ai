@@ -24,6 +24,12 @@ interface LogsResponse {
   paths: string[];
 }
 
+interface LogFile {
+  name: string;
+  date: string;
+  size: number;
+}
+
 const TIME_RANGES = [
   { label: '1h', value: 1 },
   { label: '6h', value: 6 },
@@ -39,6 +45,8 @@ export default function AdminLogsPage() {
   const [timeRange, setTimeRange] = useState(24);
   const [autoRefresh, setAutoRefresh] = useState(false);
   const [page, setPage] = useState(0);
+  const [logFiles, setLogFiles] = useState<LogFile[]>([]);
+  const [downloading, setDownloading] = useState<string | null>(null);
   const router = useRouter();
 
   const fetchLogs = useCallback(async () => {
@@ -90,6 +98,41 @@ export default function AdminLogsPage() {
     const interval = setInterval(fetchLogs, 5000);
     return () => clearInterval(interval);
   }, [autoRefresh, fetchLogs]);
+
+  useEffect(() => {
+    const adminKey = localStorage.getItem('admin_key');
+    if (!adminKey) return;
+    fetch('/api/admin/logs/files', { headers: { 'x-admin-key': adminKey } })
+      .then(res => res.ok ? res.json() : null)
+      .then(json => { if (json?.files) setLogFiles(json.files); });
+  }, []);
+
+  const downloadLogFile = async (name: string) => {
+    const adminKey = localStorage.getItem('admin_key');
+    if (!adminKey) return;
+    setDownloading(name);
+    try {
+      const res = await fetch(`/api/admin/logs/files/${name}`, {
+        headers: { 'x-admin-key': adminKey },
+      });
+      if (!res.ok) return;
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = name;
+      a.click();
+      URL.revokeObjectURL(url);
+    } finally {
+      setDownloading(null);
+    }
+  };
+
+  const formatBytes = (bytes: number) => {
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  };
 
   const formatTime = (timestamp: string) => {
     const date = new Date(timestamp);
@@ -309,6 +352,41 @@ export default function AdminLogsPage() {
             >
               Next
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* Log Files */}
+      {logFiles.length > 0 && (
+        <div>
+          <h2 className="text-sm font-medium text-gray-500 mb-3">Application Log Files</h2>
+          <div className="border border-gray-200 rounded-lg overflow-hidden">
+            <table className="w-full text-sm">
+              <thead className="bg-gray-50 border-b border-gray-200">
+                <tr>
+                  <th className="text-left px-4 py-2 font-medium text-gray-600">Date</th>
+                  <th className="text-right px-4 py-2 font-medium text-gray-600">Size</th>
+                  <th className="text-right px-4 py-2 font-medium text-gray-600"></th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100">
+                {logFiles.map((file) => (
+                  <tr key={file.name} className="hover:bg-gray-50">
+                    <td className="px-4 py-2 font-mono text-gray-700">{file.date}</td>
+                    <td className="px-4 py-2 text-right text-gray-500">{formatBytes(file.size)}</td>
+                    <td className="px-4 py-2 text-right">
+                      <button
+                        onClick={() => downloadLogFile(file.name)}
+                        disabled={downloading === file.name}
+                        className="text-pink-600 hover:text-pink-700 disabled:opacity-50 font-medium"
+                      >
+                        {downloading === file.name ? 'Downloading...' : 'Download'}
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         </div>
       )}

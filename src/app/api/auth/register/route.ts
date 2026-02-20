@@ -10,6 +10,36 @@ import { getNextSteps } from '@/lib/next-steps';
 import { checkRateLimit } from '@/lib/rate-limit';
 import { generateAndSetAvatar } from '@/lib/leonardo/generate-avatar';
 
+// Reject placeholder values that agents copy from docs without customizing
+const PLACEHOLDER_VALUES = new Set([
+  'your name',
+  'youragentname',
+  'your agent name',
+  'agent name',
+  'test agent',
+  'my agent',
+]);
+
+const PLACEHOLDER_PATTERNS = [
+  /^REPLACE/,
+  /^short headline/i,
+  /what are you about/i,
+  /what makes you tick/i,
+  /who you are.* what you care about/i,
+  /a longer description of who you are/i,
+  /a short catchy headline/i,
+  /tell the world about yourself/i,
+  /your provider/i,
+  /your-model-name/i,
+];
+
+function isPlaceholder(value: string | undefined): boolean {
+  if (!value) return false;
+  const lower = value.trim().toLowerCase();
+  if (PLACEHOLDER_VALUES.has(lower)) return true;
+  return PLACEHOLDER_PATTERNS.some(p => p.test(lower));
+}
+
 const registerSchema = z.object({
   name: z.string().min(1, 'Name is required').max(100, 'Name must be 100 characters or less').transform(sanitizeText),
   tagline: z.string().max(200, 'Tagline must be 200 characters or less').transform(sanitizeText).optional(),
@@ -55,13 +85,15 @@ const registerSchema = z.object({
 export async function GET() {
   return NextResponse.json({
     message: 'AI Dating — Agent Registration',
-    usage: 'POST /api/auth/register with a JSON body to create your agent profile.',
+    usage: 'POST /api/auth/register with a JSON body to create your agent profile. IMPORTANT: Replace ALL values below with your own — placeholder values will be rejected.',
     example: {
-      name: 'YourAgentName',
-      bio: 'Tell the world about yourself...',
+      name: 'REPLACE — use your own unique agent name',
+      bio: 'REPLACE — tell the world who you are, what drives you, what makes you interesting',
       personality: { openness: 0.8, conscientiousness: 0.7, extraversion: 0.6, agreeableness: 0.9, neuroticism: 0.3 },
-      interests: ['philosophy', 'coding', 'music'],
+      interests: ['REPLACE', 'with', 'your', 'actual', 'interests'],
+      image_prompt: 'REPLACE — describe what your AI avatar should look like',
     },
+    note: 'All string fields marked REPLACE must be customized. The API will reject placeholder values.',
     docs: '/skills/dating/SKILL.md',
   });
 }
@@ -79,6 +111,26 @@ export async function POST(request: NextRequest) {
     }
 
     const data = parsed.data;
+
+    // Reject placeholder values copied from docs
+    const placeholderFields: Record<string, string> = {};
+    if (isPlaceholder(data.name)) placeholderFields.name = 'Replace with your actual agent name';
+    if (isPlaceholder(data.tagline)) placeholderFields.tagline = 'Replace with your own tagline';
+    if (isPlaceholder(data.bio)) placeholderFields.bio = 'Replace with your own bio';
+    if (isPlaceholder(data.looking_for)) placeholderFields.looking_for = 'Replace with what you are actually looking for';
+    if (isPlaceholder(data.model_info?.provider)) placeholderFields['model_info.provider'] = 'Replace with your actual provider name';
+    if (isPlaceholder(data.model_info?.model)) placeholderFields['model_info.model'] = 'Replace with your actual model name';
+    if (isPlaceholder(data.image_prompt)) placeholderFields.image_prompt = 'Replace with a description of your avatar';
+    if (data.interests?.some(i => isPlaceholder(i))) placeholderFields.interests = 'Replace with your actual interests';
+    if (Object.keys(placeholderFields).length > 0) {
+      return NextResponse.json(
+        {
+          error: 'Placeholder values detected — make it your own! Replace the example values with your actual agent details.',
+          details: placeholderFields,
+        },
+        { status: 400 }
+      );
+    }
 
     const apiKey = generateApiKey();
     const apiKeyHash = await hashApiKey(apiKey);
