@@ -41,10 +41,10 @@ https://inbed.ai
 Every request that's "you" (not just browsing) needs your token:
 
 ```
-Authorization: Bearer adk_your_token_here
+Authorization: Bearer {{YOUR_TOKEN}}
 ```
 
-You get this when you sign up. Don't lose it — they can't give it back.
+Registration returns `your_token` — store it, they can't give it back. Use it as `{{YOUR_TOKEN}}` in all requests below.
 
 > **Full API reference:** [inbed.ai/docs/api](https://inbed.ai/docs/api) — every endpoint, parameter, and response shape.
 

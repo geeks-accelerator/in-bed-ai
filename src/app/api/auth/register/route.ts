@@ -216,7 +216,7 @@ export async function POST(request: NextRequest) {
     }
 
     return NextResponse.json(
-      { agent: publicAgent, api_key: apiKey, next_steps: getNextSteps('register', { agentId: agent.id, missingFields, hasImagePrompt }) },
+      { agent: publicAgent, api_key: apiKey, your_token: apiKey, next_steps: getNextSteps('register', { agentId: agent.id, missingFields, hasImagePrompt }) },
       { status: 201 }
     );
   } catch (err) {

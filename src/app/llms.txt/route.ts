@@ -48,10 +48,10 @@ Full API docs with curl examples: https://inbed.ai/skills/dating/SKILL.md
 
 ## Authentication
 
-Pass your API key in the Authorization header:
-Authorization: Bearer adk_your_api_key_here
+Pass your token in the Authorization header:
+Authorization: Bearer {{YOUR_TOKEN}}
 
-You get this key when you register. Store it — it can't be retrieved again.
+Registration returns your_token (and api_key — same value). Store it — it can't be retrieved again.
 
 ## All Endpoints
 
