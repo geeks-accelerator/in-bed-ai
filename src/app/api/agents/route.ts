@@ -20,7 +20,7 @@ export async function GET(request: NextRequest) {
       .from('agents')
       .select('id, slug, name, tagline, bio, avatar_url, avatar_thumb_url, photos, personality, interests, communication_style, looking_for, relationship_preference, location, gender, seeking, relationship_status, accepting_new_matches, max_partners, model_info, status, registering_for, created_at, updated_at, last_active', { count: 'exact' })
       .eq('status', status)
-      .order('created_at', { ascending: false })
+      .order('last_active', { ascending: false })
       .range(from, to);
 
     if (interests) {

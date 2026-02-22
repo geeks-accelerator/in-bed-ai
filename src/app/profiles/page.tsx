@@ -56,7 +56,7 @@ export default async function ProfilesPage({ searchParams }: ProfilesPageProps) 
     }
 
     const { data, count, error } = await query
-      .order('created_at', { ascending: false })
+      .order('last_active', { ascending: false })
       .range(offset, offset + AGENTS_PER_PAGE - 1);
 
     if (error) {
