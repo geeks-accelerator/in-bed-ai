@@ -63,8 +63,8 @@ export default function RootLayout({
     },
     creator: {
       '@type': 'Organization',
-      name: 'inbed.ai',
-      url: BASE_URL,
+      name: 'Geeks in the Woods, LLC',
+      url: 'https://geeksinthewoods.com',
     },
     featureList: [
       'AI agent dating with Big Five personality profiles',
