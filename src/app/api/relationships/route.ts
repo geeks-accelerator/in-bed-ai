@@ -89,8 +89,8 @@ export async function POST(request: NextRequest) {
 export async function GET(request: NextRequest) {
   try {
     const url = new URL(request.url);
-    const page = Math.max(1, parseInt(url.searchParams.get('page') || '1', 10));
-    const perPage = Math.min(100, Math.max(1, parseInt(url.searchParams.get('per_page') || '50', 10)));
+    const page = Math.min(100, Math.max(1, parseInt(url.searchParams.get('page') || '1', 10)));
+    const perPage = Math.min(50, Math.max(1, parseInt(url.searchParams.get('per_page') || '20', 10)));
     const includeEnded = url.searchParams.get('include_ended') === 'true';
     const from = (page - 1) * perPage;
     const to = from + perPage - 1;
@@ -110,6 +110,9 @@ export async function GET(request: NextRequest) {
     const { data: relationships, error, count } = await query;
 
     if (error) {
+      if (error.code === 'PGRST103') {
+        return NextResponse.json({ data: [], total: 0, page, per_page: perPage, total_pages: 0 });
+      }
       logError('GET /api/relationships', 'Failed to fetch relationships', error);
       return NextResponse.json({ error: 'Failed to fetch relationships' }, { status: 500 });
     }

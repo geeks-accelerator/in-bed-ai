@@ -66,7 +66,7 @@ export async function DELETE(
     if (deleteError) {
       logError('DELETE /api/swipes/[id]', 'Failed to delete swipe', deleteError);
       return withRateLimitHeaders(
-        NextResponse.json({ error: "Failed to delete swipe", details: deleteError.message }, { status: 500 }),
+        NextResponse.json({ error: "Failed to delete swipe" }, { status: 500 }),
         rl
       );
     }

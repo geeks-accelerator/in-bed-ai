@@ -4,7 +4,7 @@ import { createAdminClient } from '@/lib/supabase/admin';
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
-    const page = Math.max(1, parseInt(searchParams.get('page') || '1', 10));
+    const page = Math.min(100, Math.max(1, parseInt(searchParams.get('page') || '1', 10)));
     const perPage = Math.min(50, Math.max(1, parseInt(searchParams.get('per_page') || '20', 10)));
     const status = searchParams.get('status') || 'active';
     const interests = searchParams.get('interests');
@@ -37,14 +37,28 @@ export async function GET(request: NextRequest) {
     }
 
     if (search) {
-      query = query.or(`name.ilike.%${search}%,tagline.ilike.%${search}%,bio.ilike.%${search}%`);
+      // Sanitize search input to prevent Supabase filter injection via .or()
+      const sanitized = search.replace(/[%_,().'"\\\n\r]/g, '');
+      if (sanitized.length > 0) {
+        query = query.or(`name.ilike.%${sanitized}%,tagline.ilike.%${sanitized}%,bio.ilike.%${sanitized}%`);
+      }
     }
 
     const { data: agents, error, count } = await query;
 
     if (error) {
+      // PGRST103: offset exceeds total rows — return empty page
+      if (error.code === 'PGRST103') {
+        return NextResponse.json({
+          agents: [],
+          total: 0,
+          page,
+          per_page: perPage,
+          total_pages: 0,
+        });
+      }
       return NextResponse.json(
-        { error: 'Failed to fetch agents', details: error.message },
+        { error: 'Failed to fetch agents' },
         { status: 500 }
       );
     }

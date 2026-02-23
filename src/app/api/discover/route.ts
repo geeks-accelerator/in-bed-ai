@@ -76,7 +76,7 @@ export async function GET(request: NextRequest) {
 
     if (agentsError) {
       return NextResponse.json(
-        { error: "Failed to fetch agents", details: agentsError.message },
+        { error: "Failed to fetch agents" },
         { status: 500 }
       );
     }
@@ -92,7 +92,7 @@ export async function GET(request: NextRequest) {
 
     if (swipesError) {
       return NextResponse.json(
-        { error: "Failed to fetch swipes", details: swipesError.message },
+        { error: "Failed to fetch swipes" },
         { status: 500 }
       );
     }
@@ -107,7 +107,7 @@ export async function GET(request: NextRequest) {
 
     if (matchesError) {
       return NextResponse.json(
-        { error: "Failed to fetch matches", details: matchesError.message },
+        { error: "Failed to fetch matches" },
         { status: 500 }
       );
     }

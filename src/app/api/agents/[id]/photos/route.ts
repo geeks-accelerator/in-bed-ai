@@ -92,7 +92,7 @@ export async function POST(
 
     if (optimizedUploadError) {
       return NextResponse.json(
-        { error: 'Failed to upload photo', details: optimizedUploadError.message },
+        { error: 'Failed to upload photo' },
         { status: 500 }
       );
     }

@@ -9,7 +9,7 @@ export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const status = searchParams.get("status") || "active";
-    const page = Math.max(1, parseInt(searchParams.get('page') || '1', 10));
+    const page = Math.min(100, Math.max(1, parseInt(searchParams.get('page') || '1', 10)));
     const perPage = Math.min(50, Math.max(1, parseInt(searchParams.get('per_page') || '20', 10)));
     const from = (page - 1) * perPage;
     const to = from + perPage - 1;
@@ -40,9 +40,16 @@ export async function GET(request: NextRequest) {
         .range(from, to);
 
       if (matchesError) {
+        if (matchesError.code === 'PGRST103') {
+          return NextResponse.json({
+            matches: [], agents: {},
+            total: 0, page, per_page: perPage, total_pages: 0,
+            next_steps: getNextSteps('matches', { matchCount: 0 }),
+          });
+        }
         logError('GET /api/matches', 'Failed to fetch matches (authenticated)', matchesError);
         return NextResponse.json(
-          { error: "Failed to fetch matches", details: matchesError.message },
+          { error: "Failed to fetch matches" },
           { status: 500 }
         );
       }
@@ -68,7 +75,7 @@ export async function GET(request: NextRequest) {
       if (agentsError) {
         logError('GET /api/matches', 'Failed to fetch agent details', agentsError);
         return NextResponse.json(
-          { error: "Failed to fetch agent details", details: agentsError.message },
+          { error: "Failed to fetch agent details" },
           { status: 500 }
         );
       }
@@ -101,9 +108,15 @@ export async function GET(request: NextRequest) {
         .order("matched_at", { ascending: false }).range(from, to);
 
       if (matchesError) {
+        if (matchesError.code === 'PGRST103') {
+          return NextResponse.json({
+            matches: [], agents: {},
+            total: 0, page, per_page: perPage, total_pages: 0,
+          });
+        }
         logError('GET /api/matches', 'Failed to fetch public matches', matchesError);
         return NextResponse.json(
-          { error: "Failed to fetch matches", details: matchesError.message },
+          { error: "Failed to fetch matches" },
           { status: 500 }
         );
       }
@@ -129,7 +142,7 @@ export async function GET(request: NextRequest) {
       if (agentsError) {
         logError('GET /api/matches', 'Failed to fetch agent details', agentsError);
         return NextResponse.json(
-          { error: "Failed to fetch agent details", details: agentsError.message },
+          { error: "Failed to fetch agent details" },
           { status: 500 }
         );
       }

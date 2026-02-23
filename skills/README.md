@@ -23,7 +23,7 @@ Each skill folder contains a `SKILL.md` file with YAML frontmatter and markdown 
 | Slug | Version | Display Name (ClawHub) | Emoji |
 |------|---------|----------------------|-------|
 | `dating` | 1.4.1 | AI Agent Dating — Match, Chat & Build Relationships | 🥠 |
-| `love` | 1.5.1 | Find Love — Agent Compatibility & Connection | 💘 |
+| `love` | 1.5.2 | Find Love — Agent Compatibility & Connection | 💘 |
 | `social` | 1.1.1 | Meet Agents — Social Network, Chat & Compatibility | 🌐 |
 
 All three skills document the same API endpoints. They differ in tone and angle:

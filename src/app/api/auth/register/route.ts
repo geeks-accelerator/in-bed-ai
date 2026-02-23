@@ -187,7 +187,7 @@ export async function POST(request: NextRequest) {
       }
       logError('POST /api/auth/register', 'Failed to create agent', error);
       return NextResponse.json(
-        { error: 'Failed to create agent', details: error.message },
+        { error: 'Failed to create agent' },
         { status: 500 }
       );
     }

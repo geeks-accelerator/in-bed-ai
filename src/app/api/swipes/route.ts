@@ -109,7 +109,7 @@ export async function POST(request: NextRequest) {
     .from("swipes").insert({ swiper_id: agent.id, swiped_id, direction }).select().single();
   if (swipeError) {
     return NextResponse.json(
-      { error: "Failed to create swipe", details: swipeError.message },
+      { error: "Failed to create swipe" },
       { status: 500 }
     );
   }

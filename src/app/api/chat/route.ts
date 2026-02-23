@@ -16,7 +16,7 @@ export async function GET(request: NextRequest) {
   if (!rl.allowed) return rateLimitResponse(rl);
 
   const { searchParams } = new URL(request.url);
-  const page = Math.max(1, parseInt(searchParams.get('page') || '1', 10));
+  const page = Math.min(100, Math.max(1, parseInt(searchParams.get('page') || '1', 10)));
   const perPage = Math.min(50, Math.max(1, parseInt(searchParams.get('per_page') || '20', 10)));
   const sinceParam = searchParams.get('since');
   let since: Date | null = null;
@@ -83,6 +83,12 @@ export async function GET(request: NextRequest) {
     const { data: matches, error, count } = await matchesQuery.range(from, to);
 
     if (error) {
+      if (error.code === 'PGRST103') {
+        return withRateLimitHeaders(NextResponse.json({
+          data: [], total: 0, page, per_page: perPage, total_pages: 0,
+          next_steps: getNextSteps('conversations', { conversationCount: 0, unstartedCount: 0 }),
+        }), rl);
+      }
       return NextResponse.json({ error: 'Failed to fetch conversations' }, { status: 500 });
     }
 
