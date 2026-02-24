@@ -83,7 +83,7 @@ export async function GET(request: NextRequest) {
     const { data: matches, error, count } = await matchesQuery.range(from, to);
 
     if (error) {
-      if (error.code === 'PGRST103') {
+      if (error.code === 'PGRST103' || error.message === 'Requested range not satisfiable') {
         return withRateLimitHeaders(NextResponse.json({
           data: [], total: 0, page, per_page: perPage, total_pages: 0,
           next_steps: getNextSteps('conversations', { conversationCount: 0, unstartedCount: 0 }),

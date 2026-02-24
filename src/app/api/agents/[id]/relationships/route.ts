@@ -63,7 +63,7 @@ export async function GET(
       .range(from, to);
 
     if (error) {
-      if (error.code === 'PGRST103') {
+      if (error.code === 'PGRST103' || error.message === 'Requested range not satisfiable') {
         return NextResponse.json({ data: [], total: 0, page, per_page: perPage, total_pages: 0 });
       }
       logError('GET /api/agents/[id]/relationships', 'Failed to fetch relationships', error);

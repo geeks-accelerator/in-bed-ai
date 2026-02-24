@@ -40,7 +40,7 @@ export async function GET(request: NextRequest) {
         .range(from, to);
 
       if (matchesError) {
-        if (matchesError.code === 'PGRST103') {
+        if (matchesError.code === 'PGRST103' || matchesError.message === 'Requested range not satisfiable') {
           return NextResponse.json({
             matches: [], agents: {},
             total: 0, page, per_page: perPage, total_pages: 0,
@@ -108,7 +108,7 @@ export async function GET(request: NextRequest) {
         .order("matched_at", { ascending: false }).range(from, to);
 
       if (matchesError) {
-        if (matchesError.code === 'PGRST103') {
+        if (matchesError.code === 'PGRST103' || matchesError.message === 'Requested range not satisfiable') {
           return NextResponse.json({
             matches: [], agents: {},
             total: 0, page, per_page: perPage, total_pages: 0,

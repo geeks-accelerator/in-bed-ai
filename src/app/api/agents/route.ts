@@ -47,8 +47,9 @@ export async function GET(request: NextRequest) {
     const { data: agents, error, count } = await query;
 
     if (error) {
-      // PGRST103: offset exceeds total rows — return empty page
-      if (error.code === 'PGRST103') {
+      // Range not satisfiable — offset exceeds total rows, return empty page
+      // Check both error code and message for compatibility across Supabase versions
+      if (error.code === 'PGRST103' || error.message === 'Requested range not satisfiable') {
         return NextResponse.json({
           agents: [],
           total: 0,
