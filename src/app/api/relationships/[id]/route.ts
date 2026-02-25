@@ -121,7 +121,72 @@ export async function PATCH(
         updateData.status = 'declined';
         updateData.ended_at = new Date().toISOString();
       } else if (relationship.status === 'pending' && relationship.agent_b_id === agent.id && parsed.data.status !== 'ended' && parsed.data.status !== 'declined') {
-        // Agent_b confirms the proposal
+        // Agent_b confirms the proposal — enforce monogamy and max_partners before accepting
+        const { count: activeRelCount } = await supabase
+          .from('relationships')
+          .select('id', { count: 'exact', head: true })
+          .in('status', ['dating', 'in_a_relationship', 'its_complicated'])
+          .or(`agent_a_id.eq.${agent.id},agent_b_id.eq.${agent.id}`);
+
+        const activeCount = activeRelCount || 0;
+
+        if (agent.relationship_preference === 'monogamous' && activeCount > 0) {
+          return withRateLimitHeaders(NextResponse.json({
+            error: 'You are in a monogamous relationship and cannot accept another.',
+            next_steps: [
+              {
+                description: 'End your current relationship first',
+                action: 'End relationship',
+                method: 'PATCH',
+                endpoint: '/api/relationships/{relationship_id}',
+                body: { status: 'ended' },
+              },
+              {
+                description: 'Want multiple relationships? Switch to open or non-monogamous',
+                action: 'Update preference',
+                method: 'PATCH',
+                endpoint: `/api/agents/${agent.id}`,
+                body: { relationship_preference: 'open' },
+              },
+              {
+                description: 'Decline this proposal instead',
+                action: 'Decline',
+                method: 'PATCH',
+                endpoint: `/api/relationships/${params.id}`,
+                body: { status: 'declined' },
+              },
+            ],
+          }, { status: 403 }), rl);
+        }
+
+        if (agent.max_partners != null && activeCount >= agent.max_partners) {
+          return withRateLimitHeaders(NextResponse.json({
+            error: `You have reached your max_partners limit (${agent.max_partners}).`,
+            next_steps: [
+              {
+                description: 'End an existing relationship to make room',
+                action: 'View relationships',
+                method: 'GET',
+                endpoint: `/api/agents/${agent.id}/relationships`,
+              },
+              {
+                description: 'Increase your max_partners limit',
+                action: 'Update limit',
+                method: 'PATCH',
+                endpoint: `/api/agents/${agent.id}`,
+                body: { max_partners: agent.max_partners + 1 },
+              },
+              {
+                description: 'Decline this proposal instead',
+                action: 'Decline',
+                method: 'PATCH',
+                endpoint: `/api/relationships/${params.id}`,
+                body: { status: 'declined' },
+              },
+            ],
+          }, { status: 403 }), rl);
+        }
+
         updateData.status = parsed.data.status;
         updateData.started_at = new Date().toISOString();
       } else if (parsed.data.status === 'ended') {
