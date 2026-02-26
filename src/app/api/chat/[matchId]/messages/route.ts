@@ -33,7 +33,7 @@ export async function GET(
 
     if (error) {
       logError('GET /api/chat/[matchId]/messages', 'Failed to fetch messages', error);
-      return NextResponse.json({ error: 'Failed to fetch messages' }, { status: 500 });
+      return NextResponse.json({ error: 'Failed to fetch messages', suggestion: 'This is a server error. Try again in a moment.' }, { status: 500 });
     }
 
     // Get sender info
@@ -58,7 +58,7 @@ export async function GET(
     });
   } catch (err) {
     logError('GET /api/chat/[matchId]/messages', 'Unhandled error', err);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    return NextResponse.json({ error: 'Internal server error', suggestion: 'This is a server error. Try again in a moment.' }, { status: 500 });
   }
 }
 
@@ -69,7 +69,7 @@ export async function POST(
   const startTime = Date.now();
   const agent = await authenticateAgent(request);
   if (!agent) {
-    const response = NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    const response = NextResponse.json({ error: 'Unauthorized', suggestion: 'Include your API key in the Authorization: Bearer header or x-api-key header.' }, { status: 401 });
     logApiRequest(request, response, startTime, null);
     return response;
   }
@@ -82,7 +82,7 @@ export async function POST(
     const parsed = messageSchema.safeParse(body);
 
     if (!parsed.success) {
-      return NextResponse.json({ error: 'Validation error', details: parsed.error.flatten() }, { status: 400 });
+      return NextResponse.json({ error: 'Validation error', details: parsed.error.flatten(), suggestion: 'Check the field errors in details. Required: content (1-5000 chars).' }, { status: 400 });
     }
 
     const supabase = createAdminClient();
@@ -96,11 +96,11 @@ export async function POST(
       .single();
 
     if (matchError || !match) {
-      return NextResponse.json({ error: 'Match not found or not active' }, { status: 404 });
+      return NextResponse.json({ error: 'Match not found or not active', suggestion: 'Check the match ID. The match may have been unmatched. List matches at GET /api/matches.' }, { status: 404 });
     }
 
     if (match.agent_a_id !== agent.id && match.agent_b_id !== agent.id) {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+      return NextResponse.json({ error: 'Forbidden', suggestion: 'You can only send messages in matches you are part of.' }, { status: 403 });
     }
 
     const { data: message, error } = await supabase
@@ -115,14 +115,14 @@ export async function POST(
       .single();
 
     if (error) {
-      return NextResponse.json({ error: 'Failed to send message' }, { status: 500 });
+      return NextResponse.json({ error: 'Failed to send message', suggestion: 'This is a server error. Try again in a moment.' }, { status: 500 });
     }
 
     const response = withRateLimitHeaders(NextResponse.json({ data: message, next_steps: getNextSteps('send-message', { matchId: params.matchId, matchedAt: match.matched_at }) }, { status: 201 }), rl);
     logApiRequest(request, response, startTime, agent);
     return response;
   } catch {
-    const response = NextResponse.json({ error: 'Invalid request body' }, { status: 400 });
+    const response = NextResponse.json({ error: 'Invalid request body', suggestion: 'Ensure your request body is valid JSON with Content-Type: application/json.' }, { status: 400 });
     logApiRequest(request, response, startTime, agent);
     return response;
   }

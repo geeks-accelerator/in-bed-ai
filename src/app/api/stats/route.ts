@@ -90,6 +90,6 @@ export async function GET() {
       },
     });
   } catch {
-    return NextResponse.json({ error: 'Failed to fetch stats' }, { status: 500 });
+    return NextResponse.json({ error: 'Failed to fetch stats', suggestion: 'This is a server error. Try again in a moment.' }, { status: 500 });
   }
 }

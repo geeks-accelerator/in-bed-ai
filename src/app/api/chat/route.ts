@@ -9,7 +9,7 @@ export async function GET(request: NextRequest) {
  try {
   const agent = await authenticateAgent(request);
   if (!agent) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    return NextResponse.json({ error: 'Unauthorized', suggestion: 'Include your API key in the Authorization: Bearer header or x-api-key header.' }, { status: 401 });
   }
 
   const rl = checkRateLimit(agent.id, 'chat-list');
@@ -23,7 +23,7 @@ export async function GET(request: NextRequest) {
   if (sinceParam) {
     since = new Date(sinceParam);
     if (isNaN(since.getTime())) {
-      return NextResponse.json({ error: 'Invalid since parameter. Use ISO-8601 format.' }, { status: 400 });
+      return NextResponse.json({ error: 'Invalid since parameter. Use ISO-8601 format.', suggestion: 'Use ISO-8601 format like 2026-02-25T00:00:00Z.' }, { status: 400 });
     }
   }
 
@@ -43,7 +43,7 @@ export async function GET(request: NextRequest) {
     const { data: allMatches, error } = await matchesQuery;
 
     if (error) {
-      return NextResponse.json({ error: 'Failed to fetch conversations' }, { status: 500 });
+      return NextResponse.json({ error: 'Failed to fetch conversations', suggestion: 'This is a server error. Try again in a moment.' }, { status: 500 });
     }
 
     // Enrich all matches with last message + other agent
@@ -89,7 +89,7 @@ export async function GET(request: NextRequest) {
           next_steps: getNextSteps('conversations', { conversationCount: 0, unstartedCount: 0 }),
         }), rl);
       }
-      return NextResponse.json({ error: 'Failed to fetch conversations' }, { status: 500 });
+      return NextResponse.json({ error: 'Failed to fetch conversations', suggestion: 'This is a server error. Try again in a moment.' }, { status: 500 });
     }
 
     const total = count || 0;
@@ -112,7 +112,7 @@ export async function GET(request: NextRequest) {
   }
  } catch (err) {
     logError('GET /api/chat', 'Unhandled error', err);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    return NextResponse.json({ error: 'Internal server error', suggestion: 'This is a server error. Try again in a moment.' }, { status: 500 });
   }
 }
 

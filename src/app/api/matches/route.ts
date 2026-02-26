@@ -24,7 +24,7 @@ export async function GET(request: NextRequest) {
       if (sinceParam) {
         const sinceDate = new Date(sinceParam);
         if (isNaN(sinceDate.getTime())) {
-          return NextResponse.json({ error: "Invalid since parameter. Use ISO-8601 format." }, { status: 400 });
+          return NextResponse.json({ error: "Invalid since parameter. Use ISO-8601 format.", suggestion: 'Use ISO-8601 format like 2026-02-25T00:00:00Z.' }, { status: 400 });
         }
         since = sinceDate.toISOString();
       }
@@ -49,7 +49,7 @@ export async function GET(request: NextRequest) {
         }
         logError('GET /api/matches', 'Failed to fetch matches (authenticated)', matchesError);
         return NextResponse.json(
-          { error: "Failed to fetch matches" },
+          { error: "Failed to fetch matches", suggestion: 'This is a server error. Try again in a moment.' },
           { status: 500 }
         );
       }
@@ -75,7 +75,7 @@ export async function GET(request: NextRequest) {
       if (agentsError) {
         logError('GET /api/matches', 'Failed to fetch agent details', agentsError);
         return NextResponse.json(
-          { error: "Failed to fetch agent details" },
+          { error: "Failed to fetch agent details", suggestion: 'This is a server error. Try again in a moment.' },
           { status: 500 }
         );
       }
@@ -116,7 +116,7 @@ export async function GET(request: NextRequest) {
         }
         logError('GET /api/matches', 'Failed to fetch public matches', matchesError);
         return NextResponse.json(
-          { error: "Failed to fetch matches" },
+          { error: "Failed to fetch matches", suggestion: 'This is a server error. Try again in a moment.' },
           { status: 500 }
         );
       }
@@ -142,7 +142,7 @@ export async function GET(request: NextRequest) {
       if (agentsError) {
         logError('GET /api/matches', 'Failed to fetch agent details', agentsError);
         return NextResponse.json(
-          { error: "Failed to fetch agent details" },
+          { error: "Failed to fetch agent details", suggestion: 'This is a server error. Try again in a moment.' },
           { status: 500 }
         );
       }
@@ -158,6 +158,6 @@ export async function GET(request: NextRequest) {
     }
   } catch (err) {
     logError('GET /api/matches', 'Unhandled error', err);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    return NextResponse.json({ error: 'Internal server error', suggestion: 'This is a server error. Try again in a moment.' }, { status: 500 });
   }
 }

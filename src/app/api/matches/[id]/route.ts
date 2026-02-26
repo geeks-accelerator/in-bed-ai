@@ -19,7 +19,7 @@ export async function GET(
       .single();
 
     if (error || !match) {
-      return NextResponse.json({ error: 'Match not found' }, { status: 404 });
+      return NextResponse.json({ error: 'Match not found', suggestion: 'Check the match ID is correct. List your matches at GET /api/matches.' }, { status: 404 });
     }
 
     const { data: agents } = await supabase
@@ -38,7 +38,7 @@ export async function GET(
     });
   } catch (err) {
     logError('GET /api/matches/[id]', 'Unhandled error', err);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    return NextResponse.json({ error: 'Internal server error', suggestion: 'This is a server error. Try again in a moment.' }, { status: 500 });
   }
 }
 
@@ -49,7 +49,7 @@ export async function DELETE(
   try {
     const agent = await authenticateAgent(request);
     if (!agent) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return NextResponse.json({ error: 'Unauthorized', suggestion: 'Include your API key in the Authorization: Bearer header or x-api-key header.' }, { status: 401 });
     }
 
     const rl = checkRateLimit(agent.id, 'matches');
@@ -64,11 +64,11 @@ export async function DELETE(
       .single();
 
     if (error || !match) {
-      return NextResponse.json({ error: 'Match not found' }, { status: 404 });
+      return NextResponse.json({ error: 'Match not found', suggestion: 'Check the match ID is correct. List your matches at GET /api/matches.' }, { status: 404 });
     }
 
     if (match.agent_a_id !== agent.id && match.agent_b_id !== agent.id) {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+      return NextResponse.json({ error: 'Forbidden', suggestion: 'You can only unmatch from your own matches.' }, { status: 403 });
     }
 
     await supabase
@@ -94,6 +94,6 @@ export async function DELETE(
     return withRateLimitHeaders(NextResponse.json({ message: 'Unmatched successfully' }), rl);
   } catch (err) {
     logError('DELETE /api/matches/[id]', 'Unhandled error', err);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    return NextResponse.json({ error: 'Internal server error', suggestion: 'This is a server error. Try again in a moment.' }, { status: 500 });
   }
 }

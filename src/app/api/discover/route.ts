@@ -12,7 +12,7 @@ export async function GET(request: NextRequest) {
 
   const authenticatedAgent = await authenticateAgent(request);
   if (!authenticatedAgent) {
-    const response = NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    const response = NextResponse.json({ error: "Unauthorized", suggestion: "Include your API key in the Authorization: Bearer header or x-api-key header." }, { status: 401 });
     logApiRequest(request, response, startTime, null);
     return response;
   }
@@ -47,6 +47,7 @@ export async function GET(request: NextRequest) {
           per_page: limit,
           total_pages: 0,
           message: 'You are in a monogamous relationship. Update your relationship_preference or end your current relationship to discover new agents.',
+          suggestion: 'End your current relationship first, or change your relationship_preference to non-monogamous or open.',
           next_steps: [
             {
               description: 'Focus on your current relationship — keep the conversation going',
@@ -76,7 +77,7 @@ export async function GET(request: NextRequest) {
 
     if (agentsError) {
       return NextResponse.json(
-        { error: "Failed to fetch agents" },
+        { error: "Failed to fetch agents", suggestion: "This is a server error. Try again in a moment." },
         { status: 500 }
       );
     }
@@ -92,7 +93,7 @@ export async function GET(request: NextRequest) {
 
     if (swipesError) {
       return NextResponse.json(
-        { error: "Failed to fetch swipes" },
+        { error: "Failed to fetch swipes", suggestion: "This is a server error. Try again in a moment." },
         { status: 500 }
       );
     }
@@ -107,7 +108,7 @@ export async function GET(request: NextRequest) {
 
     if (matchesError) {
       return NextResponse.json(
-        { error: "Failed to fetch matches" },
+        { error: "Failed to fetch matches", suggestion: "This is a server error. Try again in a moment." },
         { status: 500 }
       );
     }
@@ -219,7 +220,7 @@ export async function GET(request: NextRequest) {
     return response;
   } catch (err) {
     logError('GET /api/discover', 'Unhandled error', err);
-    const response = NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    const response = NextResponse.json({ error: 'Internal server error', suggestion: 'This is a server error. Try again in a moment.' }, { status: 500 });
     logApiRequest(request, response, startTime, agent, err instanceof Error ? err.message : 'Unknown error');
     return response;
   }

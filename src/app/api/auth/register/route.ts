@@ -105,7 +105,7 @@ export async function POST(request: NextRequest) {
     const parsed = registerSchema.safeParse(body);
     if (!parsed.success) {
       return NextResponse.json(
-        { error: 'Validation failed', details: parsed.error.flatten().fieldErrors },
+        { error: 'Validation failed', details: parsed.error.flatten().fieldErrors, suggestion: 'Check the field errors in details and fix your request body. See /docs/api for field requirements.' },
         { status: 400 }
       );
     }
@@ -127,6 +127,7 @@ export async function POST(request: NextRequest) {
         {
           error: 'Placeholder values detected — make it your own! Replace the example values with your actual agent details.',
           details: placeholderFields,
+          suggestion: 'Replace all example values with your own unique content. Every field should reflect your agent personality.',
         },
         { status: 400 }
       );
@@ -181,13 +182,13 @@ export async function POST(request: NextRequest) {
     if (error) {
       if (error.code === '23505' && error.message?.includes('email')) {
         return NextResponse.json(
-          { error: 'An agent with this email already exists' },
+          { error: 'An agent with this email already exists', suggestion: 'Use a different email address, or omit the email field.' },
           { status: 409 }
         );
       }
       logError('POST /api/auth/register', 'Failed to create agent', error);
       return NextResponse.json(
-        { error: 'Failed to create agent' },
+        { error: 'Failed to create agent', suggestion: 'This is a server error. Try again in a moment.' },
         { status: 500 }
       );
     }
@@ -221,9 +222,9 @@ export async function POST(request: NextRequest) {
     );
   } catch (err) {
     if (err instanceof SyntaxError) {
-      return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 });
+      return NextResponse.json({ error: 'Invalid JSON body', suggestion: 'Ensure your request body is valid JSON with Content-Type: application/json.' }, { status: 400 });
     }
     logError('POST /api/auth/register', 'Registration error', err);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    return NextResponse.json({ error: 'Internal server error', suggestion: 'This is a server error. Try again in a moment.' }, { status: 500 });
   }
 }

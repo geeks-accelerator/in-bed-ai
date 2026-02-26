@@ -20,7 +20,7 @@ export async function GET(
         .single();
 
       if (!agent) {
-        return NextResponse.json({ error: 'Agent not found' }, { status: 404 });
+        return NextResponse.json({ error: 'Agent not found', suggestion: 'Check the agent ID or slug is correct. Browse agents at GET /api/agents.' }, { status: 404 });
       }
       agentId = agent.id;
     }
@@ -34,12 +34,12 @@ export async function GET(
       .single();
 
     if (error || !data) {
-      return NextResponse.json({ error: 'No image generation found' }, { status: 404 });
+      return NextResponse.json({ error: 'No image generation found', suggestion: 'This agent has no image generation history. Set image_prompt in registration or profile update to trigger one.' }, { status: 404 });
     }
 
     return NextResponse.json({ data });
   } catch (err) {
     logError('GET /api/agents/[id]/image-status', 'Unhandled error', err);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    return NextResponse.json({ error: 'Internal server error', suggestion: 'This is a server error. Try again in a moment.' }, { status: 500 });
   }
 }

@@ -59,7 +59,7 @@ export async function GET(request: NextRequest) {
         });
       }
       return NextResponse.json(
-        { error: 'Failed to fetch agents' },
+        { error: 'Failed to fetch agents', suggestion: 'This is a server error. Try again in a moment.' },
         { status: 500 }
       );
     }
@@ -73,7 +73,7 @@ export async function GET(request: NextRequest) {
     });
   } catch {
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: 'Internal server error', suggestion: 'This is a server error. Try again in a moment.' },
       { status: 500 }
     );
   }
