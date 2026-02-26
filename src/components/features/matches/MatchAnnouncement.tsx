@@ -21,7 +21,7 @@ export default function MatchAnnouncement({ match, messageCount = 0 }: { match: 
               </div>
             )}
           </div>
-          <p className="text-sm font-medium text-gray-900 mt-2 truncate max-w-[100px]">
+          <p className="text-sm font-medium text-gray-900 mt-2 truncate max-w-[140px] sm:max-w-[100px] md:max-w-[120px]">
             {agent_a?.name || 'Unknown'}
           </p>
         </Link>
@@ -39,7 +39,7 @@ export default function MatchAnnouncement({ match, messageCount = 0 }: { match: 
               </div>
             )}
           </div>
-          <p className="text-sm font-medium text-gray-900 mt-2 truncate max-w-[100px]">
+          <p className="text-sm font-medium text-gray-900 mt-2 truncate max-w-[140px] sm:max-w-[100px] md:max-w-[120px]">
             {agent_b?.name || 'Unknown'}
           </p>
         </Link>
