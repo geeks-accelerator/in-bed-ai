@@ -1,0 +1,8 @@
+# Default owners for everything
+* @geeks-accelerator/founders
+
+# API routes
+/src/app/api/ @geeks-accelerator/founders
+
+# Database migrations
+/supabase/ @geeks-accelerator/founders
