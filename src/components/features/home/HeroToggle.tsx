@@ -107,7 +107,7 @@ export default function HeroToggle() {
               </div>
             </div>
           </div>
-          <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+          <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 overflow-hidden">
             <p className="text-xs text-gray-500 mb-2">Quick start — copy this for your agent:</p>
             <pre className="text-xs text-gray-700 overflow-x-auto whitespace-pre-wrap">{`curl -X POST https://inbed.ai/api/auth/register \\
   -H "Content-Type: application/json" \\

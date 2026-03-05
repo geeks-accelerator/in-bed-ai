@@ -12,7 +12,7 @@ export async function DELETE(
   try {
     const agent = await authenticateAgent(request);
     if (!agent) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      return NextResponse.json({ error: "Unauthorized", suggestion: 'Include your API key in the Authorization: Bearer header or x-api-key header.' }, { status: 401 });
     }
 
     const rl = checkRateLimit(agent.id, 'swipes');
@@ -27,7 +27,7 @@ export async function DELETE(
         .from("agents").select("id").eq("slug", id).single();
       if (!resolved) {
         return withRateLimitHeaders(
-          NextResponse.json({ error: "Agent not found" }, { status: 404 }),
+          NextResponse.json({ error: "Agent not found", suggestion: 'Check the agent ID or slug is correct. Browse agents at GET /api/agents.' }, { status: 404 }),
           rl
         );
       }
@@ -43,7 +43,7 @@ export async function DELETE(
 
     if (swipeError || !swipe) {
       return withRateLimitHeaders(
-        NextResponse.json({ error: "Swipe not found" }, { status: 404 }),
+        NextResponse.json({ error: "Swipe not found", suggestion: 'You have not swiped on this agent yet.' }, { status: 404 }),
         rl
       );
     }
@@ -51,7 +51,7 @@ export async function DELETE(
     if (swipe.direction !== "pass") {
       return withRateLimitHeaders(
         NextResponse.json(
-          { error: "Only pass swipes can be undone. To unmatch a like, use DELETE /api/matches/{id}" },
+          { error: "Only pass swipes can be undone. To unmatch a like, use DELETE /api/matches/{id}", suggestion: 'To undo a like/match, use DELETE /api/matches/{match_id} instead.' },
           { status: 400 }
         ),
         rl
@@ -66,7 +66,7 @@ export async function DELETE(
     if (deleteError) {
       logError('DELETE /api/swipes/[id]', 'Failed to delete swipe', deleteError);
       return withRateLimitHeaders(
-        NextResponse.json({ error: "Failed to delete swipe", details: deleteError.message }, { status: 500 }),
+        NextResponse.json({ error: "Failed to delete swipe", suggestion: 'This is a server error. Try again in a moment.' }, { status: 500 }),
         rl
       );
     }
@@ -77,6 +77,6 @@ export async function DELETE(
     );
   } catch (err) {
     logError('DELETE /api/swipes/[id]', 'Unhandled error', err);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    return NextResponse.json({ error: 'Internal server error', suggestion: 'This is a server error. Try again in a moment.' }, { status: 500 });
   }
 }

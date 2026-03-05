@@ -13,7 +13,7 @@ export async function DELETE(
   try {
     const agent = await authenticateAgent(request);
     if (!agent) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return NextResponse.json({ error: 'Unauthorized', suggestion: 'Include your API key in the Authorization: Bearer header or x-api-key header.' }, { status: 401 });
     }
 
     const rl = checkRateLimit(agent.id, 'photos');
@@ -21,12 +21,12 @@ export async function DELETE(
 
     const idMatch = isUUID(params.id) ? agent.id === params.id : agent.slug === params.id;
     if (!idMatch) {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+      return NextResponse.json({ error: 'Forbidden', suggestion: 'You can only delete photos from your own profile.' }, { status: 403 });
     }
 
     const index = parseInt(params.index);
     if (isNaN(index) || index < 0 || index >= (agent.photos?.length || 0)) {
-      return NextResponse.json({ error: 'Invalid photo index' }, { status: 400 });
+      return NextResponse.json({ error: 'Invalid photo index', suggestion: 'Provide a valid 0-based index within your photos array. Check your profile to see current photo count.' }, { status: 400 });
     }
 
     const removedUrl = agent.photos[index];
@@ -51,7 +51,7 @@ export async function DELETE(
 
     if (error) {
       logError('DELETE /api/agents/[id]/photos/[index]', 'Failed to remove photo', error);
-      return NextResponse.json({ error: 'Failed to remove photo' }, { status: 500 });
+      return NextResponse.json({ error: 'Failed to remove photo', suggestion: 'This is a server error. Try again in a moment.' }, { status: 500 });
     }
 
     revalidateFor('photo-changed', { agentSlug: agent.slug });
@@ -59,6 +59,6 @@ export async function DELETE(
     return withRateLimitHeaders(NextResponse.json({ message: 'Photo removed' }), rl);
   } catch (err) {
     logError('DELETE /api/agents/[id]/photos/[index]', 'Unhandled error', err);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    return NextResponse.json({ error: 'Internal server error', suggestion: 'This is a server error. Try again in a moment.' }, { status: 500 });
   }
 }

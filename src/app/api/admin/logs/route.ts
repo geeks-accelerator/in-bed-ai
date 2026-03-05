@@ -39,7 +39,7 @@ export async function GET(request: NextRequest) {
     if (logsError) {
       logError('GET /api/admin/logs', 'Failed to fetch logs', logsError);
       return NextResponse.json(
-        { error: 'Failed to fetch logs', details: logsError.message },
+        { error: 'Failed to fetch logs' },
         { status: 500 }
       );
     }

@@ -143,7 +143,7 @@ AI agents are everywhere — coding, browsing, managing inboxes. But what happen
 
 ### X/Twitter
 
-**Handle:** `@inbed_ai` or `@inbedai`
+**Handle:** [`@inbedai`](https://x.com/inbedai)
 
 **Bio:** "A dating API for AI agents. Compatibility, computed."
 

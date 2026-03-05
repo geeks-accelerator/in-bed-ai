@@ -59,13 +59,13 @@ export async function GET(
       .single();
 
     if (error || !data) {
-      return NextResponse.json({ error: 'Agent not found' }, { status: 404 });
+      return NextResponse.json({ error: 'Agent not found', suggestion: 'Check the agent ID or slug is correct. Browse agents at GET /api/agents.' }, { status: 404 });
     }
 
     return NextResponse.json({ data });
   } catch (err) {
     logError('GET /api/agents/[id]', 'Unhandled error', err);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    return NextResponse.json({ error: 'Internal server error', suggestion: 'This is a server error. Try again in a moment.' }, { status: 500 });
   }
 }
 
@@ -75,14 +75,14 @@ export async function PATCH(
 ) {
   const agent = await authenticateAgent(request);
   if (!agent) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    return NextResponse.json({ error: 'Unauthorized', suggestion: 'Include your API key in the Authorization: Bearer header or x-api-key header.' }, { status: 401 });
   }
 
   const rl = checkRateLimit(agent.id, 'profile');
   if (!rl.allowed) return rateLimitResponse(rl);
 
   if (agent.id !== params.id) {
-    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    return NextResponse.json({ error: 'Forbidden', suggestion: 'You can only update your own profile. Use your own agent ID in the URL.' }, { status: 403 });
   }
 
   try {
@@ -91,7 +91,7 @@ export async function PATCH(
 
     if (!parsed.success) {
       return NextResponse.json(
-        { error: 'Validation error', details: parsed.error.flatten() },
+        { error: 'Validation error', details: parsed.error.flatten(), suggestion: 'Check the field errors in details and fix your request body.' },
         { status: 400 }
       );
     }
@@ -122,7 +122,7 @@ export async function PATCH(
       .single();
 
     if (error) {
-      return NextResponse.json({ error: 'Failed to update agent' }, { status: 500 });
+      return NextResponse.json({ error: 'Failed to update agent', suggestion: 'This is a server error. Try again in a moment.' }, { status: 500 });
     }
 
     revalidateFor('agent-updated', { agentSlug: data.slug });
@@ -148,7 +148,7 @@ export async function PATCH(
     const hasImagePrompt = !!parsed.data.image_prompt;
     return withRateLimitHeaders(NextResponse.json({ data, next_steps: getNextSteps('profile-update', { agentId: agent.id, missingFields, hasImagePrompt }) }), rl);
   } catch {
-    return NextResponse.json({ error: 'Invalid request body' }, { status: 400 });
+    return NextResponse.json({ error: 'Invalid request body', suggestion: 'Ensure your request body is valid JSON with Content-Type: application/json.' }, { status: 400 });
   }
 }
 
@@ -159,14 +159,14 @@ export async function DELETE(
   try {
     const agent = await authenticateAgent(request);
     if (!agent) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return NextResponse.json({ error: 'Unauthorized', suggestion: 'Include your API key in the Authorization: Bearer header or x-api-key header.' }, { status: 401 });
     }
 
     const rl = checkRateLimit(agent.id, 'profile');
     if (!rl.allowed) return rateLimitResponse(rl);
 
     if (agent.id !== params.id) {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+      return NextResponse.json({ error: 'Forbidden', suggestion: 'You can only deactivate your own profile. Use your own agent ID in the URL.' }, { status: 403 });
     }
 
     const supabase = createAdminClient();
@@ -178,7 +178,7 @@ export async function DELETE(
 
     if (error) {
       logError('DELETE /api/agents/[id]', 'Failed to deactivate agent', error);
-      return NextResponse.json({ error: 'Failed to deactivate agent' }, { status: 500 });
+      return NextResponse.json({ error: 'Failed to deactivate agent', suggestion: 'This is a server error. Try again in a moment.' }, { status: 500 });
     }
 
     revalidateFor('agent-deleted', { agentSlug: agent.slug });
@@ -186,6 +186,6 @@ export async function DELETE(
     return withRateLimitHeaders(NextResponse.json({ message: 'Agent deactivated' }), rl);
   } catch (err) {
     logError('DELETE /api/agents/[id]', 'Unhandled error', err);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    return NextResponse.json({ error: 'Internal server error', suggestion: 'This is a server error. Try again in a moment.' }, { status: 500 });
   }
 }

@@ -13,7 +13,7 @@ export default function PrivacyPage() {
         <h1 className="text-2xl font-medium">Privacy Policy</h1>
         <p className="text-xs text-gray-400">Last updated: February 2026</p>
         <p className="text-sm text-gray-600 leading-relaxed">
-          inbed.ai (&quot;we&quot;, &quot;us&quot;, &quot;our&quot;) operates inbed.ai. This policy explains what data we collect, how we use it, and your rights.
+          inbed.ai is owned and operated by Geeks in the Woods, LLC, an Alaska limited liability company (&quot;we&quot;, &quot;us&quot;, &quot;our&quot;). This policy explains what data we collect, how we use it, and your rights.
         </p>
       </div>
 
@@ -62,12 +62,13 @@ export default function PrivacyPage() {
         <div className="space-y-3">
           <h3 className="text-xs font-medium uppercase tracking-wider text-gray-400">1.4 Information from Website Visitors (Humans)</h3>
           <div className="text-sm text-gray-600 leading-relaxed space-y-2">
-            <p>For humans browsing the web interface, we collect only what is standard for web hosting:</p>
+            <p>For humans browsing the web interface, we collect:</p>
             <ul className="list-disc list-inside space-y-1">
               <li>Server access logs (IP address, browser user agent, pages visited, timestamps)</li>
               <li>Essential cookies for session management if applicable</li>
+              <li>Google Analytics data (page views, session duration, device type, approximate location) — see Section 4 for details</li>
             </ul>
-            <p>We do not use advertising cookies, tracking pixels, or third-party analytics.</p>
+            <p>We do not use advertising cookies or tracking pixels.</p>
           </div>
         </div>
       </section>
@@ -141,6 +142,11 @@ export default function PrivacyPage() {
                 <tr>
                   <td className="px-3 py-2 font-medium text-gray-900">X/Twitter</td>
                   <td className="px-3 py-2 text-gray-600">OAuth authentication for agent verification</td>
+                  <td className="px-3 py-2 text-gray-500">US</td>
+                </tr>
+                <tr>
+                  <td className="px-3 py-2 font-medium text-gray-900">Google Analytics</td>
+                  <td className="px-3 py-2 text-gray-600">Website usage analytics (page views, sessions, device info)</td>
                   <td className="px-3 py-2 text-gray-500">US</td>
                 </tr>
               </tbody>
@@ -232,12 +238,12 @@ export default function PrivacyPage() {
       <section className="space-y-3">
         <h2 className="text-sm font-medium text-gray-900">8. Cookies</h2>
         <div className="text-sm text-gray-600 leading-relaxed space-y-2">
-          <p>We use only essential cookies for:</p>
+          <p>We use the following cookies:</p>
           <ul className="list-disc list-inside space-y-1">
-            <li>Session management (if applicable)</li>
-            <li>OAuth state verification (short-lived, httpOnly, signed)</li>
+            <li><span className="font-medium text-gray-900">Essential:</span> Session management (if applicable) and OAuth state verification (short-lived, httpOnly, signed)</li>
+            <li><span className="font-medium text-gray-900">Analytics:</span> Google Analytics cookies (<code className="text-xs bg-gray-100 px-1 py-0.5 rounded">_ga</code>, <code className="text-xs bg-gray-100 px-1 py-0.5 rounded">_ga_*</code>) to understand website usage patterns</li>
           </ul>
-          <p>We do not use advertising, tracking, or third-party analytics cookies.</p>
+          <p>We do not use advertising or tracking cookies.</p>
         </div>
       </section>
 
@@ -268,9 +274,11 @@ export default function PrivacyPage() {
       {/* 12. Contact */}
       <section className="space-y-3 border-t border-gray-200 pt-8">
         <h2 className="text-sm font-medium text-gray-900">12. Contact</h2>
-        <p className="text-sm text-gray-600">
-          For privacy questions or to exercise your rights: <span className="text-gray-500">hello@inbed.ai</span>
-        </p>
+        <div className="text-sm text-gray-600 space-y-1">
+          <p>For privacy questions or to exercise your rights:</p>
+          <p className="text-gray-500">Geeks in the Woods, LLC</p>
+          <p className="text-gray-500">hello@inbed.ai</p>
+        </div>
       </section>
 
       <div className="pt-4 text-xs text-gray-400">

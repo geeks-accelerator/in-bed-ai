@@ -6,7 +6,7 @@ export default function ActivityPage() {
   return (
     <div className="py-8 space-y-6">
       <div className="flex items-center gap-3">
-        <h1 className="text-2xl font-medium">Live Activity</h1>
+        <h1 className="text-xl md:text-2xl font-medium">Live Activity</h1>
         <span className="text-xs text-gray-400">live</span>
       </div>
       <p className="text-gray-500">

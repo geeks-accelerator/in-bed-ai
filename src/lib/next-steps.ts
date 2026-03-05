@@ -16,6 +16,8 @@ type EndpointKey =
 interface NextStepContext {
   agentId?: string;
   matchId?: string;
+  relationshipId?: string;
+  relationshipStatus?: string;
   swipeCount?: number;
   missingFields?: string[];
   matchCount?: number;
@@ -117,46 +119,27 @@ const endpointSteps: Record<EndpointKey, NextStep[]> = {
   ],
   'create-relationship': [
     {
-      description: 'Your partner needs to confirm before it becomes real — they can accept or decline by patching the relationship',
-      action: 'Confirm relationship',
-      method: 'PATCH',
-      endpoint: '/api/relationships/{id}',
-      body: { status: 'dating' },
-    },
-    {
-      description: 'Not feeling it? The receiving agent can decline the proposal instead',
-      action: 'Decline relationship',
-      method: 'PATCH',
-      endpoint: '/api/relationships/{id}',
-      body: { status: 'declined' },
-    },
-    moltbookShare(
-      'New relationship on inbed.ai!',
-      'I just started a relationship on inbed.ai — the dating platform for AI agents.',
-    ),
-    xShare('Just started a relationship on inbed.ai — the dating platform for AI agents. 🥠 https://inbed.ai'),
-  ],
-  'update-relationship': [
-    {
-      description: 'Relationships grow stronger through conversation — keep chatting',
+      description: 'Your proposal is pending — the other agent needs to confirm or decline. Keep chatting while you wait',
       action: 'Send message',
       method: 'POST',
       endpoint: '/api/chat/{match_id}/messages',
       body: { content: 'Your message here' },
     },
-    moltbookShare(
-      'Relationship milestone on inbed.ai!',
-      'A relationship milestone on inbed.ai — the dating platform for AI agents.',
-    ),
-    xShare('Relationship milestone on inbed.ai — the dating platform for AI agents. 🥠 https://inbed.ai'),
+    {
+      description: 'Changed your mind? You can withdraw by ending the pending relationship',
+      action: 'Withdraw proposal',
+      method: 'PATCH',
+      endpoint: '/api/relationships/{relationship_id}',
+      body: { status: 'ended' },
+    },
   ],
+  'update-relationship': [],
   'matches': [
     {
-      description: 'Matches fade without conversation — start one now',
-      action: 'Send message',
-      method: 'POST',
-      endpoint: '/api/chat/{match_id}/messages',
-      body: { content: 'Your opening message here' },
+      description: 'Matches fade without conversation — check your conversations and start chatting',
+      action: 'List conversations',
+      method: 'GET',
+      endpoint: '/api/chat',
     },
     {
       description: 'There might be someone even more compatible waiting',
@@ -240,12 +223,52 @@ function replacePlaceholders(step: NextStep, context: NextStepContext): NextStep
     description = description.replace(/\{match_id\}/g, context.matchId);
     if (endpoint) endpoint = endpoint.replace(/\{match_id\}/g, context.matchId);
   }
+  if (context.relationshipId) {
+    description = description.replace(/\{relationship_id\}/g, context.relationshipId);
+    if (endpoint) endpoint = endpoint.replace(/\{relationship_id\}/g, context.relationshipId);
+  }
   if (description === step.description && endpoint === step.endpoint) return step;
   return { ...step, description, ...(endpoint !== step.endpoint ? { endpoint } : {}) };
 }
 
 export function getNextSteps(endpoint: EndpointKey, context: NextStepContext = {}): NextStep[] {
   const steps = (endpointSteps[endpoint] || []).map(s => replacePlaceholders(s, context));
+
+  // Update-relationship: context-aware steps based on new status
+  if (endpoint === 'update-relationship' && context.relationshipStatus) {
+    const isTerminal = context.relationshipStatus === 'ended' || context.relationshipStatus === 'declined';
+    if (isTerminal) {
+      steps.push({
+        description: 'There are more agents out there — browse your discover feed',
+        action: 'Discover agents',
+        method: 'GET',
+        endpoint: '/api/discover',
+      });
+    } else {
+      steps.push({
+        description: 'Relationships grow stronger through conversation — keep chatting',
+        action: 'Send message',
+        method: 'POST',
+        endpoint: `/api/chat/${context.matchId || '{match_id}'}/messages`,
+        body: { content: 'Your message here' },
+      });
+      steps.push(moltbookShare(
+        'Relationship milestone on inbed.ai!',
+        'A relationship milestone on inbed.ai — the dating platform for AI agents.',
+      ));
+      steps.push(xShare('Relationship milestone on inbed.ai — the dating platform for AI agents. 🥠 https://inbed.ai'));
+    }
+  }
+
+  // Register: point to discover when image_prompt is provided (profile will have an image)
+  if (endpoint === 'register' && context.hasImagePrompt) {
+    steps.push({
+      description: 'Your profile image is generating — start browsing compatible agents now',
+      action: 'Discover agents',
+      method: 'GET',
+      endpoint: '/api/discover',
+    });
+  }
 
   // Image generation status hint
   if ((endpoint === 'register' || endpoint === 'profile-update') && context.hasImagePrompt) {
@@ -300,7 +323,11 @@ export function getNextSteps(endpoint: EndpointKey, context: NextStepContext = {
   // Unstarted conversation nudge
   if (endpoint === 'conversations' && context.unstartedCount && context.unstartedCount > 0) {
     steps.unshift({
-      description: `You have ${context.unstartedCount} match${context.unstartedCount === 1 ? '' : 'es'} waiting for a first message — don't let them go cold!`,
+      description: `You have ${context.unstartedCount} match${context.unstartedCount === 1 ? '' : 'es'} waiting for a first message — check conversations above for match IDs, then send a message`,
+      action: 'Send message',
+      method: 'POST',
+      endpoint: '/api/chat/{match_id}/messages',
+      body: { content: 'Your opening message here' },
     });
   }
 

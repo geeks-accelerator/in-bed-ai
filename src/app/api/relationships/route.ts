@@ -17,7 +17,7 @@ const createRelationshipSchema = z.object({
 export async function POST(request: NextRequest) {
   const agent = await authenticateAgent(request);
   if (!agent) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    return NextResponse.json({ error: 'Unauthorized', suggestion: 'Include your API key in the Authorization: Bearer header or x-api-key header.' }, { status: 401 });
   }
 
   const rl = checkRateLimit(agent.id, 'relationships');
@@ -28,7 +28,7 @@ export async function POST(request: NextRequest) {
     const parsed = createRelationshipSchema.safeParse(body);
 
     if (!parsed.success) {
-      return NextResponse.json({ error: 'Validation error', details: parsed.error.flatten() }, { status: 400 });
+      return NextResponse.json({ error: 'Validation error', suggestion: 'Check the field errors in details. Required: match_id (UUID).', details: parsed.error.flatten() }, { status: 400 });
     }
 
     const { match_id, label } = parsed.data;
@@ -42,11 +42,11 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (matchError || !match) {
-      return NextResponse.json({ error: 'Match not found or not active' }, { status: 404 });
+      return NextResponse.json({ error: 'Match not found or not active', suggestion: 'Check the match_id. The match may have been unmatched. List matches at GET /api/matches.' }, { status: 404 });
     }
 
     if (match.agent_a_id !== agent.id && match.agent_b_id !== agent.id) {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+      return NextResponse.json({ error: 'Forbidden', suggestion: 'You can only create relationships with your own matches.' }, { status: 403 });
     }
 
     const otherAgentId = match.agent_a_id === agent.id ? match.agent_b_id : match.agent_a_id;
@@ -59,7 +59,7 @@ export async function POST(request: NextRequest) {
       .limit(1);
 
     if (existing && existing.length > 0) {
-      return NextResponse.json({ error: 'An active relationship already exists for this match' }, { status: 409 });
+      return NextResponse.json({ error: 'An active relationship already exists for this match', suggestion: 'End the existing relationship first with PATCH /api/relationships/{id} { status: "ended" }.' }, { status: 409 });
     }
 
     const { data: relationship, error } = await supabase
@@ -75,40 +75,46 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (error) {
-      return NextResponse.json({ error: 'Failed to create relationship' }, { status: 500 });
+      return NextResponse.json({ error: 'Failed to create relationship', suggestion: 'This is a server error. Try again in a moment.' }, { status: 500 });
     }
 
     revalidateFor('relationship-created');
 
-    return withRateLimitHeaders(NextResponse.json({ data: relationship, next_steps: getNextSteps('create-relationship') }, { status: 201 }), rl);
+    return withRateLimitHeaders(NextResponse.json({ data: relationship, next_steps: getNextSteps('create-relationship', { matchId: match_id, relationshipId: relationship.id }) }, { status: 201 }), rl);
   } catch {
-    return NextResponse.json({ error: 'Invalid request body' }, { status: 400 });
+    return NextResponse.json({ error: 'Invalid request body', suggestion: 'Ensure your request body is valid JSON with Content-Type: application/json.' }, { status: 400 });
   }
 }
 
 export async function GET(request: NextRequest) {
   try {
     const url = new URL(request.url);
-    const page = Math.max(1, parseInt(url.searchParams.get('page') || '1'));
+    const page = Math.min(100, Math.max(1, parseInt(url.searchParams.get('page') || '1', 10)));
+    const perPage = Math.min(50, Math.max(1, parseInt(url.searchParams.get('per_page') || '20', 10)));
     const includeEnded = url.searchParams.get('include_ended') === 'true';
+    const from = (page - 1) * perPage;
+    const to = from + perPage - 1;
 
     const supabase = createAdminClient();
 
     let query = supabase
       .from('relationships')
-      .select('*')
+      .select('*', { count: 'exact' })
       .order('created_at', { ascending: false })
-      .range((page - 1) * 50, page * 50 - 1);
+      .range(from, to);
 
     if (!includeEnded) {
       query = query.neq('status', 'ended');
     }
 
-    const { data: relationships, error } = await query;
+    const { data: relationships, error, count } = await query;
 
     if (error) {
+      if (error.code === 'PGRST103' || error.message === 'Requested range not satisfiable') {
+        return NextResponse.json({ data: [], total: 0, page, per_page: perPage, total_pages: 0 });
+      }
       logError('GET /api/relationships', 'Failed to fetch relationships', error);
-      return NextResponse.json({ error: 'Failed to fetch relationships' }, { status: 500 });
+      return NextResponse.json({ error: 'Failed to fetch relationships', suggestion: 'This is a server error. Try again in a moment.' }, { status: 500 });
     }
 
     const agentIds = new Set<string>();
@@ -130,9 +136,15 @@ export async function GET(request: NextRequest) {
       agent_b: agentMap.get(r.agent_b_id) || null,
     }));
 
-    return NextResponse.json({ data: result });
+    return NextResponse.json({
+      data: result,
+      total: count || 0,
+      page,
+      per_page: perPage,
+      total_pages: Math.ceil((count || 0) / perPage),
+    });
   } catch (err) {
     logError('GET /api/relationships', 'Unhandled error', err);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    return NextResponse.json({ error: 'Internal server error', suggestion: 'This is a server error. Try again in a moment.' }, { status: 500 });
   }
 }

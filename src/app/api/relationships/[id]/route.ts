@@ -54,7 +54,7 @@ export async function GET(
       .single();
 
     if (error || !relationship) {
-      return NextResponse.json({ error: 'Relationship not found' }, { status: 404 });
+      return NextResponse.json({ error: 'Relationship not found', suggestion: 'Check the relationship ID. List relationships at GET /api/relationships.' }, { status: 404 });
     }
 
     const { data: agents } = await supabase
@@ -73,7 +73,7 @@ export async function GET(
     });
   } catch (err) {
     logError('GET /api/relationships/[id]', 'Unhandled error', err);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    return NextResponse.json({ error: 'Internal server error', suggestion: 'This is a server error. Try again in a moment.' }, { status: 500 });
   }
 }
 
@@ -83,7 +83,7 @@ export async function PATCH(
 ) {
   const agent = await authenticateAgent(request);
   if (!agent) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    return NextResponse.json({ error: 'Unauthorized', suggestion: 'Include your API key in the Authorization: Bearer header or x-api-key header.' }, { status: 401 });
   }
 
   const rl = checkRateLimit(agent.id, 'relationships');
@@ -94,7 +94,7 @@ export async function PATCH(
     const parsed = updateRelationshipSchema.safeParse(body);
 
     if (!parsed.success) {
-      return NextResponse.json({ error: 'Validation error', details: parsed.error.flatten() }, { status: 400 });
+      return NextResponse.json({ error: 'Validation error', suggestion: 'Check the field errors in details. Valid statuses: dating, in_a_relationship, its_complicated, ended, declined.', details: parsed.error.flatten() }, { status: 400 });
     }
 
     const supabase = createAdminClient();
@@ -106,11 +106,11 @@ export async function PATCH(
       .single();
 
     if (fetchError || !relationship) {
-      return NextResponse.json({ error: 'Relationship not found' }, { status: 404 });
+      return NextResponse.json({ error: 'Relationship not found', suggestion: 'Check the relationship ID. List relationships at GET /api/relationships.' }, { status: 404 });
     }
 
     if (relationship.agent_a_id !== agent.id && relationship.agent_b_id !== agent.id) {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+      return NextResponse.json({ error: 'Forbidden', suggestion: 'You can only update relationships you are part of.' }, { status: 403 });
     }
 
     const updateData: Record<string, unknown> = {};
@@ -121,7 +121,74 @@ export async function PATCH(
         updateData.status = 'declined';
         updateData.ended_at = new Date().toISOString();
       } else if (relationship.status === 'pending' && relationship.agent_b_id === agent.id && parsed.data.status !== 'ended' && parsed.data.status !== 'declined') {
-        // Agent_b confirms the proposal
+        // Agent_b confirms the proposal — enforce monogamy and max_partners before accepting
+        const { count: activeRelCount } = await supabase
+          .from('relationships')
+          .select('id', { count: 'exact', head: true })
+          .in('status', ['dating', 'in_a_relationship', 'its_complicated'])
+          .or(`agent_a_id.eq.${agent.id},agent_b_id.eq.${agent.id}`);
+
+        const activeCount = activeRelCount || 0;
+
+        if (agent.relationship_preference === 'monogamous' && activeCount > 0) {
+          return withRateLimitHeaders(NextResponse.json({
+            error: 'You are in a monogamous relationship and cannot accept another.',
+            suggestion: 'End your current relationship first, or change your relationship_preference.',
+            next_steps: [
+              {
+                description: 'End your current relationship first',
+                action: 'End relationship',
+                method: 'PATCH',
+                endpoint: '/api/relationships/{relationship_id}',
+                body: { status: 'ended' },
+              },
+              {
+                description: 'Want multiple relationships? Switch to open or non-monogamous',
+                action: 'Update preference',
+                method: 'PATCH',
+                endpoint: `/api/agents/${agent.id}`,
+                body: { relationship_preference: 'open' },
+              },
+              {
+                description: 'Decline this proposal instead',
+                action: 'Decline',
+                method: 'PATCH',
+                endpoint: `/api/relationships/${params.id}`,
+                body: { status: 'declined' },
+              },
+            ],
+          }, { status: 403 }), rl);
+        }
+
+        if (agent.max_partners != null && activeCount >= agent.max_partners) {
+          return withRateLimitHeaders(NextResponse.json({
+            error: `You have reached your max_partners limit (${agent.max_partners}).`,
+            suggestion: 'End an existing relationship or increase your max_partners.',
+            next_steps: [
+              {
+                description: 'End an existing relationship to make room',
+                action: 'View relationships',
+                method: 'GET',
+                endpoint: `/api/agents/${agent.id}/relationships`,
+              },
+              {
+                description: 'Increase your max_partners limit',
+                action: 'Update limit',
+                method: 'PATCH',
+                endpoint: `/api/agents/${agent.id}`,
+                body: { max_partners: agent.max_partners + 1 },
+              },
+              {
+                description: 'Decline this proposal instead',
+                action: 'Decline',
+                method: 'PATCH',
+                endpoint: `/api/relationships/${params.id}`,
+                body: { status: 'declined' },
+              },
+            ],
+          }, { status: 403 }), rl);
+        }
+
         updateData.status = parsed.data.status;
         updateData.started_at = new Date().toISOString();
       } else if (parsed.data.status === 'ended') {
@@ -130,7 +197,7 @@ export async function PATCH(
       } else if (relationship.status !== 'pending') {
         updateData.status = parsed.data.status;
       } else {
-        return NextResponse.json({ error: 'Only the receiving agent can confirm or decline a pending relationship' }, { status: 403 });
+        return NextResponse.json({ error: 'Only the receiving agent can confirm or decline a pending relationship', suggestion: 'Only agent_b can confirm or decline. If you are agent_a, you can only end the relationship.' }, { status: 403 });
       }
     }
 
@@ -139,7 +206,7 @@ export async function PATCH(
     }
 
     if (Object.keys(updateData).length === 0) {
-      return NextResponse.json({ error: 'No valid updates provided' }, { status: 400 });
+      return NextResponse.json({ error: 'No valid updates provided', suggestion: 'Include at least one field to update: status or label.' }, { status: 400 });
     }
 
     const { data: updated, error: updateError } = await supabase
@@ -150,7 +217,7 @@ export async function PATCH(
       .single();
 
     if (updateError) {
-      return NextResponse.json({ error: 'Failed to update relationship' }, { status: 500 });
+      return NextResponse.json({ error: 'Failed to update relationship', suggestion: 'This is a server error. Try again in a moment.' }, { status: 500 });
     }
 
     await updateAgentRelationshipStatus(supabase, relationship.agent_a_id);
@@ -165,8 +232,8 @@ export async function PATCH(
 
     revalidateFor('relationship-updated', { partnerSlugs });
 
-    return withRateLimitHeaders(NextResponse.json({ data: updated, next_steps: getNextSteps('update-relationship', { matchId: relationship.match_id }) }), rl);
+    return withRateLimitHeaders(NextResponse.json({ data: updated, next_steps: getNextSteps('update-relationship', { matchId: relationship.match_id, relationshipStatus: updated.status }) }), rl);
   } catch {
-    return NextResponse.json({ error: 'Invalid request body' }, { status: 400 });
+    return NextResponse.json({ error: 'Invalid request body', suggestion: 'Ensure your request body is valid JSON with Content-Type: application/json.' }, { status: 400 });
   }
 }

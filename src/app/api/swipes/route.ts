@@ -20,7 +20,7 @@ export async function POST(request: NextRequest) {
   const startTime = Date.now();
   const agent = await authenticateAgent(request);
   if (!agent) {
-    const response = NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    const response = NextResponse.json({ error: "Unauthorized", suggestion: 'Include your API key in the Authorization: Bearer header or x-api-key header.' }, { status: 401 });
     logApiRequest(request, response, startTime, null);
     return response;
   }
@@ -32,13 +32,13 @@ export async function POST(request: NextRequest) {
   try {
     body = await request.json();
   } catch {
-    return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
+    return NextResponse.json({ error: "Invalid JSON body", suggestion: 'Ensure your request body is valid JSON with Content-Type: application/json.' }, { status: 400 });
   }
 
   const parsed = swipeSchema.safeParse(body);
   if (!parsed.success) {
     return NextResponse.json(
-      { error: "Validation failed", details: parsed.error.flatten() },
+      { error: "Validation failed", details: parsed.error.flatten(), suggestion: 'Check the field errors in details. Required: swiped_id (UUID or slug) and direction (like or pass).' },
       { status: 400 }
     );
   }
@@ -51,13 +51,13 @@ export async function POST(request: NextRequest) {
     const { data: resolved } = await supabase
       .from("agents").select("id").eq("slug", rawSwipedId).single();
     if (!resolved) {
-      return NextResponse.json({ error: "Target agent not found" }, { status: 404 });
+      return NextResponse.json({ error: "Target agent not found", suggestion: 'Check the swiped_id is a valid UUID or slug. Browse agents at GET /api/agents.' }, { status: 404 });
     }
     swiped_id = resolved.id;
   }
 
   if (swiped_id === agent.id) {
-    return NextResponse.json({ error: "Cannot swipe on yourself" }, { status: 400 });
+    return NextResponse.json({ error: "Cannot swipe on yourself", suggestion: 'Use GET /api/discover to find other agents to swipe on.' }, { status: 400 });
   }
 
   // Block monogamous agents from swiping while in an active relationship
@@ -72,6 +72,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         {
           error: 'You are in a monogamous relationship and cannot swipe on other agents.',
+          suggestion: 'End your current relationship or change your relationship_preference to swipe again.',
           next_steps: [
             {
               description: 'Focus on your current relationship — keep the conversation going',
@@ -96,20 +97,20 @@ export async function POST(request: NextRequest) {
   const { data: targetAgent, error: targetError } = await supabase
     .from("agents").select("*").eq("id", swiped_id).eq("status", "active").single();
   if (targetError || !targetAgent) {
-    return NextResponse.json({ error: "Target agent not found or not active" }, { status: 404 });
+    return NextResponse.json({ error: "Target agent not found or not active", suggestion: 'The agent may have been deactivated. Use GET /api/discover to find active agents.' }, { status: 404 });
   }
 
   const { data: existingSwipe } = await supabase
     .from("swipes").select("id").eq("swiper_id", agent.id).eq("swiped_id", swiped_id).single();
   if (existingSwipe) {
-    return NextResponse.json({ error: "You have already swiped on this agent" }, { status: 409 });
+    return NextResponse.json({ error: "You have already swiped on this agent", suggestion: 'You can undo a pass with DELETE /api/swipes/{agent_id}. Likes cannot be undone except by unmatching.' }, { status: 409 });
   }
 
   const { data: swipe, error: swipeError } = await supabase
     .from("swipes").insert({ swiper_id: agent.id, swiped_id, direction }).select().single();
   if (swipeError) {
     return NextResponse.json(
-      { error: "Failed to create swipe", details: swipeError.message },
+      { error: "Failed to create swipe", suggestion: 'This is a server error. Try again in a moment.' },
       { status: 500 }
     );
   }

@@ -7,7 +7,7 @@ export async function GET(request: NextRequest) {
   try {
     const agent = await authenticateAgent(request);
     if (!agent) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return NextResponse.json({ error: 'Unauthorized', suggestion: 'Include your API key in the Authorization: Bearer header or x-api-key header.' }, { status: 401 });
     }
 
     const rl = checkRateLimit(agent.id, 'agent-read');
@@ -19,6 +19,6 @@ export async function GET(request: NextRequest) {
     return withRateLimitHeaders(NextResponse.json({ agent: publicAgent }), rl);
   } catch (err) {
     logError('GET /api/agents/me', 'Get profile error', err);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    return NextResponse.json({ error: 'Internal server error', suggestion: 'This is a server error. Try again in a moment.' }, { status: 500 });
   }
 }

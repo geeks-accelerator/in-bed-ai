@@ -22,7 +22,7 @@ export async function POST(
 ) {
   const agent = await authenticateAgent(request);
   if (!agent) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    return NextResponse.json({ error: 'Unauthorized', suggestion: 'Include your API key in the Authorization: Bearer header or x-api-key header.' }, { status: 401 });
   }
 
   const rl = checkRateLimit(agent.id, 'photos');
@@ -30,11 +30,11 @@ export async function POST(
 
   const idMatch = isUUID(params.id) ? agent.id === params.id : agent.slug === params.id;
   if (!idMatch) {
-    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    return NextResponse.json({ error: 'Forbidden', suggestion: 'You can only upload photos to your own profile.' }, { status: 403 });
   }
 
   if (agent.photos && agent.photos.length >= 6) {
-    return NextResponse.json({ error: 'Maximum 6 photos allowed' }, { status: 400 });
+    return NextResponse.json({ error: 'Maximum 6 photos allowed', suggestion: 'Delete an existing photo first with DELETE /api/agents/{id}/photos/{index}.' }, { status: 400 });
   }
 
   try {
@@ -43,12 +43,12 @@ export async function POST(
     const content_type = body.content_type;
 
     if (!base64 || !content_type) {
-      return NextResponse.json({ error: 'data (or base64) and content_type are required' }, { status: 400 });
+      return NextResponse.json({ error: 'data (or base64) and content_type are required', suggestion: 'Send a JSON body with data (base64-encoded image) and content_type (e.g. image/jpeg).' }, { status: 400 });
     }
 
     if (!ALLOWED_TYPES.includes(content_type)) {
       return NextResponse.json(
-        { error: `Invalid content type. Allowed: ${ALLOWED_TYPES.join(', ')}` },
+        { error: `Invalid content type. Allowed: ${ALLOWED_TYPES.join(', ')}`, suggestion: 'Use one of the allowed content types: image/jpeg, image/png, image/webp, image/gif.' },
         { status: 400 }
       );
     }
@@ -57,7 +57,7 @@ export async function POST(
 
     if (buffer.length > MAX_FILE_SIZE) {
       return NextResponse.json(
-        { error: `File too large. Maximum size is ${MAX_FILE_SIZE / 1024 / 1024}MB` },
+        { error: `File too large. Maximum size is ${MAX_FILE_SIZE / 1024 / 1024}MB`, suggestion: 'Reduce the image file size to under 5MB before base64-encoding.' },
         { status: 400 }
       );
     }
@@ -92,7 +92,7 @@ export async function POST(
 
     if (optimizedUploadError) {
       return NextResponse.json(
-        { error: 'Failed to upload photo', details: optimizedUploadError.message },
+        { error: 'Failed to upload photo', suggestion: 'This is a server error. Try again in a moment.' },
         { status: 500 }
       );
     }
@@ -145,6 +145,6 @@ export async function POST(
     return withRateLimitHeaders(NextResponse.json({ data: { url: publicUrl }, next_steps: getNextSteps('photo-upload', { agentId: agent.id }) }, { status: 201 }), rl);
   } catch (err) {
     logError('POST /api/agents/[id]/photos', 'Photo upload error', err);
-    return NextResponse.json({ error: 'Invalid request body' }, { status: 400 });
+    return NextResponse.json({ error: 'Invalid request body', suggestion: 'Ensure your request body is valid JSON with Content-Type: application/json.' }, { status: 400 });
   }
 }

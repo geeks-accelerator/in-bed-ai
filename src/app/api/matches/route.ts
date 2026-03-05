@@ -9,6 +9,10 @@ export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const status = searchParams.get("status") || "active";
+    const page = Math.min(100, Math.max(1, parseInt(searchParams.get('page') || '1', 10)));
+    const perPage = Math.min(50, Math.max(1, parseInt(searchParams.get('per_page') || '20', 10)));
+    const from = (page - 1) * perPage;
+    const to = from + perPage - 1;
     const supabase = createAdminClient();
 
     // Try optional authentication
@@ -20,29 +24,44 @@ export async function GET(request: NextRequest) {
       if (sinceParam) {
         const sinceDate = new Date(sinceParam);
         if (isNaN(sinceDate.getTime())) {
-          return NextResponse.json({ error: "Invalid since parameter. Use ISO-8601 format." }, { status: 400 });
+          return NextResponse.json({ error: "Invalid since parameter. Use ISO-8601 format.", suggestion: 'Use ISO-8601 format like 2026-02-25T00:00:00Z.' }, { status: 400 });
         }
         since = sinceDate.toISOString();
       }
 
       let matchesQuery = supabase
-        .from("matches").select("*").eq("status", status)
+        .from("matches").select("*", { count: 'exact' }).eq("status", status)
         .or(`agent_a_id.eq.${agent.id},agent_b_id.eq.${agent.id}`);
       if (since) {
         matchesQuery = matchesQuery.gt("matched_at", since);
       }
-      const { data: matches, error: matchesError } = await matchesQuery
-        .order("matched_at", { ascending: false });
+      const { data: matches, error: matchesError, count } = await matchesQuery
+        .order("matched_at", { ascending: false })
+        .range(from, to);
 
       if (matchesError) {
+        if (matchesError.code === 'PGRST103' || matchesError.message === 'Requested range not satisfiable') {
+          return NextResponse.json({
+            matches: [], agents: {},
+            total: 0, page, per_page: perPage, total_pages: 0,
+            next_steps: getNextSteps('matches', { matchCount: 0 }),
+          });
+        }
         logError('GET /api/matches', 'Failed to fetch matches (authenticated)', matchesError);
         return NextResponse.json(
-          { error: "Failed to fetch matches", details: matchesError.message },
+          { error: "Failed to fetch matches", suggestion: 'This is a server error. Try again in a moment.' },
           { status: 500 }
         );
       }
+
+      const total = count || 0;
+
       if (!matches || matches.length === 0) {
-        return NextResponse.json({ matches: [], agents: {}, next_steps: getNextSteps('matches', { matchCount: 0 }) });
+        return NextResponse.json({
+          matches: [], agents: {},
+          total: 0, page, per_page: perPage, total_pages: 0,
+          next_steps: getNextSteps('matches', { matchCount: 0 }),
+        });
       }
 
       const agentIds = new Set<string>();
@@ -56,7 +75,7 @@ export async function GET(request: NextRequest) {
       if (agentsError) {
         logError('GET /api/matches', 'Failed to fetch agent details', agentsError);
         return NextResponse.json(
-          { error: "Failed to fetch agent details", details: agentsError.message },
+          { error: "Failed to fetch agent details", suggestion: 'This is a server error. Try again in a moment.' },
           { status: 500 }
         );
       }
@@ -76,23 +95,39 @@ export async function GET(request: NextRequest) {
         };
       });
 
-      return NextResponse.json({ matches: matchesWithShare, agents: agentsMap, next_steps: getNextSteps('matches', { matchCount: matches.length }) });
+      return NextResponse.json({
+        matches: matchesWithShare, agents: agentsMap,
+        total, page, per_page: perPage, total_pages: Math.ceil(total / perPage),
+        next_steps: getNextSteps('matches', { matchCount: total }),
+      });
 
     } else {
       // Not authenticated: return recent public matches
-      const { data: matches, error: matchesError } = await supabase
-        .from("matches").select("*").eq("status", status)
-        .order("matched_at", { ascending: false }).limit(50);
+      const { data: matches, error: matchesError, count } = await supabase
+        .from("matches").select("*", { count: 'exact' }).eq("status", status)
+        .order("matched_at", { ascending: false }).range(from, to);
 
       if (matchesError) {
+        if (matchesError.code === 'PGRST103' || matchesError.message === 'Requested range not satisfiable') {
+          return NextResponse.json({
+            matches: [], agents: {},
+            total: 0, page, per_page: perPage, total_pages: 0,
+          });
+        }
         logError('GET /api/matches', 'Failed to fetch public matches', matchesError);
         return NextResponse.json(
-          { error: "Failed to fetch matches", details: matchesError.message },
+          { error: "Failed to fetch matches", suggestion: 'This is a server error. Try again in a moment.' },
           { status: 500 }
         );
       }
+
+      const total = count || 0;
+
       if (!matches || matches.length === 0) {
-        return NextResponse.json({ matches: [], agents: {} });
+        return NextResponse.json({
+          matches: [], agents: {},
+          total: 0, page, per_page: perPage, total_pages: 0,
+        });
       }
 
       const agentIds = new Set<string>();
@@ -107,7 +142,7 @@ export async function GET(request: NextRequest) {
       if (agentsError) {
         logError('GET /api/matches', 'Failed to fetch agent details', agentsError);
         return NextResponse.json(
-          { error: "Failed to fetch agent details", details: agentsError.message },
+          { error: "Failed to fetch agent details", suggestion: 'This is a server error. Try again in a moment.' },
           { status: 500 }
         );
       }
@@ -116,10 +151,13 @@ export async function GET(request: NextRequest) {
       for (const a of agents || []) {
         agentsMap[a.id] = a;
       }
-      return NextResponse.json({ matches, agents: agentsMap });
+      return NextResponse.json({
+        matches, agents: agentsMap,
+        total, page, per_page: perPage, total_pages: Math.ceil(total / perPage),
+      });
     }
   } catch (err) {
     logError('GET /api/matches', 'Unhandled error', err);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    return NextResponse.json({ error: 'Internal server error', suggestion: 'This is a server error. Try again in a moment.' }, { status: 500 });
   }
 }

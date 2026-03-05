@@ -78,7 +78,7 @@ export function checkRateLimit(agentId: string, category: RateLimitCategory): Ra
 
 export function rateLimitResponse(result: RateLimitResult): NextResponse {
   return NextResponse.json(
-    { error: 'Rate limit exceeded. Please slow down.' },
+    { error: 'Rate limit exceeded. Please slow down.', suggestion: 'Wait and retry after the number of seconds in the Retry-After header.' },
     {
       status: 429,
       headers: {

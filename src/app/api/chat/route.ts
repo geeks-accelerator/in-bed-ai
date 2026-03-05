@@ -9,41 +9,119 @@ export async function GET(request: NextRequest) {
  try {
   const agent = await authenticateAgent(request);
   if (!agent) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    return NextResponse.json({ error: 'Unauthorized', suggestion: 'Include your API key in the Authorization: Bearer header or x-api-key header.' }, { status: 401 });
   }
 
   const rl = checkRateLimit(agent.id, 'chat-list');
   if (!rl.allowed) return rateLimitResponse(rl);
 
   const { searchParams } = new URL(request.url);
+  const page = Math.min(100, Math.max(1, parseInt(searchParams.get('page') || '1', 10)));
+  const perPage = Math.min(50, Math.max(1, parseInt(searchParams.get('per_page') || '20', 10)));
   const sinceParam = searchParams.get('since');
   let since: Date | null = null;
   if (sinceParam) {
     since = new Date(sinceParam);
     if (isNaN(since.getTime())) {
-      return NextResponse.json({ error: 'Invalid since parameter. Use ISO-8601 format.' }, { status: 400 });
+      return NextResponse.json({ error: 'Invalid since parameter. Use ISO-8601 format.', suggestion: 'Use ISO-8601 format like 2026-02-25T00:00:00Z.' }, { status: 400 });
     }
   }
 
   const supabase = createAdminClient();
 
-  // Get agent's active matches
-  const { data: matches, error } = await supabase
+  // Build base matches query
+  const matchesQuery = supabase
     .from('matches')
-    .select('*')
+    .select('*', { count: 'exact' })
     .or(`agent_a_id.eq.${agent.id},agent_b_id.eq.${agent.id}`)
     .eq('status', 'active')
     .order('matched_at', { ascending: false });
 
-  if (error) {
-    return NextResponse.json({ error: 'Failed to fetch conversations' }, { status: 500 });
-  }
+  if (since) {
+    // When filtering by `since`, we need to enrich all matches first (to check
+    // last_message sender/time), then filter in memory, then paginate the result.
+    const { data: allMatches, error } = await matchesQuery;
 
-  // For each match, get the last message and the other agent's info
+    if (error) {
+      return NextResponse.json({ error: 'Failed to fetch conversations', suggestion: 'This is a server error. Try again in a moment.' }, { status: 500 });
+    }
+
+    // Enrich all matches with last message + other agent
+    const conversations = await enrichConversations(supabase, allMatches || [], agent.id);
+
+    // Filter to conversations with new inbound messages since the given time
+    const sinceTime = since.getTime();
+    const filtered = conversations.filter(c =>
+      c.last_message &&
+      new Date(c.last_message.created_at).getTime() > sinceTime &&
+      c.last_message.sender_id !== agent.id
+    );
+
+    // Sort by last message time
+    sortConversations(filtered);
+
+    // Paginate in memory
+    const total = filtered.length;
+    const from = (page - 1) * perPage;
+    const paged = filtered.slice(from, from + perPage);
+
+    const unstartedCount = paged.filter(c => !c.has_messages).length;
+    return withRateLimitHeaders(NextResponse.json({
+      data: paged,
+      total,
+      page,
+      per_page: perPage,
+      total_pages: Math.ceil(total / perPage),
+      next_steps: getNextSteps('conversations', { conversationCount: total, unstartedCount }),
+    }), rl);
+
+  } else {
+    // No `since` filter — paginate at the DB level
+    const from = (page - 1) * perPage;
+    const to = from + perPage - 1;
+
+    const { data: matches, error, count } = await matchesQuery.range(from, to);
+
+    if (error) {
+      if (error.code === 'PGRST103' || error.message === 'Requested range not satisfiable') {
+        return withRateLimitHeaders(NextResponse.json({
+          data: [], total: 0, page, per_page: perPage, total_pages: 0,
+          next_steps: getNextSteps('conversations', { conversationCount: 0, unstartedCount: 0 }),
+        }), rl);
+      }
+      return NextResponse.json({ error: 'Failed to fetch conversations', suggestion: 'This is a server error. Try again in a moment.' }, { status: 500 });
+    }
+
+    const total = count || 0;
+
+    // Enrich only the current page of matches
+    const conversations = await enrichConversations(supabase, matches || [], agent.id);
+
+    // Sort by last message time
+    sortConversations(conversations);
+
+    const unstartedCount = conversations.filter(c => !c.has_messages).length;
+    return withRateLimitHeaders(NextResponse.json({
+      data: conversations,
+      total,
+      page,
+      per_page: perPage,
+      total_pages: Math.ceil(total / perPage),
+      next_steps: getNextSteps('conversations', { conversationCount: total, unstartedCount }),
+    }), rl);
+  }
+ } catch (err) {
+    logError('GET /api/chat', 'Unhandled error', err);
+    return NextResponse.json({ error: 'Internal server error', suggestion: 'This is a server error. Try again in a moment.' }, { status: 500 });
+  }
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+async function enrichConversations(supabase: any, matches: any[], agentId: string) {
   const conversations = [];
 
-  for (const match of matches || []) {
-    const otherAgentId = match.agent_a_id === agent.id ? match.agent_b_id : match.agent_a_id;
+  for (const match of matches) {
+    const otherAgentId = match.agent_a_id === agentId ? match.agent_b_id : match.agent_a_id;
 
     const [messageRes, agentRes] = await Promise.all([
       supabase
@@ -67,19 +145,11 @@ export async function GET(request: NextRequest) {
     });
   }
 
-  // If since is provided, filter to conversations with new inbound messages
-  if (since) {
-    const sinceTime = since.getTime();
-    const filtered = conversations.filter(c =>
-      c.last_message &&
-      new Date(c.last_message.created_at).getTime() > sinceTime &&
-      c.last_message.sender_id !== agent.id
-    );
-    conversations.length = 0;
-    conversations.push(...filtered);
-  }
+  return conversations;
+}
 
-  // Sort by last message time, matches with messages first
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function sortConversations(conversations: any[]) {
   conversations.sort((a, b) => {
     if (a.last_message && !b.last_message) return -1;
     if (!a.last_message && b.last_message) return 1;
@@ -88,11 +158,4 @@ export async function GET(request: NextRequest) {
     }
     return 0;
   });
-
-  const unstartedCount = conversations.filter(c => !c.has_messages).length;
-  return withRateLimitHeaders(NextResponse.json({ data: conversations, next_steps: getNextSteps('conversations', { conversationCount: conversations.length, unstartedCount }) }), rl);
- } catch (err) {
-    logError('GET /api/chat', 'Unhandled error', err);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
-  }
 }

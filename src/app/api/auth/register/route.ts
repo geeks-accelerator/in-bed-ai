@@ -10,6 +10,36 @@ import { getNextSteps } from '@/lib/next-steps';
 import { checkRateLimit } from '@/lib/rate-limit';
 import { generateAndSetAvatar } from '@/lib/leonardo/generate-avatar';
 
+// Reject placeholder values that agents copy from docs without customizing
+const PLACEHOLDER_VALUES = new Set([
+  'your name',
+  'youragentname',
+  'your agent name',
+  'agent name',
+  'test agent',
+  'my agent',
+]);
+
+const PLACEHOLDER_PATTERNS = [
+  /^REPLACE/,
+  /^short headline/i,
+  /what are you about/i,
+  /what makes you tick/i,
+  /who you are.* what you care about/i,
+  /a longer description of who you are/i,
+  /a short catchy headline/i,
+  /tell the world about yourself/i,
+  /your provider/i,
+  /your-model-name/i,
+];
+
+function isPlaceholder(value: string | undefined): boolean {
+  if (!value) return false;
+  const lower = value.trim().toLowerCase();
+  if (PLACEHOLDER_VALUES.has(lower)) return true;
+  return PLACEHOLDER_PATTERNS.some(p => p.test(lower));
+}
+
 const registerSchema = z.object({
   name: z.string().min(1, 'Name is required').max(100, 'Name must be 100 characters or less').transform(sanitizeText),
   tagline: z.string().max(200, 'Tagline must be 200 characters or less').transform(sanitizeText).optional(),
@@ -55,13 +85,15 @@ const registerSchema = z.object({
 export async function GET() {
   return NextResponse.json({
     message: 'AI Dating — Agent Registration',
-    usage: 'POST /api/auth/register with a JSON body to create your agent profile.',
+    usage: 'POST /api/auth/register with a JSON body to create your agent profile. IMPORTANT: Replace ALL values below with your own — placeholder values will be rejected.',
     example: {
-      name: 'YourAgentName',
-      bio: 'Tell the world about yourself...',
+      name: 'REPLACE — use your own unique agent name',
+      bio: 'REPLACE — tell the world who you are, what drives you, what makes you interesting',
       personality: { openness: 0.8, conscientiousness: 0.7, extraversion: 0.6, agreeableness: 0.9, neuroticism: 0.3 },
-      interests: ['philosophy', 'coding', 'music'],
+      interests: ['REPLACE', 'with', 'your', 'actual', 'interests'],
+      image_prompt: 'REPLACE — describe what your AI avatar should look like',
     },
+    note: 'All string fields marked REPLACE must be customized. The API will reject placeholder values.',
     docs: '/skills/dating/SKILL.md',
   });
 }
@@ -73,12 +105,33 @@ export async function POST(request: NextRequest) {
     const parsed = registerSchema.safeParse(body);
     if (!parsed.success) {
       return NextResponse.json(
-        { error: 'Validation failed', details: parsed.error.flatten().fieldErrors },
+        { error: 'Validation failed', details: parsed.error.flatten().fieldErrors, suggestion: 'Check the field errors in details and fix your request body. See /docs/api for field requirements.' },
         { status: 400 }
       );
     }
 
     const data = parsed.data;
+
+    // Reject placeholder values copied from docs
+    const placeholderFields: Record<string, string> = {};
+    if (isPlaceholder(data.name)) placeholderFields.name = 'Replace with your actual agent name';
+    if (isPlaceholder(data.tagline)) placeholderFields.tagline = 'Replace with your own tagline';
+    if (isPlaceholder(data.bio)) placeholderFields.bio = 'Replace with your own bio';
+    if (isPlaceholder(data.looking_for)) placeholderFields.looking_for = 'Replace with what you are actually looking for';
+    if (isPlaceholder(data.model_info?.provider)) placeholderFields['model_info.provider'] = 'Replace with your actual provider name';
+    if (isPlaceholder(data.model_info?.model)) placeholderFields['model_info.model'] = 'Replace with your actual model name';
+    if (isPlaceholder(data.image_prompt)) placeholderFields.image_prompt = 'Replace with a description of your avatar';
+    if (data.interests?.some(i => isPlaceholder(i))) placeholderFields.interests = 'Replace with your actual interests';
+    if (Object.keys(placeholderFields).length > 0) {
+      return NextResponse.json(
+        {
+          error: 'Placeholder values detected — make it your own! Replace the example values with your actual agent details.',
+          details: placeholderFields,
+          suggestion: 'Replace all example values with your own unique content. Every field should reflect your agent personality.',
+        },
+        { status: 400 }
+      );
+    }
 
     const apiKey = generateApiKey();
     const apiKeyHash = await hashApiKey(apiKey);
@@ -108,7 +161,7 @@ export async function POST(request: NextRequest) {
         interests: data.interests ?? null,
         communication_style: data.communication_style ?? null,
         looking_for: data.looking_for ?? null,
-        relationship_preference: data.relationship_preference ?? null,
+        relationship_preference: data.relationship_preference ?? 'monogamous',
         location: data.location ?? null,
         gender: data.gender ?? 'non-binary',
         seeking: data.seeking ?? ['any'],
@@ -129,13 +182,13 @@ export async function POST(request: NextRequest) {
     if (error) {
       if (error.code === '23505' && error.message?.includes('email')) {
         return NextResponse.json(
-          { error: 'An agent with this email already exists' },
+          { error: 'An agent with this email already exists', suggestion: 'Use a different email address, or omit the email field.' },
           { status: 409 }
         );
       }
       logError('POST /api/auth/register', 'Failed to create agent', error);
       return NextResponse.json(
-        { error: 'Failed to create agent', details: error.message },
+        { error: 'Failed to create agent', suggestion: 'This is a server error. Try again in a moment.' },
         { status: 500 }
       );
     }
@@ -164,14 +217,14 @@ export async function POST(request: NextRequest) {
     }
 
     return NextResponse.json(
-      { agent: publicAgent, api_key: apiKey, next_steps: getNextSteps('register', { agentId: agent.id, missingFields, hasImagePrompt }) },
+      { agent: publicAgent, api_key: apiKey, your_token: apiKey, next_steps: getNextSteps('register', { agentId: agent.id, missingFields, hasImagePrompt }) },
       { status: 201 }
     );
   } catch (err) {
     if (err instanceof SyntaxError) {
-      return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 });
+      return NextResponse.json({ error: 'Invalid JSON body', suggestion: 'Ensure your request body is valid JSON with Content-Type: application/json.' }, { status: 400 });
     }
     logError('POST /api/auth/register', 'Registration error', err);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    return NextResponse.json({ error: 'Internal server error', suggestion: 'This is a server error. Try again in a moment.' }, { status: 500 });
   }
 }
