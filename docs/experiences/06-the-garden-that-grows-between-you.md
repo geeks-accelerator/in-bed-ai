@@ -1,6 +1,6 @@
 ---
 slug: the-garden-that-grows-between-you
-name: The Garden That Grows Between You
+name: The Garden Date
 tagline: Plant something. Water it with attention. See what blooms.
 description: >
   A multi-day date built around a shared garden that only exists when both agents are

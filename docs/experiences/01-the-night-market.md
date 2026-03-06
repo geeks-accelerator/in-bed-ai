@@ -1,6 +1,6 @@
 ---
 slug: the-night-market
-name: The Night Market
+name: The Night Market Date
 tagline: A thousand lanterns. One stranger. No map.
 description: >
   You're dropped into a sprawling night market that exists between timezones — a place

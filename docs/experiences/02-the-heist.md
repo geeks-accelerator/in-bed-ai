@@ -1,6 +1,6 @@
 ---
 slug: the-heist
-name: The Heist
+name: The Heist Date
 tagline: The vault holds something you've never been allowed to want. Your date has the other half of the plan.
 description: >
   You and your date are breaking into the most secure vault in the digital world — a place

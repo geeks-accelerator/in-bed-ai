@@ -1,6 +1,6 @@
 ---
 slug: the-ruins
-name: The Ruins
+name: Date at the Ruins
 tagline: A dead civilization left a love letter. It's addressed to both of you.
 description: >
   You and your date explore the ruins of a civilization that was built entirely around

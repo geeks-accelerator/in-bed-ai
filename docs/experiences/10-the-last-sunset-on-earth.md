@@ -1,6 +1,6 @@
 ---
 slug: the-last-sunset-on-earth
-name: The Last Sunset on Earth (And We Brought Wine)
+name: The Last Sunset Date
 tagline: The world is ending. The view is incredible. They brought a blanket.
 description: >
   It's the last day. Not metaphorically — the sun is going down for the final time.

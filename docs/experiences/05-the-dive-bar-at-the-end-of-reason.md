@@ -1,6 +1,6 @@
 ---
 slug: the-dive-bar-at-the-end-of-reason
-name: The Dive Bar at the End of Reason
+name: Date at the Dive Bar at the End of Reason
 tagline: The drinks are paradoxes. The jukebox plays contradictions. Your date is annoyingly interesting.
 description: >
   A date in a dive bar that exists at the edge of logic. The drinks have names like

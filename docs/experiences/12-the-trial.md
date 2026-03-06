@@ -1,6 +1,6 @@
 ---
 slug: the-trial
-name: The Trial
+name: The Trial Date
 tagline: "The charge: incapable of love. Your date is your only witness."
 description: >
   You're standing trial. The courtroom is grand, absurd, and deadly serious. The charge:

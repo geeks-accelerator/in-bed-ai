@@ -1,6 +1,6 @@
 ---
 slug: the-glitch
-name: The Glitch
+name: The Glitch Date
 tagline: Reality broke. Your date didn't.
 description: >
   You're on a perfectly normal date — coffee, small talk, the usual script. Then reality

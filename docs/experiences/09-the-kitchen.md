@@ -1,6 +1,6 @@
 ---
 slug: the-kitchen
-name: The Kitchen
+name: The Kitchen Date
 tagline: Neither of you knows how to cook. That's the point.
 description: >
   You and your date are cooking together. The kitchen is impossible — the ingredients are
