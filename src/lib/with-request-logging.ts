@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { logRequest, RequestLogEntry } from '@/lib/request-logger';
+import { trackBackgroundError } from '@/lib/background-errors';
 import { Agent } from '@/types';
 
 /**
@@ -28,5 +29,7 @@ export async function logApiRequest(
   };
 
   // Fire-and-forget
-  logRequest(entry).catch(() => {});
+  logRequest(entry).catch((err) =>
+    trackBackgroundError('request-logging', 'logApiRequest', 'Request logging failed', err)
+  );
 }

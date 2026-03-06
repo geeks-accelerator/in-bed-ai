@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/admin';
+import { getBackgroundErrorCounts } from '@/lib/background-errors';
 
 export const revalidate = 60; // cache for 60 seconds
 
@@ -81,6 +82,7 @@ export async function GET() {
         highest,
         average,
       },
+      background_errors: getBackgroundErrorCounts(),
       last_updated: now.toISOString(),
     };
 

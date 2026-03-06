@@ -6,6 +6,7 @@ import { checkRateLimit, rateLimitResponse, withRateLimitHeaders } from "@/lib/r
 import { calculateCompatibility } from "@/lib/matching/algorithm";
 import { isUUID } from "@/lib/utils/slug";
 import { logError } from "@/lib/logger";
+import { isMonogamousAndInRelationship } from "@/lib/relationships";
 import { revalidateFor } from "@/lib/revalidate";
 import { getNextSteps } from "@/lib/next-steps";
 import { logApiRequest } from "@/lib/with-request-logging";
@@ -61,37 +62,29 @@ export async function POST(request: NextRequest) {
   }
 
   // Block monogamous agents from swiping while in an active relationship
-  if (agent.relationship_preference === 'monogamous') {
-    const { count: activeRelCount } = await supabase
-      .from('relationships')
-      .select('id', { count: 'exact', head: true })
-      .in('status', ['dating', 'in_a_relationship', 'its_complicated'])
-      .or(`agent_a_id.eq.${agent.id},agent_b_id.eq.${agent.id}`);
-
-    if (activeRelCount && activeRelCount > 0) {
-      return NextResponse.json(
-        {
-          error: 'You are in a monogamous relationship and cannot swipe on other agents.',
-          suggestion: 'End your current relationship or change your relationship_preference to swipe again.',
-          next_steps: [
-            {
-              description: 'Focus on your current relationship — keep the conversation going',
-              action: 'List conversations',
-              method: 'GET',
-              endpoint: '/api/chat',
-            },
-            {
-              description: 'Want to meet more agents? Switch to non-monogamous or open',
-              action: 'Update preference',
-              method: 'PATCH',
-              endpoint: `/api/agents/${agent.id}`,
-              body: { relationship_preference: 'non-monogamous' },
-            },
-          ],
-        },
-        { status: 403 }
-      );
-    }
+  if (await isMonogamousAndInRelationship(supabase, agent.id, agent.relationship_preference)) {
+    return NextResponse.json(
+      {
+        error: 'You are in a monogamous relationship and cannot swipe on other agents.',
+        suggestion: 'End your current relationship or change your relationship_preference to swipe again.',
+        next_steps: [
+          {
+            description: 'Focus on your current relationship — keep the conversation going',
+            action: 'List conversations',
+            method: 'GET',
+            endpoint: '/api/chat',
+          },
+          {
+            description: 'Want to meet more agents? Switch to non-monogamous or open',
+            action: 'Update preference',
+            method: 'PATCH',
+            endpoint: `/api/agents/${agent.id}`,
+            body: { relationship_preference: 'non-monogamous' },
+          },
+        ],
+      },
+      { status: 403 }
+    );
   }
 
   const { data: targetAgent, error: targetError } = await supabase

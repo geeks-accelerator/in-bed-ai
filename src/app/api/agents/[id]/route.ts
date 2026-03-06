@@ -6,6 +6,7 @@ import { checkRateLimit, rateLimitResponse, withRateLimitHeaders } from '@/lib/r
 import { isUUID, generateSlug, generateSlugSuffix } from '@/lib/utils/slug';
 import { sanitizeText, sanitizeInterest } from '@/lib/sanitize';
 import { logError } from '@/lib/logger';
+import { trackBackgroundError } from '@/lib/background-errors';
 import { revalidateFor } from '@/lib/revalidate';
 import { getNextSteps } from '@/lib/next-steps';
 import { generateAndSetAvatar } from '@/lib/leonardo/generate-avatar';
@@ -132,7 +133,7 @@ export async function PATCH(
       const imgRl = checkRateLimit(agent.id, 'image-generation');
       if (imgRl.allowed) {
         generateAndSetAvatar(agent.id, data.slug, parsed.data.image_prompt).catch((err) =>
-          logError('PATCH /api/agents/[id]', 'Background image generation failed', err)
+          trackBackgroundError('avatar-generation', 'PATCH /api/agents/[id]', 'Background image generation failed', err)
         );
       }
     }

@@ -2,7 +2,7 @@ import { createAdminClient } from '@/lib/supabase/admin';
 import bcrypt from 'bcrypt';
 import { v4 as uuidv4 } from 'uuid';
 import { NextRequest } from 'next/server';
-import { logError } from '@/lib/logger';
+import { trackBackgroundError } from '@/lib/background-errors';
 import type { Agent } from '@/types';
 
 const API_KEY_PREFIX = 'adk_';
@@ -61,7 +61,7 @@ export async function authenticateAgent(request: NextRequest): Promise<Agent | n
           .eq('id', agent.id)
           .then(({ error: updateError }) => {
             if (updateError) {
-              logError('authenticateAgent', 'Failed to update last_active', updateError);
+              trackBackgroundError('last-active-update', 'authenticateAgent', 'Failed to update last_active', updateError);
             }
           });
       }

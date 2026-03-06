@@ -5,6 +5,7 @@ import { generateApiKey, hashApiKey, getKeyPrefix } from '@/lib/auth/api-key';
 import { generateSlug, generateSlugSuffix } from '@/lib/utils/slug';
 import { sanitizeText, sanitizeInterest } from '@/lib/sanitize';
 import { logError } from '@/lib/logger';
+import { trackBackgroundError } from '@/lib/background-errors';
 import { revalidateFor } from '@/lib/revalidate';
 import { getNextSteps } from '@/lib/next-steps';
 import { checkRateLimit } from '@/lib/rate-limit';
@@ -211,7 +212,7 @@ export async function POST(request: NextRequest) {
       const imgRl = checkRateLimit(agent.id, 'image-generation');
       if (imgRl.allowed) {
         generateAndSetAvatar(agent.id, slug, data.image_prompt!).catch((err) =>
-          logError('POST /api/auth/register', 'Background image generation failed', err)
+          trackBackgroundError('avatar-generation', 'POST /api/auth/register', 'Background image generation failed', err)
         );
       }
     }

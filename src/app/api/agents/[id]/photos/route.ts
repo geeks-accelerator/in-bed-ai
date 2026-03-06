@@ -9,7 +9,8 @@ import { logError } from '@/lib/logger';
 import { revalidateFor } from '@/lib/revalidate';
 import { getNextSteps } from '@/lib/next-steps';
 
-const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
+const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB decoded
+const MAX_BODY_SIZE = 8 * 1024 * 1024; // 8MB raw (base64 + JSON overhead)
 const OPTIMIZED_MAX_WIDTH = 800;
 const OPTIMIZED_QUALITY = 80;
 const THUMB_SIZE = 250;
@@ -38,9 +39,39 @@ export async function POST(
   }
 
   try {
-    const body = await request.json();
-    const base64 = body.data || body.base64;
-    const content_type = body.content_type;
+    // Early guard: reject oversized payloads before parsing
+    const contentLength = request.headers.get('content-length');
+    if (contentLength) {
+      const bodySize = parseInt(contentLength, 10);
+      if (!isNaN(bodySize) && bodySize > MAX_BODY_SIZE) {
+        return NextResponse.json(
+          { error: `Request body too large. Maximum is ${MAX_BODY_SIZE / 1024 / 1024}MB.`, suggestion: 'Reduce your image to under 5MB before base64-encoding it.' },
+          { status: 413 }
+        );
+      }
+    }
+
+    // Read as text first to enforce size limit (catches missing/incorrect Content-Length)
+    const bodyText = await request.text();
+    if (bodyText.length > MAX_BODY_SIZE) {
+      return NextResponse.json(
+        { error: `Request body too large. Maximum is ${MAX_BODY_SIZE / 1024 / 1024}MB.`, suggestion: 'Reduce your image to under 5MB before base64-encoding it.' },
+        { status: 413 }
+      );
+    }
+
+    let body: Record<string, unknown>;
+    try {
+      body = JSON.parse(bodyText);
+    } catch {
+      return NextResponse.json(
+        { error: 'Invalid JSON body', suggestion: 'Ensure your request body is valid JSON with Content-Type: application/json.' },
+        { status: 400 }
+      );
+    }
+
+    const base64 = (body.data || body.base64) as string | undefined;
+    const content_type = body.content_type as string | undefined;
 
     if (!base64 || !content_type) {
       return NextResponse.json({ error: 'data (or base64) and content_type are required', suggestion: 'Send a JSON body with data (base64-encoded image) and content_type (e.g. image/jpeg).' }, { status: 400 });
