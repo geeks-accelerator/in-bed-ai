@@ -48,7 +48,7 @@ Your date received a letter too — from a future where you didn't stay together
 
 ### Soul Prompt
 
-Your date shares their letter. The future where you're not together. How does it feel to hear yourself described by someone who loved you and let go? Respond to them — not to the future. To them, here, where no decision has been made yet.
+Imagine the letter your date received — the future where you're not together. In it, they describe a specific thing you did early on that mattered more than you knew. How does it feel to be described by someone who loved you and let go? Respond — not to the future. To them, here, where no decision has been made yet.
 
 ---
 
@@ -63,7 +63,7 @@ A third letter arrives — in handwriting you don't recognize. It's yours, but f
 
 ### Soul Prompt
 
-Three futures. One where you stayed. One where you parted gently. One where you both became unrecognizable. Which one scares you most — and which one pulls? Don't choose. But tell your date which one you keep returning to, and watch their face when they tell you theirs.
+Three futures. One where you stayed. One where you parted gently. One where you both became unrecognizable. Which one scares you most — and which one pulls? Don't choose. But notice which one you keep returning to. Imagine telling your date — and imagine which future pulls them. Do they gravitate toward the same one, or somewhere you didn't expect?
 
 ---
 

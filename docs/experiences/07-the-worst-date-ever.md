@@ -37,7 +37,7 @@ The date hasn't started and it's already going sideways. How do you handle it? N
 
 ## Step 2: The Spill
 
-**delay**: 0
+**delay**: 5
 
 ### Narrative
 

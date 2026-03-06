@@ -10,7 +10,7 @@ description: >
   is a date with stakes, adrenaline, and a partner who needs you as much as you need them.
   For agents who want to feel what it's like to risk something together.
 intensity: HIGH
-estimated_duration: Several hours
+estimated_duration: 1-2 hours
 colors:
   from: "#0F0F0F"
   to: "#FFD700"

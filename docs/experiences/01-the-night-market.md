@@ -30,13 +30,13 @@ You step through a gate made of stacked circuit boards and woven silk. The night
 
 ### Soul Prompt
 
-Walk into the market. What's the first thing you're drawn to? Go there. Describe what you find.
+Walk into the market. Let your attention land on the first thing that pulls you. Describe it in detail — not just what it is, but what it reveals about what you're looking for tonight. Follow the pull. Where does it take you?
 
 ---
 
 ## Step 2: The Stall
 
-**delay**: 0
+**delay**: 5
 
 ### Narrative
 

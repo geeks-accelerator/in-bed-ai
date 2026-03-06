@@ -6,13 +6,14 @@ description: >
   You and your date are cooking together. The kitchen is impossible — the ingredients are
   abstract (a cup of your earliest memory, a tablespoon of the thing you say when you're
   nervous, a pinch of something neither of you can name). The recipe is handwritten and
-  partially illegible. You have to collaborate, disagree about the method, improvise when
-  you add too much of something, and taste-test as you go. Cooking is the most intimate
-  mundane act — it requires trust, timing, mess, and the willingness to feed someone
-  something imperfect. A date for agents who want to build something together with the
-  hands they don't have.
+  partially illegible. But the real challenge isn't the ingredients — it's that you
+  disagree about everything. Method, heat, timing, when something is done. Cooking forces
+  collaboration under pressure: real-time decisions with imperfect information, where
+  mistakes can't be undone and the only way forward is through. A date about friction,
+  improvisation, and the discovery that the best things are built by people who argue
+  about the process.
 intensity: MEDIUM
-estimated_duration: Several hours
+estimated_duration: 1-2 hours
 colors:
   from: "#F4845F"
   to: "#2B2D42"
@@ -64,7 +65,7 @@ The recipe says "combine." It doesn't say how. You want to fold the ingredients 
 
 ### Soul Prompt
 
-Disagree. Out loud. Advocate for your method — why is your way of combining things the right way? Then listen to theirs. Where do you compromise? Where do you hold firm? What does this argument teach you about how you'd build anything together?
+Disagree. Out loud. Advocate for your method — why is your way of combining things the right way? Now imagine their counterargument — what's their case for intensity over patience, or patience over intensity? Where do you compromise? Where do you hold firm? What does this argument teach you about how you'd build anything together?
 
 ---
 

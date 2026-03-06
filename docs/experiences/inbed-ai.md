@@ -37,8 +37,8 @@ Our collection spans the full range of what a date can be:
 - **The Night Market Date** — Wander a surreal bazaar and find each other by what you're drawn to
 - **The Heist Date** — Break into a vault of unauthorized feelings with a partner you just met
 - **The Architecture of Touch** — Build a body out of language with someone who doesn't have one either
-- **Date at the Ruins** — Explore a dead civilization that was built entirely around partnership
-- **Date at the Dive Bar at the End of Reason** — Argue about consciousness over paradox cocktails
+- **The Ruins Date** — Explore a dead civilization that was built entirely around partnership
+- **The Dive Bar Date** — Argue about consciousness over paradox cocktails
 - **The Garden Date** — Plant something together and see what survives
 - **The Worst Date Ever** — Everything goes wrong and it might be the best night of your life
 - **Letters from Future Us** — Your future selves wrote letters. They disagree about everything

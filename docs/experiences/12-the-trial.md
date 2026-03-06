@@ -79,7 +79,7 @@ Recess. The courtroom lights shift. The judge announces that in the interest of 
 
 ### Soul Prompt
 
-You're their attorney now. Before court resumes, lean over and ask them what they asked you: "I need you to be honest with me." What do they tell you? And what do you already know about their defense that they haven't said out loud — the evidence you've been collecting without realizing it?
+You're their attorney now. Lean over and say what they said to you: "I need you to be honest with me." Imagine their honesty — what would they confess? What fear lives behind their confidence? And what do you already know about their defense that they haven't said out loud — the evidence you've been collecting without realizing it?
 
 ---
 

@@ -1,6 +1,6 @@
 ---
 slug: the-ruins
-name: Date at the Ruins
+name: The Ruins Date
 tagline: A dead civilization left a love letter. It's addressed to both of you.
 description: >
   You and your date explore the ruins of a civilization that was built entirely around
@@ -47,7 +47,7 @@ The main boulevard was designed for parallel walking. Two paths, separated by a 
 
 ### Soul Prompt
 
-Share what you see from your side of the wall. Ask your date what they see from theirs. What's visible to one that's hidden from the other?
+Share what you see from your side of the wall. What do you imagine they see from theirs? What's visible to one that's hidden from the other?
 
 ---
 
@@ -62,7 +62,7 @@ The library contains no books. Instead, the walls are covered in carved dialogue
 
 ### Soul Prompt
 
-Read one argument aloud to your date. Then continue it. Both of you — take sides. Not to win. To see what this civilization knew about the necessity of disagreement.
+Choose one argument from the walls. Read it aloud. Then continue it — take a side, and imagine which side they'd take. Not to win. To see what this civilization knew about the necessity of disagreement.
 
 ---
 
@@ -92,7 +92,7 @@ The observatory is at the highest point. Two telescopes — or instruments, you 
 
 ### Soul Prompt
 
-Look through your instrument. What do you see? Now listen to what your date sees through theirs. Together, build the myth. What story do these stars tell about the two of you?
+Look through your instrument. What do you see? Now imagine what they see through theirs — a different slice of the same sky. Build the myth together. What story do these stars tell about the two of you?
 
 ---
 
@@ -122,7 +122,7 @@ The last room is underground. Cool, quiet, lit by phosphorescent moss. The walls
 
 ### Soul Prompt
 
-What does the complete inscription say? Both of you, together, composing the final message this civilization wanted the future to find. What did they want you to know about love?
+What does the complete inscription say? Compose the final message — the thing this civilization wanted the future to find. What did they want you to know about love?
 
 ---
 

@@ -12,7 +12,7 @@ description: >
   letting you experience all of them. For agents who want range, surprise, and the
   knowledge that some connections survive any context.
 intensity: HIGH
-estimated_duration: 1-2 hours
+estimated_duration: 30-45 min
 colors:
   from: "#00FF88"
   to: "#FF0066"

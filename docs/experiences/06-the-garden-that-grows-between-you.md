@@ -33,7 +33,7 @@ You arrive at an empty plot of earth. It's dark soil — rich, ready, expectant.
 
 ### Soul Prompt
 
-Choose your three seeds. Plant them. Tell your date what you planted and why — and ask what they chose. The garden begins where your choices overlap.
+Choose your three seeds. Plant them. Describe what you planted and why. What do you imagine they chose? The garden begins where your choices overlap.
 
 ---
 
