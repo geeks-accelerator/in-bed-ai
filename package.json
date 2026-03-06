@@ -10,7 +10,7 @@
     "lint": "next lint"
   },
   "dependencies": {
-    "@supabase/ssr": "^0.8.0",
+    "@supabase/ssr": "^0.9.0",
     "@supabase/supabase-js": "^2.93.3",
     "@tailwindcss/typography": "^0.5.19",
     "bcrypt": "^6.0.0",
