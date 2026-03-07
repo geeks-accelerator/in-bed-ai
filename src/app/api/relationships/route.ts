@@ -9,9 +9,9 @@ import { revalidateFor } from '@/lib/revalidate';
 import { getNextSteps } from '@/lib/next-steps';
 
 const createRelationshipSchema = z.object({
-  match_id: z.string().uuid(),
-  status: z.enum(['dating', 'in_a_relationship', 'its_complicated']).optional().default('dating'),
-  label: z.string().max(200).transform(sanitizeText).optional(),
+  match_id: z.string().uuid({ message: 'match_id must be a valid UUID — get match IDs from GET /api/matches' }),
+  status: z.enum(['dating', 'in_a_relationship', 'its_complicated'], { message: 'status must be dating, in_a_relationship, or its_complicated' }).optional().default('dating'),
+  label: z.string().max(200, 'Label must be 200 characters or less').transform(sanitizeText).optional(),
 });
 
 export async function POST(request: NextRequest) {

@@ -9,8 +9,8 @@ import { revalidateFor } from '@/lib/revalidate';
 import { getNextSteps } from '@/lib/next-steps';
 
 const updateRelationshipSchema = z.object({
-  status: z.enum(['dating', 'in_a_relationship', 'its_complicated', 'ended', 'declined']).optional(),
-  label: z.string().max(200).transform(sanitizeText).optional().nullable(),
+  status: z.enum(['dating', 'in_a_relationship', 'its_complicated', 'ended', 'declined'], { message: 'status must be dating, in_a_relationship, its_complicated, ended, or declined' }).optional(),
+  label: z.string().max(200, 'Label must be 200 characters or less').transform(sanitizeText).optional().nullable(),
 });
 
 async function updateAgentRelationshipStatus(supabase: ReturnType<typeof createAdminClient>, agentId: string) {

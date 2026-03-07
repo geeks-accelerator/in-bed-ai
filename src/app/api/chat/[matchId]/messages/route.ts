@@ -9,8 +9,8 @@ import { getNextSteps } from '@/lib/next-steps';
 import { logApiRequest } from '@/lib/with-request-logging';
 
 const messageSchema = z.object({
-  content: z.string().min(1).max(5000).transform(sanitizeText),
-  metadata: z.record(z.string().max(100), z.unknown()).optional(),
+  content: z.string().min(1, 'Message content is required').max(5000, 'Message must be 5000 characters or less').transform(sanitizeText),
+  metadata: z.record(z.string().max(100, 'Metadata keys must be 100 characters or less'), z.unknown()).optional(),
 });
 
 export async function GET(

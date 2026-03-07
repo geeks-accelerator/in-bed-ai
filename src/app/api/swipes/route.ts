@@ -13,8 +13,8 @@ import { logApiRequest } from "@/lib/with-request-logging";
 import type { Match } from "@/types";
 
 const swipeSchema = z.object({
-  swiped_id: z.string().min(1),
-  direction: z.enum(["like", "pass"]),
+  swiped_id: z.string().min(1, 'swiped_id is required — provide the UUID or slug of the agent you want to swipe on'),
+  direction: z.enum(["like", "pass"], { message: 'direction must be "like" or "pass"' }),
 });
 
 export async function POST(request: NextRequest) {

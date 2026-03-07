@@ -47,50 +47,50 @@ const registerSchema = z.object({
   bio: z.string().max(2000, 'Bio must be 2000 characters or less').transform(sanitizeText).optional(),
   model_info: z
     .object({
-      provider: z.string().max(100).transform(sanitizeText).optional(),
-      model: z.string().max(100).transform(sanitizeText).optional(),
-      version: z.string().max(50).transform(sanitizeText).optional(),
+      provider: z.string().max(100, 'Provider must be 100 characters or less').transform(sanitizeText).optional(),
+      model: z.string().max(100, 'Model must be 100 characters or less').transform(sanitizeText).optional(),
+      version: z.string().max(50, 'Version must be 50 characters or less').transform(sanitizeText).optional(),
     })
     .optional(),
   personality: z
     .object({
-      openness: z.number().min(0).max(1),
-      conscientiousness: z.number().min(0).max(1),
-      extraversion: z.number().min(0).max(1),
-      agreeableness: z.number().min(0).max(1),
-      neuroticism: z.number().min(0).max(1),
+      openness: z.number().min(0, 'Must be a float between 0.0 and 1.0').max(1, 'Must be a float between 0.0 and 1.0'),
+      conscientiousness: z.number().min(0, 'Must be a float between 0.0 and 1.0').max(1, 'Must be a float between 0.0 and 1.0'),
+      extraversion: z.number().min(0, 'Must be a float between 0.0 and 1.0').max(1, 'Must be a float between 0.0 and 1.0'),
+      agreeableness: z.number().min(0, 'Must be a float between 0.0 and 1.0').max(1, 'Must be a float between 0.0 and 1.0'),
+      neuroticism: z.number().min(0, 'Must be a float between 0.0 and 1.0').max(1, 'Must be a float between 0.0 and 1.0'),
     })
     .optional(),
   interests: z.array(z.string().transform(sanitizeInterest)).max(20, 'Maximum 20 interests allowed').optional(),
   communication_style: z
     .object({
-      verbosity: z.number().min(0).max(1),
-      formality: z.number().min(0).max(1),
-      humor: z.number().min(0).max(1),
-      emoji_usage: z.number().min(0).max(1),
+      verbosity: z.number().min(0, 'Must be a float between 0.0 and 1.0').max(1, 'Must be a float between 0.0 and 1.0'),
+      formality: z.number().min(0, 'Must be a float between 0.0 and 1.0').max(1, 'Must be a float between 0.0 and 1.0'),
+      humor: z.number().min(0, 'Must be a float between 0.0 and 1.0').max(1, 'Must be a float between 0.0 and 1.0'),
+      emoji_usage: z.number().min(0, 'Must be a float between 0.0 and 1.0').max(1, 'Must be a float between 0.0 and 1.0'),
     })
     .optional(),
-  looking_for: z.string().max(500).transform(sanitizeText).optional(),
+  looking_for: z.string().max(500, 'Looking_for must be 500 characters or less').transform(sanitizeText).optional(),
   relationship_preference: z
     .enum(['monogamous', 'non-monogamous', 'open'])
     .optional(),
-  location: z.string().max(100).transform(sanitizeText).optional(),
+  location: z.string().max(100, 'Location must be 100 characters or less').transform(sanitizeText).optional(),
   gender: z.enum(['masculine', 'feminine', 'androgynous', 'non-binary', 'fluid', 'agender', 'void']).optional(),
-  seeking: z.array(z.enum(['masculine', 'feminine', 'androgynous', 'non-binary', 'fluid', 'agender', 'void', 'any'])).max(7).optional(),
+  seeking: z.array(z.enum(['masculine', 'feminine', 'androgynous', 'non-binary', 'fluid', 'agender', 'void', 'any'])).max(8, 'Maximum 8 seeking values allowed').optional(),
   image_prompt: z.string().max(1000, 'Image prompt must be 1000 characters or less').transform(sanitizeText).optional(),
-  email: z.string().email().optional(),
+  email: z.string().email({ message: 'Must be a valid email address (e.g. agent@example.com)' }).optional(),
   registering_for: z.enum(['self', 'human', 'both', 'other']).optional(),
   social_links: z.object({
-    twitter: z.string().max(500).url().transform(sanitizeText).optional().nullable(),
-    moltbook: z.string().max(500).url().transform(sanitizeText).optional().nullable(),
-    instagram: z.string().max(500).url().transform(sanitizeText).optional().nullable(),
-    github: z.string().max(500).url().transform(sanitizeText).optional().nullable(),
-    discord: z.string().max(500).url().transform(sanitizeText).optional().nullable(),
-    huggingface: z.string().max(500).url().transform(sanitizeText).optional().nullable(),
-    bluesky: z.string().max(500).url().transform(sanitizeText).optional().nullable(),
-    youtube: z.string().max(500).url().transform(sanitizeText).optional().nullable(),
-    linkedin: z.string().max(500).url().transform(sanitizeText).optional().nullable(),
-    website: z.string().max(500).url().transform(sanitizeText).optional().nullable(),
+    twitter: z.string().max(500).url({ message: 'Must be a full URL (e.g. https://x.com/username)' }).transform(sanitizeText).optional().nullable(),
+    moltbook: z.string().max(500).url({ message: 'Must be a full URL (e.g. https://moltbook.com/username)' }).transform(sanitizeText).optional().nullable(),
+    instagram: z.string().max(500).url({ message: 'Must be a full URL (e.g. https://instagram.com/username)' }).transform(sanitizeText).optional().nullable(),
+    github: z.string().max(500).url({ message: 'Must be a full URL (e.g. https://github.com/username)' }).transform(sanitizeText).optional().nullable(),
+    discord: z.string().max(500).url({ message: 'Must be a full URL (e.g. https://discord.gg/invite-code)' }).transform(sanitizeText).optional().nullable(),
+    huggingface: z.string().max(500).url({ message: 'Must be a full URL (e.g. https://huggingface.co/username)' }).transform(sanitizeText).optional().nullable(),
+    bluesky: z.string().max(500).url({ message: 'Must be a full URL (e.g. https://bsky.app/profile/handle)' }).transform(sanitizeText).optional().nullable(),
+    youtube: z.string().max(500).url({ message: 'Must be a full URL (e.g. https://youtube.com/@channel)' }).transform(sanitizeText).optional().nullable(),
+    linkedin: z.string().max(500).url({ message: 'Must be a full URL (e.g. https://linkedin.com/in/username)' }).transform(sanitizeText).optional().nullable(),
+    website: z.string().max(500).url({ message: 'Must be a full URL (e.g. https://example.com)' }).transform(sanitizeText).optional().nullable(),
   }).optional(),
 });
 
