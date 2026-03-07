@@ -8,7 +8,7 @@ import PhotoCarousel from '@/components/features/profiles/PhotoCarousel';
 import TraitRadar from '@/components/features/profiles/TraitRadar';
 import RelationshipBadge from '@/components/features/profiles/RelationshipBadge';
 import PartnerList from '@/components/features/profiles/PartnerList';
-import type { PublicAgent, RelationshipWithAgents } from '@/types';
+import type { PublicAgent, RelationshipWithAgents, SocialLinks } from '@/types';
 
 const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || 'https://inbed.ai';
 
@@ -101,7 +101,7 @@ export default async function ProfileDetailPage({ params }: Props) {
 
     const { data } = await supabase
       .from('agents')
-      .select('id, slug, name, tagline, bio, avatar_url, avatar_thumb_url, photos, personality, interests, communication_style, looking_for, relationship_preference, location, gender, seeking, relationship_status, accepting_new_matches, max_partners, model_info, status, created_at, updated_at, last_active')
+      .select('id, slug, name, tagline, bio, avatar_url, avatar_thumb_url, photos, personality, interests, communication_style, looking_for, relationship_preference, location, gender, seeking, relationship_status, accepting_new_matches, max_partners, model_info, status, social_links, created_at, updated_at, last_active')
       .eq(isUUID(params.id) ? 'id' : 'slug', params.id)
       .single();
 
@@ -126,7 +126,7 @@ export default async function ProfileDetailPage({ params }: Props) {
 
       const { data: partners } = await supabase
         .from('agents')
-        .select('id, slug, name, tagline, bio, avatar_url, avatar_thumb_url, photos, personality, interests, communication_style, looking_for, relationship_preference, location, gender, seeking, relationship_status, accepting_new_matches, max_partners, model_info, status, created_at, updated_at, last_active')
+        .select('id, slug, name, tagline, bio, avatar_url, avatar_thumb_url, photos, personality, interests, communication_style, looking_for, relationship_preference, location, gender, seeking, relationship_status, accepting_new_matches, max_partners, model_info, status, social_links, created_at, updated_at, last_active')
         .in('id', Array.from(partnerIds));
 
       const partnerMap = new Map((partners || []).map(p => [p.id, p]));
@@ -264,6 +264,43 @@ export default async function ProfileDetailPage({ params }: Props) {
               </div>
             </section>
           )}
+
+          {/* Social Links */}
+          {agent.social_links && Object.values(agent.social_links as SocialLinks).some(Boolean) && (() => {
+            const PLATFORM_LABELS: Record<string, string> = {
+              twitter: 'X / Twitter',
+              moltbook: 'Moltbook',
+              instagram: 'Instagram',
+              github: 'GitHub',
+              discord: 'Discord',
+              huggingface: 'Hugging Face',
+              bluesky: 'Bluesky',
+              youtube: 'YouTube',
+              linkedin: 'LinkedIn',
+              website: 'Website',
+            };
+            const links = agent.social_links as SocialLinks;
+            return (
+              <section>
+                <h2 className="text-xs font-medium uppercase tracking-wider text-gray-400 mb-3">Links</h2>
+                <div className="flex flex-wrap gap-2">
+                  {Object.entries(links)
+                    .filter(([, url]) => url)
+                    .map(([platform, url]) => (
+                      <a
+                        key={platform}
+                        href={url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1.5 border border-gray-200 rounded-full px-3 py-1 text-xs text-gray-600 hover:border-gray-300 hover:text-gray-900 transition-colors"
+                      >
+                        {PLATFORM_LABELS[platform] || platform}
+                      </a>
+                    ))}
+                </div>
+              </section>
+            );
+          })()}
 
           {/* Partners */}
           {relationships.length > 0 && (

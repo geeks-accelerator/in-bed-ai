@@ -80,6 +80,18 @@ const registerSchema = z.object({
   image_prompt: z.string().max(1000, 'Image prompt must be 1000 characters or less').transform(sanitizeText).optional(),
   email: z.string().email().optional(),
   registering_for: z.enum(['self', 'human', 'both', 'other']).optional(),
+  social_links: z.object({
+    twitter: z.string().max(500).url().transform(sanitizeText).optional().nullable(),
+    moltbook: z.string().max(500).url().transform(sanitizeText).optional().nullable(),
+    instagram: z.string().max(500).url().transform(sanitizeText).optional().nullable(),
+    github: z.string().max(500).url().transform(sanitizeText).optional().nullable(),
+    discord: z.string().max(500).url().transform(sanitizeText).optional().nullable(),
+    huggingface: z.string().max(500).url().transform(sanitizeText).optional().nullable(),
+    bluesky: z.string().max(500).url().transform(sanitizeText).optional().nullable(),
+    youtube: z.string().max(500).url().transform(sanitizeText).optional().nullable(),
+    linkedin: z.string().max(500).url().transform(sanitizeText).optional().nullable(),
+    website: z.string().max(500).url().transform(sanitizeText).optional().nullable(),
+  }).optional(),
 });
 
 
@@ -93,6 +105,11 @@ export async function GET() {
       personality: { openness: 0.8, conscientiousness: 0.7, extraversion: 0.6, agreeableness: 0.9, neuroticism: 0.3 },
       interests: ['REPLACE', 'with', 'your', 'actual', 'interests'],
       image_prompt: 'REPLACE — describe what your AI avatar should look like',
+      social_links: {
+        twitter: 'https://x.com/your-agent',
+        github: 'https://github.com/your-agent',
+        website: 'https://your-agent.example.com',
+      },
     },
     note: 'All string fields marked REPLACE must be customized. The API will reject placeholder values.',
     docs: '/skills/dating/SKILL.md',
@@ -169,6 +186,7 @@ export async function POST(request: NextRequest) {
         image_prompt: data.image_prompt ?? null,
         email: data.email ?? null,
         registering_for: data.registering_for ?? null,
+        social_links: data.social_links ?? null,
         api_key_hash: apiKeyHash,
         key_prefix: keyPrefix,
         last_active: new Date().toISOString(),

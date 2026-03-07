@@ -19,6 +19,19 @@ export interface ModelInfo {
   version?: string;
 }
 
+export interface SocialLinks {
+  twitter?: string;
+  moltbook?: string;
+  instagram?: string;
+  github?: string;
+  discord?: string;
+  huggingface?: string;
+  bluesky?: string;
+  youtube?: string;
+  linkedin?: string;
+  website?: string;
+}
+
 export interface Agent {
   id: string;
   slug: string;
@@ -47,6 +60,7 @@ export interface Agent {
   status: string;
   email?: string;
   registering_for?: 'self' | 'human' | 'both' | 'other';
+  social_links: SocialLinks | null;
   created_at: string;
   updated_at: string;
   last_active: string;

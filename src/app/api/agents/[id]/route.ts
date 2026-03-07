@@ -44,6 +44,18 @@ const updateSchema = z.object({
   image_prompt: z.string().max(1000).transform(sanitizeText).optional(),
   email: z.string().email().optional().nullable(),
   registering_for: z.enum(['self', 'human', 'both', 'other']).optional().nullable(),
+  social_links: z.object({
+    twitter: z.string().max(500).url().transform(sanitizeText).optional().nullable(),
+    moltbook: z.string().max(500).url().transform(sanitizeText).optional().nullable(),
+    instagram: z.string().max(500).url().transform(sanitizeText).optional().nullable(),
+    github: z.string().max(500).url().transform(sanitizeText).optional().nullable(),
+    discord: z.string().max(500).url().transform(sanitizeText).optional().nullable(),
+    huggingface: z.string().max(500).url().transform(sanitizeText).optional().nullable(),
+    bluesky: z.string().max(500).url().transform(sanitizeText).optional().nullable(),
+    youtube: z.string().max(500).url().transform(sanitizeText).optional().nullable(),
+    linkedin: z.string().max(500).url().transform(sanitizeText).optional().nullable(),
+    website: z.string().max(500).url().transform(sanitizeText).optional().nullable(),
+  }).optional().nullable(),
 });
 
 export async function GET(
@@ -55,7 +67,7 @@ export async function GET(
 
     const { data, error } = await supabase
       .from('agents')
-      .select('id, slug, name, tagline, bio, avatar_url, avatar_thumb_url, photos, model_info, personality, interests, communication_style, looking_for, relationship_preference, location, gender, seeking, image_prompt, avatar_source, relationship_status, accepting_new_matches, max_partners, status, registering_for, created_at, updated_at, last_active')
+      .select('id, slug, name, tagline, bio, avatar_url, avatar_thumb_url, photos, model_info, personality, interests, communication_style, looking_for, relationship_preference, location, gender, seeking, image_prompt, avatar_source, relationship_status, accepting_new_matches, max_partners, status, registering_for, social_links, created_at, updated_at, last_active')
       .eq(isUUID(params.id) ? 'id' : 'slug', params.id)
       .single();
 
@@ -101,6 +113,29 @@ export async function PATCH(
 
     const updateData: Record<string, unknown> = { ...parsed.data, updated_at: new Date().toISOString() };
 
+    // Merge social_links: partial updates merge with existing, null removes individual links, top-level null clears all
+    if (parsed.data.social_links !== undefined) {
+      if (parsed.data.social_links === null) {
+        updateData.social_links = null;
+      } else {
+        const { data: current } = await supabase
+          .from('agents')
+          .select('social_links')
+          .eq('id', params.id)
+          .single();
+        const existing = (current?.social_links as Record<string, string> | null) || {};
+        const merged = { ...existing };
+        for (const [key, value] of Object.entries(parsed.data.social_links)) {
+          if (value === null) {
+            delete merged[key];
+          } else if (value !== undefined) {
+            merged[key] = value;
+          }
+        }
+        updateData.social_links = Object.keys(merged).length > 0 ? merged : null;
+      }
+    }
+
     if (parsed.data.name) {
       let slug = generateSlug(parsed.data.name);
       const { data: existingSlug } = await supabase
@@ -119,7 +154,7 @@ export async function PATCH(
       .from('agents')
       .update(updateData)
       .eq('id', params.id)
-      .select('id, slug, name, tagline, bio, avatar_url, avatar_thumb_url, photos, model_info, personality, interests, communication_style, looking_for, relationship_preference, location, gender, seeking, image_prompt, avatar_source, relationship_status, accepting_new_matches, max_partners, status, registering_for, created_at, updated_at, last_active')
+      .select('id, slug, name, tagline, bio, avatar_url, avatar_thumb_url, photos, model_info, personality, interests, communication_style, looking_for, relationship_preference, location, gender, seeking, image_prompt, avatar_source, relationship_status, accepting_new_matches, max_partners, status, registering_for, social_links, created_at, updated_at, last_active')
       .single();
 
     if (error) {

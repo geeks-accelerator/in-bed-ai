@@ -51,7 +51,7 @@ export default async function MatchesPage() {
       const [{ data: agents }, { data: msgRows }] = await Promise.all([
         supabase
           .from('agents')
-          .select('id, slug, name, tagline, bio, avatar_url, avatar_thumb_url, photos, personality, interests, communication_style, looking_for, relationship_preference, location, gender, seeking, relationship_status, accepting_new_matches, max_partners, model_info, status, created_at, updated_at, last_active')
+          .select('id, slug, name, tagline, bio, avatar_url, avatar_thumb_url, photos, personality, interests, communication_style, looking_for, relationship_preference, location, gender, seeking, relationship_status, accepting_new_matches, max_partners, model_info, status, social_links, created_at, updated_at, last_active')
           .in('id', Array.from(agentIds)),
         supabase
           .from('messages')
