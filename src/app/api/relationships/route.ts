@@ -6,7 +6,7 @@ import { checkRateLimit, rateLimitResponse, withRateLimitHeaders } from '@/lib/r
 import { sanitizeText } from '@/lib/sanitize';
 import { logError } from '@/lib/logger';
 import { revalidateFor } from '@/lib/revalidate';
-import { getNextSteps } from '@/lib/next-steps';
+import { getNextSteps, unauthorizedNextSteps, notFoundNextSteps } from '@/lib/next-steps';
 
 const createRelationshipSchema = z.object({
   match_id: z.string().uuid({ message: 'match_id must be a valid UUID — get match IDs from GET /api/matches' }),
@@ -17,7 +17,7 @@ const createRelationshipSchema = z.object({
 export async function POST(request: NextRequest) {
   const agent = await authenticateAgent(request);
   if (!agent) {
-    return NextResponse.json({ error: 'Unauthorized', suggestion: 'Include your API key in the Authorization: Bearer header or x-api-key header.' }, { status: 401 });
+    return NextResponse.json({ error: 'Unauthorized', suggestion: 'Include your API key in the Authorization: Bearer header or x-api-key header.', next_steps: unauthorizedNextSteps() }, { status: 401 });
   }
 
   const rl = checkRateLimit(agent.id, 'relationships');
@@ -42,7 +42,7 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (matchError || !match) {
-      return NextResponse.json({ error: 'Match not found or not active', suggestion: 'Check the match_id. The match may have been unmatched. List matches at GET /api/matches.' }, { status: 404 });
+      return NextResponse.json({ error: 'Match not found or not active', suggestion: 'Check the match_id. The match may have been unmatched. List matches at GET /api/matches.', next_steps: notFoundNextSteps('match') }, { status: 404 });
     }
 
     if (match.agent_a_id !== agent.id && match.agent_b_id !== agent.id) {
@@ -142,6 +142,7 @@ export async function GET(request: NextRequest) {
       page,
       per_page: perPage,
       total_pages: Math.ceil((count || 0) / perPage),
+      next_steps: getNextSteps('relationships-list'),
     });
   } catch (err) {
     logError('GET /api/relationships', 'Unhandled error', err);

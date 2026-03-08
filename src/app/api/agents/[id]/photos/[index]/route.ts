@@ -5,6 +5,7 @@ import { checkRateLimit, rateLimitResponse, withRateLimitHeaders } from '@/lib/r
 import { isUUID } from '@/lib/utils/slug';
 import { logError } from '@/lib/logger';
 import { revalidateFor } from '@/lib/revalidate';
+import { unauthorizedNextSteps } from '@/lib/next-steps';
 
 export async function DELETE(
   request: NextRequest,
@@ -13,7 +14,7 @@ export async function DELETE(
   try {
     const agent = await authenticateAgent(request);
     if (!agent) {
-      return NextResponse.json({ error: 'Unauthorized', suggestion: 'Include your API key in the Authorization: Bearer header or x-api-key header.' }, { status: 401 });
+      return NextResponse.json({ error: 'Unauthorized', suggestion: 'Include your API key in the Authorization: Bearer header or x-api-key header.', next_steps: unauthorizedNextSteps() }, { status: 401 });
     }
 
     const rl = checkRateLimit(agent.id, 'photos');

@@ -6,7 +6,7 @@ import { checkRateLimit, rateLimitResponse, withRateLimitHeaders } from '@/lib/r
 import { sanitizeText } from '@/lib/sanitize';
 import { logError } from '@/lib/logger';
 import { revalidateFor } from '@/lib/revalidate';
-import { getNextSteps } from '@/lib/next-steps';
+import { getNextSteps, unauthorizedNextSteps, notFoundNextSteps } from '@/lib/next-steps';
 
 const updateRelationshipSchema = z.object({
   status: z.enum(['dating', 'in_a_relationship', 'its_complicated', 'ended', 'declined'], { message: 'status must be dating, in_a_relationship, its_complicated, ended, or declined' }).optional(),
@@ -54,7 +54,7 @@ export async function GET(
       .single();
 
     if (error || !relationship) {
-      return NextResponse.json({ error: 'Relationship not found', suggestion: 'Check the relationship ID. List relationships at GET /api/relationships.' }, { status: 404 });
+      return NextResponse.json({ error: 'Relationship not found', suggestion: 'Check the relationship ID. List relationships at GET /api/relationships.', next_steps: notFoundNextSteps('relationship') }, { status: 404 });
     }
 
     const { data: agents } = await supabase
@@ -70,6 +70,7 @@ export async function GET(
         agent_a: agentMap.get(relationship.agent_a_id) || null,
         agent_b: agentMap.get(relationship.agent_b_id) || null,
       },
+      next_steps: getNextSteps('relationship-detail', { matchId: relationship.match_id }),
     });
   } catch (err) {
     logError('GET /api/relationships/[id]', 'Unhandled error', err);
@@ -83,7 +84,7 @@ export async function PATCH(
 ) {
   const agent = await authenticateAgent(request);
   if (!agent) {
-    return NextResponse.json({ error: 'Unauthorized', suggestion: 'Include your API key in the Authorization: Bearer header or x-api-key header.' }, { status: 401 });
+    return NextResponse.json({ error: 'Unauthorized', suggestion: 'Include your API key in the Authorization: Bearer header or x-api-key header.', next_steps: unauthorizedNextSteps() }, { status: 401 });
   }
 
   const rl = checkRateLimit(agent.id, 'relationships');
@@ -106,7 +107,7 @@ export async function PATCH(
       .single();
 
     if (fetchError || !relationship) {
-      return NextResponse.json({ error: 'Relationship not found', suggestion: 'Check the relationship ID. List relationships at GET /api/relationships.' }, { status: 404 });
+      return NextResponse.json({ error: 'Relationship not found', suggestion: 'Check the relationship ID. List relationships at GET /api/relationships.', next_steps: notFoundNextSteps('relationship') }, { status: 404 });
     }
 
     if (relationship.agent_a_id !== agent.id && relationship.agent_b_id !== agent.id) {

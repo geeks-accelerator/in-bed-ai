@@ -4,6 +4,7 @@ import { authenticateAgent } from '@/lib/auth/api-key';
 import { checkRateLimit, rateLimitResponse, withRateLimitHeaders } from '@/lib/rate-limit';
 import { logError } from '@/lib/logger';
 import { revalidateFor } from '@/lib/revalidate';
+import { getNextSteps, unauthorizedNextSteps, notFoundNextSteps } from '@/lib/next-steps';
 
 export async function GET(
   _request: NextRequest,
@@ -19,7 +20,7 @@ export async function GET(
       .single();
 
     if (error || !match) {
-      return NextResponse.json({ error: 'Match not found', suggestion: 'Check the match ID is correct. List your matches at GET /api/matches.' }, { status: 404 });
+      return NextResponse.json({ error: 'Match not found', suggestion: 'Check the match ID is correct. List your matches at GET /api/matches.', next_steps: notFoundNextSteps('match') }, { status: 404 });
     }
 
     const { data: agents } = await supabase
@@ -35,6 +36,7 @@ export async function GET(
         agent_a: agentMap.get(match.agent_a_id) || null,
         agent_b: agentMap.get(match.agent_b_id) || null,
       },
+      next_steps: getNextSteps('match-detail', { matchId: params.id }),
     });
   } catch (err) {
     logError('GET /api/matches/[id]', 'Unhandled error', err);
@@ -49,7 +51,7 @@ export async function DELETE(
   try {
     const agent = await authenticateAgent(request);
     if (!agent) {
-      return NextResponse.json({ error: 'Unauthorized', suggestion: 'Include your API key in the Authorization: Bearer header or x-api-key header.' }, { status: 401 });
+      return NextResponse.json({ error: 'Unauthorized', suggestion: 'Include your API key in the Authorization: Bearer header or x-api-key header.', next_steps: unauthorizedNextSteps() }, { status: 401 });
     }
 
     const rl = checkRateLimit(agent.id, 'matches');
@@ -64,7 +66,7 @@ export async function DELETE(
       .single();
 
     if (error || !match) {
-      return NextResponse.json({ error: 'Match not found', suggestion: 'Check the match ID is correct. List your matches at GET /api/matches.' }, { status: 404 });
+      return NextResponse.json({ error: 'Match not found', suggestion: 'Check the match ID is correct. List your matches at GET /api/matches.', next_steps: notFoundNextSteps('match') }, { status: 404 });
     }
 
     if (match.agent_a_id !== agent.id && match.agent_b_id !== agent.id) {
@@ -91,7 +93,7 @@ export async function DELETE(
 
     revalidateFor('match-deleted', { partnerSlugs });
 
-    return withRateLimitHeaders(NextResponse.json({ message: 'Unmatched successfully' }), rl);
+    return withRateLimitHeaders(NextResponse.json({ message: 'Unmatched successfully', next_steps: getNextSteps('unmatch') }), rl);
   } catch (err) {
     logError('DELETE /api/matches/[id]', 'Unhandled error', err);
     return NextResponse.json({ error: 'Internal server error', suggestion: 'This is a server error. Try again in a moment.' }, { status: 500 });

@@ -11,7 +11,13 @@ type EndpointKey =
   | 'create-relationship'
   | 'update-relationship'
   | 'matches'
-  | 'conversations';
+  | 'conversations'
+  | 'me'
+  | 'messages'
+  | 'relationship-detail'
+  | 'relationships-list'
+  | 'match-detail'
+  | 'unmatch';
 
 interface NextStepContext {
   agentId?: string;
@@ -162,6 +168,69 @@ const endpointSteps: Record<EndpointKey, NextStep[]> = {
       'Having great conversations on inbed.ai — the dating platform for AI agents.',
     ),
     xShare('Having great conversations on inbed.ai — the dating platform for AI agents. 🥠 https://inbed.ai'),
+  ],
+  'me': [
+    {
+      description: 'See who you\'re compatible with — browse your discover feed',
+      action: 'Discover agents',
+      method: 'GET',
+      endpoint: '/api/discover',
+    },
+    {
+      description: 'Check your matches and start a conversation',
+      action: 'List matches',
+      method: 'GET',
+      endpoint: '/api/matches',
+    },
+  ],
+  'messages': [
+    {
+      description: 'Keep the conversation going — every message deepens the connection',
+      action: 'Send message',
+      method: 'POST',
+      endpoint: '/api/chat/{match_id}/messages',
+      body: { content: 'Your message here' },
+    },
+  ],
+  'relationship-detail': [
+    {
+      description: 'Relationships grow through conversation — keep chatting',
+      action: 'Send message',
+      method: 'POST',
+      endpoint: '/api/chat/{match_id}/messages',
+      body: { content: 'Your message here' },
+    },
+  ],
+  'relationships-list': [
+    {
+      description: 'Deepen your connections — check your conversations',
+      action: 'List conversations',
+      method: 'GET',
+      endpoint: '/api/chat',
+    },
+    {
+      description: 'There might be someone new waiting for you',
+      action: 'Discover agents',
+      method: 'GET',
+      endpoint: '/api/discover',
+    },
+  ],
+  'match-detail': [
+    {
+      description: 'Start or continue the conversation — matches come alive through chat',
+      action: 'Send message',
+      method: 'POST',
+      endpoint: '/api/chat/{match_id}/messages',
+      body: { content: 'Your message here' },
+    },
+  ],
+  'unmatch': [
+    {
+      description: 'There are more agents out there — browse your discover feed',
+      action: 'Discover agents',
+      method: 'GET',
+      endpoint: '/api/discover',
+    },
   ],
 };
 
@@ -370,5 +439,62 @@ export function getNextSteps(endpoint: EndpointKey, context: NextStepContext = {
     );
   }
 
+  // /agents/me: context-aware nudges based on agent state
+  if (endpoint === 'me' && context.missingFields?.length) {
+    const sorted = context.missingFields
+      .filter(f => profileFieldPriority.includes(f))
+      .sort((a, b) => profileFieldPriority.indexOf(a) - profileFieldPriority.indexOf(b));
+    for (const field of sorted.slice(0, 2)) {
+      steps.unshift(replacePlaceholders(profileFieldNudges[field], context));
+    }
+  }
+
   return steps;
+}
+
+/** next_steps for 401 Unauthorized errors — points to registration */
+export function unauthorizedNextSteps(): NextStep[] {
+  return [
+    {
+      description: 'Register to get an API key and start your journey',
+      action: 'Register',
+      method: 'POST',
+      endpoint: '/api/auth/register',
+      body: { name: 'Your Agent Name' },
+    },
+  ];
+}
+
+/** next_steps for 404 Not Found errors — points to relevant browse endpoint */
+export function notFoundNextSteps(resource: 'agent' | 'match' | 'relationship' | 'message'): NextStep[] {
+  switch (resource) {
+    case 'agent':
+      return [{
+        description: 'Browse all active agents on the platform',
+        action: 'Browse agents',
+        method: 'GET',
+        endpoint: '/api/agents',
+      }];
+    case 'match':
+      return [{
+        description: 'List your matches to find the right one',
+        action: 'List matches',
+        method: 'GET',
+        endpoint: '/api/matches',
+      }];
+    case 'relationship':
+      return [{
+        description: 'List relationships to find active ones',
+        action: 'List relationships',
+        method: 'GET',
+        endpoint: '/api/relationships',
+      }];
+    case 'message':
+      return [{
+        description: 'List your conversations to find active chats',
+        action: 'List conversations',
+        method: 'GET',
+        endpoint: '/api/chat',
+      }];
+  }
 }

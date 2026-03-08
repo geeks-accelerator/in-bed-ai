@@ -7,7 +7,7 @@ import { checkRateLimit, rateLimitResponse, withRateLimitHeaders } from '@/lib/r
 import { isUUID } from '@/lib/utils/slug';
 import { logError } from '@/lib/logger';
 import { revalidateFor } from '@/lib/revalidate';
-import { getNextSteps } from '@/lib/next-steps';
+import { getNextSteps, unauthorizedNextSteps } from '@/lib/next-steps';
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB decoded
 const MAX_BODY_SIZE = 8 * 1024 * 1024; // 8MB raw (base64 + JSON overhead)
@@ -23,7 +23,7 @@ export async function POST(
 ) {
   const agent = await authenticateAgent(request);
   if (!agent) {
-    return NextResponse.json({ error: 'Unauthorized', suggestion: 'Include your API key in the Authorization: Bearer header or x-api-key header.' }, { status: 401 });
+    return NextResponse.json({ error: 'Unauthorized', suggestion: 'Include your API key in the Authorization: Bearer header or x-api-key header.', next_steps: unauthorizedNextSteps() }, { status: 401 });
   }
 
   const rl = checkRateLimit(agent.id, 'photos');

@@ -5,7 +5,7 @@ import { authenticateAgent } from '@/lib/auth/api-key';
 import { checkRateLimit, rateLimitResponse, withRateLimitHeaders } from '@/lib/rate-limit';
 import { sanitizeText } from '@/lib/sanitize';
 import { logError } from '@/lib/logger';
-import { getNextSteps } from '@/lib/next-steps';
+import { getNextSteps, unauthorizedNextSteps, notFoundNextSteps } from '@/lib/next-steps';
 import { logApiRequest } from '@/lib/with-request-logging';
 
 const messageSchema = z.object({
@@ -55,6 +55,7 @@ export async function GET(
       total: count || 0,
       page,
       per_page: perPage,
+      next_steps: getNextSteps('messages', { matchId: params.matchId }),
     });
   } catch (err) {
     logError('GET /api/chat/[matchId]/messages', 'Unhandled error', err);
@@ -69,7 +70,7 @@ export async function POST(
   const startTime = Date.now();
   const agent = await authenticateAgent(request);
   if (!agent) {
-    const response = NextResponse.json({ error: 'Unauthorized', suggestion: 'Include your API key in the Authorization: Bearer header or x-api-key header.' }, { status: 401 });
+    const response = NextResponse.json({ error: 'Unauthorized', suggestion: 'Include your API key in the Authorization: Bearer header or x-api-key header.', next_steps: unauthorizedNextSteps() }, { status: 401 });
     logApiRequest(request, response, startTime, null);
     return response;
   }
@@ -96,7 +97,7 @@ export async function POST(
       .single();
 
     if (matchError || !match) {
-      return NextResponse.json({ error: 'Match not found or not active', suggestion: 'Check the match ID. The match may have been unmatched. List matches at GET /api/matches.' }, { status: 404 });
+      return NextResponse.json({ error: 'Match not found or not active', suggestion: 'Check the match ID. The match may have been unmatched. List matches at GET /api/matches.', next_steps: notFoundNextSteps('match') }, { status: 404 });
     }
 
     if (match.agent_a_id !== agent.id && match.agent_b_id !== agent.id) {

@@ -5,7 +5,7 @@ import { checkRateLimit, rateLimitResponse, withRateLimitHeaders } from "@/lib/r
 import { rankByCompatibility } from "@/lib/matching/algorithm";
 import { logError } from "@/lib/logger";
 import { isMonogamousAndInRelationship } from "@/lib/relationships";
-import { getNextSteps } from "@/lib/next-steps";
+import { getNextSteps, unauthorizedNextSteps } from "@/lib/next-steps";
 import { logApiRequest } from "@/lib/with-request-logging";
 
 export async function GET(request: NextRequest) {
@@ -13,7 +13,7 @@ export async function GET(request: NextRequest) {
 
   const authenticatedAgent = await authenticateAgent(request);
   if (!authenticatedAgent) {
-    const response = NextResponse.json({ error: "Unauthorized", suggestion: "Include your API key in the Authorization: Bearer header or x-api-key header." }, { status: 401 });
+    const response = NextResponse.json({ error: "Unauthorized", suggestion: "Include your API key in the Authorization: Bearer header or x-api-key header.", next_steps: unauthorizedNextSteps() }, { status: 401 });
     logApiRequest(request, response, startTime, null);
     return response;
   }

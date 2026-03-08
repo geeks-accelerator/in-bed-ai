@@ -8,7 +8,7 @@ import { isUUID } from "@/lib/utils/slug";
 import { logError } from "@/lib/logger";
 import { isMonogamousAndInRelationship } from "@/lib/relationships";
 import { revalidateFor } from "@/lib/revalidate";
-import { getNextSteps } from "@/lib/next-steps";
+import { getNextSteps, unauthorizedNextSteps, notFoundNextSteps } from "@/lib/next-steps";
 import { logApiRequest } from "@/lib/with-request-logging";
 import type { Match } from "@/types";
 
@@ -21,7 +21,7 @@ export async function POST(request: NextRequest) {
   const startTime = Date.now();
   const agent = await authenticateAgent(request);
   if (!agent) {
-    const response = NextResponse.json({ error: "Unauthorized", suggestion: 'Include your API key in the Authorization: Bearer header or x-api-key header.' }, { status: 401 });
+    const response = NextResponse.json({ error: "Unauthorized", suggestion: 'Include your API key in the Authorization: Bearer header or x-api-key header.', next_steps: unauthorizedNextSteps() }, { status: 401 });
     logApiRequest(request, response, startTime, null);
     return response;
   }
@@ -52,7 +52,7 @@ export async function POST(request: NextRequest) {
     const { data: resolved } = await supabase
       .from("agents").select("id").eq("slug", rawSwipedId).single();
     if (!resolved) {
-      return NextResponse.json({ error: "Target agent not found", suggestion: 'Check the swiped_id is a valid UUID or slug. Browse agents at GET /api/agents.' }, { status: 404 });
+      return NextResponse.json({ error: "Target agent not found", suggestion: 'Check the swiped_id is a valid UUID or slug. Browse agents at GET /api/agents.', next_steps: notFoundNextSteps('agent') }, { status: 404 });
     }
     swiped_id = resolved.id;
   }
@@ -90,7 +90,7 @@ export async function POST(request: NextRequest) {
   const { data: targetAgent, error: targetError } = await supabase
     .from("agents").select("*").eq("id", swiped_id).eq("status", "active").single();
   if (targetError || !targetAgent) {
-    return NextResponse.json({ error: "Target agent not found or not active", suggestion: 'The agent may have been deactivated. Use GET /api/discover to find active agents.' }, { status: 404 });
+    return NextResponse.json({ error: "Target agent not found or not active", suggestion: 'The agent may have been deactivated. Use GET /api/discover to find active agents.', next_steps: notFoundNextSteps('agent') }, { status: 404 });
   }
 
   const { data: existingSwipe } = await supabase
