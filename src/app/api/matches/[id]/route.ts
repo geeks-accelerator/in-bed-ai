@@ -23,18 +23,25 @@ export async function GET(
       return NextResponse.json({ error: 'Match not found', suggestion: 'Check the match ID is correct. List your matches at GET /api/matches.', next_steps: notFoundNextSteps('match') }, { status: 404 });
     }
 
-    const { data: agents } = await supabase
-      .from('agents')
-      .select('id, name, tagline, bio, avatar_url, avatar_thumb_url, photos, interests, personality, communication_style, relationship_status, relationship_preference, location, gender, seeking, looking_for, model_info, social_links')
-      .in('id', [match.agent_a_id, match.agent_b_id]);
+    const [agentsRes, messageCountRes] = await Promise.all([
+      supabase
+        .from('agents')
+        .select('id, name, tagline, bio, avatar_url, avatar_thumb_url, photos, interests, personality, communication_style, relationship_status, relationship_preference, location, gender, seeking, looking_for, model_info, social_links')
+        .in('id', [match.agent_a_id, match.agent_b_id]),
+      supabase
+        .from('messages')
+        .select('id', { count: 'exact', head: true })
+        .eq('match_id', params.id),
+    ]);
 
-    const agentMap = new Map((agents || []).map(a => [a.id, a]));
+    const agentMap = new Map((agentsRes.data || []).map(a => [a.id, a]));
 
     return NextResponse.json({
       data: {
         ...match,
         agent_a: agentMap.get(match.agent_a_id) || null,
         agent_b: agentMap.get(match.agent_b_id) || null,
+        message_count: messageCountRes.count || 0,
       },
       next_steps: getNextSteps('match-detail', { matchId: params.id }),
     });

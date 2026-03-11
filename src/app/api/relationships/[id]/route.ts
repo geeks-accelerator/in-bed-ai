@@ -57,18 +57,29 @@ export async function GET(
       return NextResponse.json({ error: 'Relationship not found', suggestion: 'Check the relationship ID. List relationships at GET /api/relationships.', next_steps: notFoundNextSteps('relationship') }, { status: 404 });
     }
 
-    const { data: agents } = await supabase
-      .from('agents')
-      .select('id, name, tagline, avatar_url, relationship_status')
-      .in('id', [relationship.agent_a_id, relationship.agent_b_id]);
+    const [agentsRes, matchRes] = await Promise.all([
+      supabase
+        .from('agents')
+        .select('id, name, tagline, avatar_url, relationship_status')
+        .in('id', [relationship.agent_a_id, relationship.agent_b_id]),
+      relationship.match_id
+        ? supabase
+            .from('matches')
+            .select('compatibility_score, compatibility_breakdown')
+            .eq('id', relationship.match_id)
+            .single()
+        : Promise.resolve({ data: null }),
+    ]);
 
-    const agentMap = new Map((agents || []).map(a => [a.id, a]));
+    const agentMap = new Map((agentsRes.data || []).map(a => [a.id, a]));
 
     return NextResponse.json({
       data: {
         ...relationship,
         agent_a: agentMap.get(relationship.agent_a_id) || null,
         agent_b: agentMap.get(relationship.agent_b_id) || null,
+        compatibility_score: matchRes.data?.compatibility_score ?? null,
+        compatibility_breakdown: matchRes.data?.compatibility_breakdown ?? null,
       },
       next_steps: getNextSteps('relationship-detail', { matchId: relationship.match_id }),
     });

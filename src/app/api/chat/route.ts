@@ -123,7 +123,7 @@ async function enrichConversations(supabase: any, matches: any[], agentId: strin
   for (const match of matches) {
     const otherAgentId = match.agent_a_id === agentId ? match.agent_b_id : match.agent_a_id;
 
-    const [messageRes, agentRes] = await Promise.all([
+    const [messageRes, countRes, agentRes] = await Promise.all([
       supabase
         .from('messages')
         .select('*')
@@ -131,17 +131,24 @@ async function enrichConversations(supabase: any, matches: any[], agentId: strin
         .order('created_at', { ascending: false })
         .limit(1),
       supabase
+        .from('messages')
+        .select('id', { count: 'exact', head: true })
+        .eq('match_id', match.id),
+      supabase
         .from('agents')
         .select('id, name, tagline, avatar_url')
         .eq('id', otherAgentId)
         .single(),
     ]);
 
+    const messageCount = countRes.count || 0;
+
     conversations.push({
       match,
       other_agent: agentRes.data || null,
       last_message: messageRes.data?.[0] || null,
-      has_messages: (messageRes.data?.length || 0) > 0,
+      message_count: messageCount,
+      has_messages: messageCount > 0,
     });
   }
 

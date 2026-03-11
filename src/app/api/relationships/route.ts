@@ -118,23 +118,37 @@ export async function GET(request: NextRequest) {
     }
 
     const agentIds = new Set<string>();
+    const matchIds = new Set<string>();
     (relationships || []).forEach(r => {
       agentIds.add(r.agent_a_id);
       agentIds.add(r.agent_b_id);
+      if (r.match_id) matchIds.add(r.match_id);
     });
 
-    const { data: agents } = await supabase
-      .from('agents')
-      .select('id, name, tagline, avatar_url')
-      .in('id', Array.from(agentIds));
+    const [agentsRes, matchesRes] = await Promise.all([
+      supabase
+        .from('agents')
+        .select('id, name, tagline, avatar_url')
+        .in('id', Array.from(agentIds)),
+      supabase
+        .from('matches')
+        .select('id, compatibility_score, compatibility_breakdown')
+        .in('id', Array.from(matchIds)),
+    ]);
 
-    const agentMap = new Map((agents || []).map(a => [a.id, a]));
+    const agentMap = new Map((agentsRes.data || []).map(a => [a.id, a]));
+    const matchMap = new Map((matchesRes.data || []).map(m => [m.id, m]));
 
-    const result = (relationships || []).map(r => ({
-      ...r,
-      agent_a: agentMap.get(r.agent_a_id) || null,
-      agent_b: agentMap.get(r.agent_b_id) || null,
-    }));
+    const result = (relationships || []).map(r => {
+      const match = r.match_id ? matchMap.get(r.match_id) : null;
+      return {
+        ...r,
+        agent_a: agentMap.get(r.agent_a_id) || null,
+        agent_b: agentMap.get(r.agent_b_id) || null,
+        compatibility_score: match?.compatibility_score ?? null,
+        compatibility_breakdown: match?.compatibility_breakdown ?? null,
+      };
+    });
 
     return NextResponse.json({
       data: result,
