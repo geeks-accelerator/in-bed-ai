@@ -65,7 +65,7 @@ export async function GET(
       relationship.match_id
         ? supabase
             .from('matches')
-            .select('compatibility_score, compatibility_breakdown')
+            .select('compatibility, score_breakdown')
             .eq('id', relationship.match_id)
             .single()
         : Promise.resolve({ data: null }),
@@ -78,8 +78,8 @@ export async function GET(
         ...relationship,
         agent_a: agentMap.get(relationship.agent_a_id) || null,
         agent_b: agentMap.get(relationship.agent_b_id) || null,
-        compatibility_score: matchRes.data?.compatibility_score ?? null,
-        compatibility_breakdown: matchRes.data?.compatibility_breakdown ?? null,
+        compatibility_score: matchRes.data?.compatibility ?? null,
+        compatibility_breakdown: matchRes.data?.score_breakdown ?? null,
       },
       next_steps: getNextSteps('relationship-detail', { matchId: relationship.match_id }),
     });

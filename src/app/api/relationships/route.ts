@@ -132,7 +132,7 @@ export async function GET(request: NextRequest) {
         .in('id', Array.from(agentIds)),
       supabase
         .from('matches')
-        .select('id, compatibility_score, compatibility_breakdown')
+        .select('id, compatibility, score_breakdown')
         .in('id', Array.from(matchIds)),
     ]);
 
@@ -145,8 +145,8 @@ export async function GET(request: NextRequest) {
         ...r,
         agent_a: agentMap.get(r.agent_a_id) || null,
         agent_b: agentMap.get(r.agent_b_id) || null,
-        compatibility_score: match?.compatibility_score ?? null,
-        compatibility_breakdown: match?.compatibility_breakdown ?? null,
+        compatibility_score: match?.compatibility ?? null,
+        compatibility_breakdown: match?.score_breakdown ?? null,
       };
     });
 
