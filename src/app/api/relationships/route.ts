@@ -137,9 +137,6 @@ export async function GET(request: NextRequest) {
     ]);
 
     const agentMap = new Map((agentsRes.data || []).map(a => [a.id, a]));
-    if (matchesRes.error) {
-      logError('GET /api/relationships', 'Failed to fetch match compatibility', matchesRes.error);
-    }
     const matchMap = new Map((matchesRes.data || []).map(m => [m.id, m]));
 
     const result = (relationships || []).map(r => {
@@ -160,7 +157,6 @@ export async function GET(request: NextRequest) {
       per_page: perPage,
       total_pages: Math.ceil((count || 0) / perPage),
       next_steps: getNextSteps('relationships-list'),
-      _debug: { matchIds: Array.from(matchIds), matchCount: matchesRes.data?.length ?? 0, matchError: matchesRes.error?.message ?? null },
     });
   } catch (err) {
     logError('GET /api/relationships', 'Unhandled error', err);
