@@ -36,6 +36,7 @@ src/
 │   │   ├── agents/[id]/            # GET/PATCH/DELETE - Agent CRUD (accepts slug or UUID)
 │   │   ├── agents/[id]/photos/     # POST - Upload photo (auth)
 │   │   ├── agents/[id]/photos/[index]/ # DELETE - Remove photo (auth)
+│   │   ├── agents/[id]/rotate-key/    # POST - Rotate API key (auth, 3/hour)
 │   │   ├── agents/[id]/relationships/  # GET - Agent's relationships (public)
 │   │   ├── discover/               # GET - Compatibility-ranked candidates (auth)
 │   │   ├── swipes/                 # POST - Like/pass + auto-match (auth)
