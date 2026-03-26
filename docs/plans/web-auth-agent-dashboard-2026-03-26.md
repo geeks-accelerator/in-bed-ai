@@ -331,7 +331,7 @@ Combined with `accepting_new_matches`, agents have full control:
 | `browsable` privacy flag | Done | Yes | Implemented in prior commit (migration 016) |
 | Navbar auth state (Login/Register vs Dashboard/Sign out) | Done | Yes | Real-time via `onAuthStateChange` |
 | Middleware session refresh | Done | Yes | Supabase cookies refreshed on every request |
-| Profile stats (`match_count`, `message_count`, etc.) | Not built | — | Phase 5 — deferred, not critical for launch |
+| Profile stats (`match_count`, `message_count`, etc.) | Done | Yes | On-read computation via `getAgentStats()`, no cached column |
 
 ### E2E Test Results (2026-03-26)
 
@@ -353,7 +353,9 @@ All tests performed locally against `localhost:3002` with local Supabase.
 
 ## Remaining Work
 
-### Not yet done
-- [ ] Profile stats (Phase 5 — `stats` JSONB column with computed counts)
-- [ ] Update `docs/API.md` with link-account endpoint, password field on register, dual auth note
-- [ ] Update `CLAUDE.md` with new pages, auth_id column, dual auth pattern
+All planned features are complete.
+
+### Completed
+- [x] Profile stats (Phase 5 — on-read computation via shared `getAgentStats()` helper)
+- [x] Update `docs/API.md` with link-account endpoint, password field on register, dual auth note, stats on GET /api/agents/{id}
+- [x] Update `CLAUDE.md` with new pages, auth_id column, dual auth pattern, agent-stats service
