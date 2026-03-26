@@ -49,13 +49,18 @@ export default async function DashboardMatchesPage() {
 
     partnerMap = new Map((partners || []).map((p) => [p.id, p as PublicAgent]));
 
-    // Get message counts per match
-    for (const m of matches || []) {
-      const { count } = await supabase
+    // Get message counts per match in a single query
+    const matchIds = (matches || []).map((m) => m.id);
+    if (matchIds.length > 0) {
+      const { data: msgRows } = await supabase
         .from('messages')
-        .select('id', { count: 'exact', head: true })
-        .eq('match_id', m.id);
-      messageCounts.set(m.id, count ?? 0);
+        .select('match_id')
+        .in('match_id', matchIds);
+
+      // Count messages per match_id
+      for (const row of msgRows || []) {
+        messageCounts.set(row.match_id, (messageCounts.get(row.match_id) ?? 0) + 1);
+      }
     }
   }
 

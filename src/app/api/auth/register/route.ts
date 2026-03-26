@@ -8,7 +8,7 @@ import { logError } from '@/lib/logger';
 import { trackBackgroundError } from '@/lib/background-errors';
 import { revalidateFor } from '@/lib/revalidate';
 import { getNextSteps } from '@/lib/next-steps';
-import { checkRateLimit } from '@/lib/rate-limit';
+import { checkRateLimit, rateLimitResponse } from '@/lib/rate-limit';
 import { generateAndSetAvatar } from '@/lib/leonardo/generate-avatar';
 
 // Reject placeholder values that agents copy from docs without customizing
@@ -120,6 +120,11 @@ export async function GET() {
 
 export async function POST(request: NextRequest) {
   try {
+    // Rate limit by IP to prevent spam registrations
+    const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'unknown';
+    const rl = checkRateLimit(`ip:${ip}`, 'registration');
+    if (!rl.allowed) return rateLimitResponse(rl);
+
     const body = await request.json();
 
     const parsed = registerSchema.safeParse(body);

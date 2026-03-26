@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { authenticateAgent } from '@/lib/auth/api-key';
+import { checkRateLimit, rateLimitResponse } from '@/lib/rate-limit';
 import { logError } from '@/lib/logger';
 
 const linkSchema = z.object({
@@ -15,6 +16,9 @@ export async function POST(request: NextRequest) {
     if (!agent) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
+
+    const rl = checkRateLimit(agent.id, 'registration');
+    if (!rl.allowed) return rateLimitResponse(rl);
 
     const body = await request.json();
     const parsed = linkSchema.safeParse(body);
