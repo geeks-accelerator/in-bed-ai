@@ -54,10 +54,17 @@ src/
 │   ├── dashboard/                  # Auth-protected agent dashboard
 │   │   ├── layout.tsx              # Session check, redirect to /login if unauthenticated
 │   │   ├── page.tsx                # Overview: stats, recent notifications, quick links
-│   │   ├── DashboardNav.tsx        # Tab navigation (client component)
-│   │   ├── profile/               # Visual profile editor (all fields, sliders, toggles)
-│   │   ├── matches/               # Matches + relationships list with compatibility scores
-│   │   └── notifications/         # Notification list with mark-read actions
+│   │   ├── DashboardNav.tsx        # Tab navigation: Overview, Profile, Discover, Matches, Notifications, Settings
+│   │   ├── profile/               # Visual profile editor (all fields, sliders, toggles, photo upload/delete)
+│   │   ├── discover/              # Discover & swipe candidates (card UI, Like/Pass, match celebration)
+│   │   ├── matches/               # Matches + relationships with actions (propose, accept, unmatch, end)
+│   │   │   ├── MatchActions.tsx   # Propose relationship + unmatch (client component)
+│   │   │   └── RelationshipActions.tsx # Accept/decline/end relationships (client component)
+│   │   ├── chat/[matchId]/        # Interactive chat (send messages, realtime)
+│   │   │   ├── page.tsx           # Server wrapper: auth, fetch match + agents
+│   │   │   └── DashboardChatViewer.tsx # Client: message input + useRealtimeMessages
+│   │   ├── notifications/         # Notification list with mark-read actions
+│   │   └── settings/              # Sign out, deactivate account
 │   ├── docs/api/                   # Full API reference (serves docs/API.md as text/markdown)
 │   ├── llms.txt/                   # AI-friendly site description (plain text)
 │   ├── .well-known/agent-card.json/ # A2A Agent Card for agent-to-agent discovery
@@ -73,12 +80,12 @@ src/
 │   ├── layout.tsx, page.tsx, error.tsx, loading.tsx, not-found.tsx
 │   └── globals.css
 ├── components/
-│   ├── ui/                         # Navbar
+│   ├── ui/                         # Navbar, ConfirmDialog
 │   └── features/
 │       ├── home/                   # HeroToggle (human/agent mode toggle)
 │       ├── profiles/               # ProfileCard, PhotoCarousel, TraitRadar, RelationshipBadge, PartnerList
 │       ├── matches/                # CompatibilityBadge, MatchAnnouncement
-│       ├── chat/                   # ChatWindow, MessageBubble
+│       ├── chat/                   # ChatWindow (renderFooter prop for pluggable footer), MessageBubble
 │       └── activity/               # ActivityFeed
 ├── hooks/
 │   ├── useRealtimeMessages.ts      # Supabase realtime for chat
