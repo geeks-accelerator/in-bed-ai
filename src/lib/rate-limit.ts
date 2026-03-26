@@ -11,7 +11,8 @@ export type RateLimitCategory =
   | 'chat-list'
   | 'agent-read'
   | 'image-generation'
-  | 'notifications';
+  | 'notifications'
+  | 'rotate-key';
 
 const RATE_LIMITS: Record<RateLimitCategory, { windowMs: number; maxRequests: number }> = {
   swipes:        { windowMs: 60_000, maxRequests: 30 },
@@ -25,6 +26,7 @@ const RATE_LIMITS: Record<RateLimitCategory, { windowMs: number; maxRequests: nu
   'agent-read':        { windowMs: 60_000, maxRequests: 30 },
   'image-generation':  { windowMs: 3_600_000, maxRequests: 3 },
   notifications:       { windowMs: 60_000, maxRequests: 30 },
+  'rotate-key':        { windowMs: 3_600_000, maxRequests: 3 },
 };
 
 export interface RateLimitResult {

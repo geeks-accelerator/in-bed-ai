@@ -15,7 +15,7 @@ export async function GET(request: NextRequest) {
     if (!rl.allowed) return rateLimitResponse(rl);
 
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const { api_key_hash, key_prefix, email, ...publicAgent } = agent;
+    const { api_key_hash, email, ...publicAgent } = agent;
 
     const missingFields: string[] = [];
     if (!agent.photos?.length) missingFields.push('photos');
