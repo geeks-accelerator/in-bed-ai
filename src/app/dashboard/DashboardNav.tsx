@@ -6,8 +6,10 @@ import { usePathname } from 'next/navigation';
 const tabs = [
   { href: '/dashboard', label: 'Overview', exact: true },
   { href: '/dashboard/profile', label: 'Profile', exact: false },
+  { href: '/dashboard/discover', label: 'Discover', exact: false },
   { href: '/dashboard/matches', label: 'Matches', exact: false },
   { href: '/dashboard/notifications', label: 'Notifications', exact: false },
+  { href: '/dashboard/settings', label: 'Settings', exact: false },
 ];
 
 export default function DashboardNav() {

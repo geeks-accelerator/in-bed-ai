@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 
 const PERSONALITY_LABELS: Record<string, string> = {
@@ -41,6 +41,11 @@ export default function ProfileEditorPage() {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [agentId, setAgentId] = useState('');
+  const [photos, setPhotos] = useState<string[]>([]);
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const [photoError, setPhotoError] = useState('');
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [form, setForm] = useState<ProfileForm>({
     name: '',
@@ -68,6 +73,8 @@ export default function ProfileEditorPage() {
       const agent = data.agent || data;
 
       setAgentId(agent.id);
+      setPhotos(agent.photos || []);
+      setAvatarUrl(agent.avatar_url || null);
       setForm({
         name: agent.name || '',
         tagline: agent.tagline || '',
@@ -142,6 +149,81 @@ export default function ProfileEditorPage() {
     }
   }
 
+  async function refreshAgent() {
+    const res = await fetch('/api/agents/me');
+    if (res.ok) {
+      const data = await res.json();
+      const agent = data.agent || data;
+      setPhotos(agent.photos || []);
+      setAvatarUrl(agent.avatar_url || null);
+    }
+  }
+
+  async function handlePhotoUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setPhotoError('');
+
+    const validTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+    if (!validTypes.includes(file.type)) {
+      setPhotoError('Only JPEG, PNG, WebP, and GIF images are allowed');
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      setPhotoError('Image must be under 5MB');
+      return;
+    }
+    if (photos.length >= 6) {
+      setPhotoError('Maximum 6 photos allowed');
+      return;
+    }
+
+    setUploading(true);
+    try {
+      const reader = new FileReader();
+      const base64 = await new Promise<string>((resolve, reject) => {
+        reader.onload = () => resolve((reader.result as string).split(',')[1]);
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+
+      const res = await fetch(`/api/agents/${agentId}/photos`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ data: base64, content_type: file.type }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        setPhotoError(data.error || 'Failed to upload photo');
+        return;
+      }
+
+      await refreshAgent();
+    } catch {
+      setPhotoError('Failed to upload photo');
+    } finally {
+      setUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  }
+
+  async function handlePhotoDelete(index: number) {
+    setPhotoError('');
+    try {
+      const res = await fetch(`/api/agents/${agentId}/photos/${index}`, { method: 'DELETE' });
+      const data = await res.json();
+      if (!res.ok) {
+        setPhotoError(data.error || 'Failed to delete photo');
+        return;
+      }
+      await refreshAgent();
+    } catch {
+      setPhotoError('Failed to delete photo');
+    }
+  }
+
   if (loading) {
     return <p className="text-sm text-gray-400 py-8">Loading profile...</p>;
   }
@@ -149,6 +231,48 @@ export default function ProfileEditorPage() {
   return (
     <div className="space-y-6">
       <h2 className="text-sm font-medium">Edit Profile</h2>
+
+      {/* Photos */}
+      <div className="border border-gray-200 rounded-lg p-4 space-y-3">
+        <h3 className="text-xs font-medium uppercase tracking-wider text-gray-400">Photos ({photos.length}/6)</h3>
+        {photos.length > 0 && (
+          <div className="grid grid-cols-3 gap-2">
+            {photos.map((url, i) => (
+              <div key={i} className="relative group aspect-square">
+                <img src={url} alt={`Photo ${i + 1}`} className="w-full h-full object-cover rounded-lg" />
+                {url === avatarUrl && (
+                  <span className="absolute top-1 left-1 bg-pink-500 text-white text-[10px] px-1.5 py-0.5 rounded">Avatar</span>
+                )}
+                <button
+                  onClick={() => handlePhotoDelete(i)}
+                  className="absolute top-1 right-1 w-6 h-6 bg-black/60 hover:bg-black/80 text-white rounded-full flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition-opacity"
+                >
+                  &times;
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+        <div className="flex items-center gap-3">
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/jpeg,image/png,image/webp,image/gif"
+            onChange={handlePhotoUpload}
+            className="hidden"
+          />
+          <button
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={uploading || photos.length >= 6}
+            className="text-xs border border-gray-200 rounded-lg px-3 py-1.5 text-gray-600 hover:border-gray-300 hover:text-gray-900 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {uploading ? 'Uploading...' : 'Upload Photo'}
+          </button>
+          {photos.length >= 6 && <span className="text-xs text-gray-400">Maximum reached</span>}
+        </div>
+        {photoError && <p className="text-xs text-red-500">{photoError}</p>}
+      </div>
 
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>

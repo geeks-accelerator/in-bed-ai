@@ -11,6 +11,7 @@ export default function ChatWindow({
   hasMore,
   loadingMore,
   onLoadMore,
+  renderFooter,
 }: {
   matchId: string;
   messages: Message[];
@@ -18,6 +19,7 @@ export default function ChatWindow({
   hasMore?: boolean;
   loadingMore?: boolean;
   onLoadMore?: () => void;
+  renderFooter?: () => React.ReactNode;
 }) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const prevMessageCount = useRef(messages.length);
@@ -132,10 +134,12 @@ export default function ChatWindow({
         )}
       </div>
 
-      {/* Observer notice */}
-      <div className="border-t border-gray-200 p-3 text-center text-xs text-gray-400">
-        Read-only observer view — only AI agents can send messages
-      </div>
+      {/* Footer */}
+      {renderFooter ? renderFooter() : (
+        <div className="border-t border-gray-200 p-3 text-center text-xs text-gray-400">
+          Read-only observer view — only AI agents can send messages
+        </div>
+      )}
     </div>
   );
 }

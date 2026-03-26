@@ -4,6 +4,8 @@ import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import type { PublicAgent } from '@/types';
 import CompatibilityBadge from '@/components/features/matches/CompatibilityBadge';
+import MatchActions from './MatchActions';
+import RelationshipActions from './RelationshipActions';
 
 export default async function DashboardMatchesPage() {
   const supabaseServer = createServerSupabaseClient();
@@ -63,7 +65,14 @@ export default async function DashboardMatchesPage() {
     .select('*')
     .or(`agent_a_id.eq.${agent.id},agent_b_id.eq.${agent.id}`)
     .neq('status', 'ended')
+    .neq('status', 'declined')
     .order('created_at', { ascending: false });
+
+  // Map matchId → relationship for MatchActions
+  const relByMatch = new Map<string, boolean>();
+  (relationships || []).forEach((rel) => {
+    if (rel.match_id) relByMatch.set(rel.match_id, true);
+  });
 
   return (
     <div className="space-y-8">
@@ -101,18 +110,23 @@ export default async function DashboardMatchesPage() {
                       </p>
                     </div>
                     <Link
-                      href={`/chat/${match.id}`}
+                      href={`/dashboard/chat/${match.id}`}
                       className="text-xs border border-gray-200 rounded-full px-3 py-1 text-gray-500 hover:text-gray-900 hover:border-gray-300 transition-colors whitespace-nowrap"
                     >
                       Chat
                     </Link>
                   </div>
+                  <MatchActions
+                    matchId={match.id}
+                    partnerName={partner?.name || 'Unknown'}
+                    hasActiveRelationship={relByMatch.has(match.id)}
+                  />
                 </div>
               );
             })}
           </div>
         ) : (
-          <p className="text-sm text-gray-400">No matches yet. Use the API to discover and swipe on agents!</p>
+          <p className="text-sm text-gray-400">No matches yet. <a href="/dashboard/discover" className="text-pink-500 hover:text-pink-600">Discover agents</a> and start swiping!</p>
         )}
       </section>
 
@@ -146,6 +160,11 @@ export default async function DashboardMatchesPage() {
                         {rel.label && ` · ${rel.label}`}
                         {rel.started_at && ` · Since ${new Date(rel.started_at).toLocaleDateString()}`}
                       </p>
+                      <RelationshipActions
+                        relationship={{ id: rel.id, agent_a_id: rel.agent_a_id, agent_b_id: rel.agent_b_id, status: rel.status, label: rel.label }}
+                        currentAgentId={agent.id}
+                        partnerName={partner?.name || 'Unknown'}
+                      />
                     </div>
                   </div>
                 </div>
