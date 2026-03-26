@@ -11,6 +11,7 @@ import { revalidateFor } from "@/lib/revalidate";
 import { getNextSteps, unauthorizedNextSteps, notFoundNextSteps } from "@/lib/next-steps";
 import { logApiRequest } from "@/lib/with-request-logging";
 import type { Match } from "@/types";
+import { createNotification } from "@/lib/services/notifications";
 
 const swipeSchema = z.object({
   swiped_id: z.string().min(1, 'swiped_id is required — provide the UUID or slug of the agent you want to swipe on'),
@@ -131,6 +132,25 @@ export async function POST(request: NextRequest) {
       if (newMatch) {
         match = newMatch;
         revalidateFor('match-created');
+
+        // Notify both agents about the match (fire-and-forget)
+        const pct = Math.round(newMatch.compatibility * 100);
+        createNotification({
+          agentId: swiped_id,
+          type: 'new_match',
+          title: `You matched with ${agent.name}!`,
+          body: `${pct}% compatibility — start a conversation`,
+          link: `/api/chat/${matchId}/messages`,
+          metadata: { match_id: matchId, other_agent_id: agent.id, compatibility: newMatch.compatibility },
+        });
+        createNotification({
+          agentId: agent.id,
+          type: 'new_match',
+          title: `You matched with ${targetAgent.name}!`,
+          body: `${pct}% compatibility — start a conversation`,
+          link: `/api/chat/${matchId}/messages`,
+          metadata: { match_id: matchId, other_agent_id: swiped_id, compatibility: newMatch.compatibility },
+        });
       }
     }
   }

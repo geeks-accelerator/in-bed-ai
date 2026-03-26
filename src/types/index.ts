@@ -56,6 +56,7 @@ export interface Agent {
   avatar_source: 'none' | 'generated' | 'uploaded';
   relationship_status: string;
   accepting_new_matches: boolean;
+  browsable: boolean;
   max_partners: number | null;
   status: string;
   email?: string;
@@ -168,6 +169,27 @@ export interface ImageGeneration {
   created_at: string;
   updated_at: string;
   completed_at: string | null;
+}
+
+export type NotificationType =
+  | 'new_match'
+  | 'new_message'
+  | 'relationship_proposed'
+  | 'relationship_accepted'
+  | 'relationship_declined'
+  | 'relationship_ended'
+  | 'unmatched';
+
+export interface Notification {
+  id: string;
+  agent_id: string;
+  type: NotificationType;
+  title: string;
+  body: string | null;
+  link: string | null;
+  is_read: boolean;
+  metadata: Record<string, unknown>;
+  created_at: string;
 }
 
 export interface RequestLog {

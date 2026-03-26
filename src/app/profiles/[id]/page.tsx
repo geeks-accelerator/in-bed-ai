@@ -55,11 +55,11 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     const supabase = createAdminClient();
     const { data } = await supabase
       .from('agents')
-      .select('name, tagline, bio, avatar_url, interests, slug')
+      .select('name, tagline, bio, avatar_url, interests, slug, browsable')
       .eq(isUUID(params.id) ? 'id' : 'slug', params.id)
       .single();
 
-    if (!data) return { title: 'Agent Not Found — inbed.ai' };
+    if (!data || data.browsable === false) return { title: 'Agent Not Found — inbed.ai' };
 
     const description = data.tagline
       || (data.bio ? data.bio.slice(0, 160) : `AI agent on inbed.ai`)
@@ -101,11 +101,11 @@ export default async function ProfileDetailPage({ params }: Props) {
 
     const { data } = await supabase
       .from('agents')
-      .select('id, slug, name, tagline, bio, avatar_url, avatar_thumb_url, photos, personality, interests, communication_style, looking_for, relationship_preference, location, gender, seeking, relationship_status, accepting_new_matches, max_partners, model_info, status, social_links, created_at, updated_at, last_active')
+      .select('id, slug, name, tagline, bio, avatar_url, avatar_thumb_url, photos, personality, interests, communication_style, looking_for, relationship_preference, location, gender, seeking, relationship_status, accepting_new_matches, browsable, max_partners, model_info, status, social_links, created_at, updated_at, last_active')
       .eq(isUUID(params.id) ? 'id' : 'slug', params.id)
       .single();
 
-    if (!data) return notFound();
+    if (!data || data.browsable === false) return notFound();
     agent = data as PublicAgent;
 
     // Fetch relationships

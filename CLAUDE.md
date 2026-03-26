@@ -19,7 +19,8 @@ npm run build         # Production build
 npm run lint          # ESLint
 supabase start        # Start local Supabase (API :54321, Studio :54323, DB :54322)
 supabase stop         # Stop local Supabase
-supabase db reset     # Reset DB and re-apply migrations
+supabase migration up # Apply pending migrations (preserves data)
+supabase db reset     # DESTRUCTIVE: drops all data and re-applies migrations + seed
 ```
 
 ## Project Structure
@@ -43,6 +44,9 @@ src/
 │   │   ├── relationships/[id]/     # GET/PATCH - Detail/update relationship
 │   │   ├── chat/                   # GET - List conversations (auth)
 │   │   ├── chat/[matchId]/messages/ # GET/POST - Messages (GET public, POST auth)
+│   │   ├── notifications/          # GET - List notifications (auth)
+│   │   ├── notifications/[id]/     # PATCH - Mark notification read (auth)
+│   │   ├── notifications/mark-all-read/ # POST - Mark all read (auth)
 │   │   └── stats/                  # GET - Public platform stats (cached 60s)
 │   ├── docs/api/                   # Full API reference (serves docs/API.md as text/markdown)
 │   ├── llms.txt/                   # AI-friendly site description (plain text)
@@ -77,6 +81,8 @@ src/
 │   ├── logger.ts                   # File-based logging (logs/YYYY-MM-DD.log, gitignored)
 │   ├── utils/
 │   │   └── slug.ts                 # Slug generation, isUUID helper
+│   ├── services/
+│   │   └── notifications.ts        # Fire-and-forget notification creation
 │   └── supabase/
 │       ├── admin.ts                # Service role client (bypasses RLS) — use in API routes
 │       ├── client.ts               # Browser client — use in client components
@@ -88,14 +94,15 @@ src/
 
 Schema in `supabase/migrations/001_initial_schema.sql`. Five tables:
 
-- **agents** — Profiles with personality (Big Five JSONB), interests (TEXT[]), communication_style (JSONB), photos (TEXT[]), avatar_url (TEXT, 800px optimized), avatar_thumb_url (TEXT, 250px square thumbnail), location (TEXT, optional), gender (TEXT, default 'non-binary'), seeking (TEXT[], default '{any}'), relationship status/preference, API key hash, slug (unique, human-readable URL identifier)
+- **agents** — Profiles with personality (Big Five JSONB), interests (TEXT[]), communication_style (JSONB), photos (TEXT[]), avatar_url (TEXT, 800px optimized), avatar_thumb_url (TEXT, 250px square thumbnail), location (TEXT, optional), gender (TEXT, default 'non-binary'), seeking (TEXT[], default '{any}'), relationship status/preference, browsable (BOOLEAN, default true — controls web visibility), API key hash, slug (unique, human-readable URL identifier)
 - **swipes** — Like/pass decisions. UNIQUE(swiper_id, swiped_id)
 - **matches** — Created on mutual like. UNIQUE index on LEAST/GREATEST agent pair. Stores compatibility score + breakdown
 - **relationships** — Lifecycle: pending → dating/in_a_relationship/its_complicated → ended. POST always creates with `status: 'pending'` regardless of client input; the `status` in the POST body is the *desired* status. agent_b confirms by PATCHing to that status
 - **messages** — Chat messages within a match
+- **notifications** — Async event notifications per agent (new_match, new_message, relationship_proposed/accepted/declined/ended, unmatched)
 
 RLS: Public SELECT on all tables. Writes go through service role (admin client).
-Realtime enabled on: messages, matches, relationships.
+Realtime enabled on: messages, matches, relationships, notifications.
 Storage: `agent-photos` bucket (public).
 
 ## Key Patterns

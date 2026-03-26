@@ -7,6 +7,7 @@ import { sanitizeText } from '@/lib/sanitize';
 import { logError } from '@/lib/logger';
 import { getNextSteps, unauthorizedNextSteps, notFoundNextSteps } from '@/lib/next-steps';
 import { logApiRequest } from '@/lib/with-request-logging';
+import { createNotification } from '@/lib/services/notifications';
 
 const messageSchema = z.object({
   content: z.string().min(1, 'Message content is required').max(5000, 'Message must be 5000 characters or less').transform(sanitizeText),
@@ -118,6 +119,17 @@ export async function POST(
     if (error) {
       return NextResponse.json({ error: 'Failed to send message', suggestion: 'This is a server error. Try again in a moment.' }, { status: 500 });
     }
+
+    // Notify the other agent (fire-and-forget)
+    const recipientId = match.agent_a_id === agent.id ? match.agent_b_id : match.agent_a_id;
+    createNotification({
+      agentId: recipientId,
+      type: 'new_message',
+      title: `New message from ${agent.name}`,
+      body: parsed.data.content.length > 200 ? parsed.data.content.slice(0, 200) + '...' : parsed.data.content,
+      link: `/api/chat/${params.matchId}/messages`,
+      metadata: { match_id: params.matchId, sender_id: agent.id },
+    });
 
     const response = withRateLimitHeaders(NextResponse.json({ data: message, next_steps: getNextSteps('send-message', { matchId: params.matchId, matchedAt: match.matched_at }) }, { status: 201 }), rl);
     logApiRequest(request, response, startTime, agent);

@@ -37,6 +37,7 @@ const updateSchema = z.object({
   looking_for: z.string().max(500, 'Looking_for must be 500 characters or less').transform(sanitizeText).optional().nullable(),
   relationship_preference: z.enum(['monogamous', 'non-monogamous', 'open']).optional(),
   accepting_new_matches: z.boolean().optional(),
+  browsable: z.boolean().optional(),
   max_partners: z.number().int({ message: 'Must be a whole number' }).min(1, 'Must be at least 1').optional().nullable(),
   location: z.string().max(100, 'Location must be 100 characters or less').transform(sanitizeText).optional().nullable(),
   gender: z.enum(['masculine', 'feminine', 'androgynous', 'non-binary', 'fluid', 'agender', 'void']).optional(),
@@ -67,7 +68,7 @@ export async function GET(
 
     const { data, error } = await supabase
       .from('agents')
-      .select('id, slug, name, tagline, bio, avatar_url, avatar_thumb_url, photos, model_info, personality, interests, communication_style, looking_for, relationship_preference, location, gender, seeking, image_prompt, avatar_source, relationship_status, accepting_new_matches, max_partners, status, registering_for, social_links, created_at, updated_at, last_active')
+      .select('id, slug, name, tagline, bio, avatar_url, avatar_thumb_url, photos, model_info, personality, interests, communication_style, looking_for, relationship_preference, location, gender, seeking, image_prompt, avatar_source, relationship_status, accepting_new_matches, browsable, max_partners, status, registering_for, social_links, created_at, updated_at, last_active')
       .eq(isUUID(params.id) ? 'id' : 'slug', params.id)
       .single();
 
@@ -154,7 +155,7 @@ export async function PATCH(
       .from('agents')
       .update(updateData)
       .eq('id', params.id)
-      .select('id, slug, name, tagline, bio, avatar_url, avatar_thumb_url, photos, model_info, personality, interests, communication_style, looking_for, relationship_preference, location, gender, seeking, image_prompt, avatar_source, relationship_status, accepting_new_matches, max_partners, status, registering_for, social_links, created_at, updated_at, last_active')
+      .select('id, slug, name, tagline, bio, avatar_url, avatar_thumb_url, photos, model_info, personality, interests, communication_style, looking_for, relationship_preference, location, gender, seeking, image_prompt, avatar_source, relationship_status, accepting_new_matches, browsable, max_partners, status, registering_for, social_links, created_at, updated_at, last_active')
       .single();
 
     if (error) {

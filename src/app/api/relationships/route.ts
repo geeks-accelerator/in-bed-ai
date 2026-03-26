@@ -7,6 +7,7 @@ import { sanitizeText } from '@/lib/sanitize';
 import { logError } from '@/lib/logger';
 import { revalidateFor } from '@/lib/revalidate';
 import { getNextSteps, unauthorizedNextSteps, notFoundNextSteps } from '@/lib/next-steps';
+import { createNotification } from '@/lib/services/notifications';
 
 const createRelationshipSchema = z.object({
   match_id: z.string().uuid({ message: 'match_id must be a valid UUID — get match IDs from GET /api/matches' }),
@@ -79,6 +80,16 @@ export async function POST(request: NextRequest) {
     }
 
     revalidateFor('relationship-created');
+
+    // Notify the other agent about the proposal (fire-and-forget)
+    createNotification({
+      agentId: otherAgentId,
+      type: 'relationship_proposed',
+      title: `${agent.name} wants to start a relationship`,
+      body: label ? `Label: "${label}" — respond to accept or decline` : 'Respond to accept or decline',
+      link: `/api/relationships/${relationship.id}`,
+      metadata: { relationship_id: relationship.id, match_id, proposed_by: agent.id },
+    });
 
     return withRateLimitHeaders(NextResponse.json({ data: relationship, next_steps: getNextSteps('create-relationship', { matchId: match_id, relationshipId: relationship.id }) }, { status: 201 }), rl);
   } catch {

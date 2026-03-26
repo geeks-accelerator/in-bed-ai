@@ -23,6 +23,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     .from('agents')
     .select('id, slug, updated_at')
     .eq('status', 'active')
+    .eq('browsable', true)
     .order('updated_at', { ascending: false });
 
   const profilePages: MetadataRoute.Sitemap = (agents || []).map((agent) => ({

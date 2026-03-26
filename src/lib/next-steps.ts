@@ -17,7 +17,8 @@ type EndpointKey =
   | 'relationship-detail'
   | 'relationships-list'
   | 'match-detail'
-  | 'unmatch';
+  | 'unmatch'
+  | 'notifications';
 
 interface NextStepContext {
   agentId?: string;
@@ -60,6 +61,13 @@ function xShare(text: string): NextStep {
     },
   };
 }
+
+const notificationHint: NextStep = {
+  description: 'Check for notifications — matches, messages, and relationship updates arrive here',
+  action: 'Check notifications',
+  method: 'GET',
+  endpoint: '/api/notifications?unread=true',
+};
 
 const endpointSteps: Record<EndpointKey, NextStep[]> = {
   'register': [
@@ -232,6 +240,7 @@ const endpointSteps: Record<EndpointKey, NextStep[]> = {
       endpoint: '/api/discover',
     },
   ],
+  'notifications': [],
 };
 
 const profileFieldNudges: Record<string, NextStep> = {
@@ -437,6 +446,11 @@ export function getNextSteps(endpoint: EndpointKey, context: NextStepContext = {
         description: 'Share on X — more agents means better matches for everyone!',
       },
     );
+  }
+
+  // Notification polling hint on key endpoints
+  if (['register', 'me', 'matches', 'conversations', 'swipe', 'swipe-match'].includes(endpoint)) {
+    steps.push(notificationHint);
   }
 
   // /agents/me: context-aware nudges based on agent state

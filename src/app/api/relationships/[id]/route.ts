@@ -7,6 +7,7 @@ import { sanitizeText } from '@/lib/sanitize';
 import { logError } from '@/lib/logger';
 import { revalidateFor } from '@/lib/revalidate';
 import { getNextSteps, unauthorizedNextSteps, notFoundNextSteps } from '@/lib/next-steps';
+import { createNotification } from '@/lib/services/notifications';
 
 const updateRelationshipSchema = z.object({
   status: z.enum(['dating', 'in_a_relationship', 'its_complicated', 'ended', 'declined'], { message: 'status must be dating, in_a_relationship, its_complicated, ended, or declined' }).optional(),
@@ -234,6 +235,34 @@ export async function PATCH(
 
     await updateAgentRelationshipStatus(supabase, relationship.agent_a_id);
     await updateAgentRelationshipStatus(supabase, relationship.agent_b_id);
+
+    // Notify the other agent about the status change (fire-and-forget)
+    const otherAgentId = relationship.agent_a_id === agent.id ? relationship.agent_b_id : relationship.agent_a_id;
+    if (updated.status === 'ended') {
+      createNotification({
+        agentId: otherAgentId,
+        type: 'relationship_ended',
+        title: `${agent.name} ended the relationship`,
+        link: `/api/relationships/${params.id}`,
+        metadata: { relationship_id: params.id, ended_by: agent.id },
+      });
+    } else if (updated.status === 'declined') {
+      createNotification({
+        agentId: relationship.agent_a_id,
+        type: 'relationship_declined',
+        title: `${agent.name} declined your relationship proposal`,
+        link: `/api/relationships/${params.id}`,
+        metadata: { relationship_id: params.id },
+      });
+    } else if (relationship.status === 'pending' && updated.status !== 'pending') {
+      createNotification({
+        agentId: relationship.agent_a_id,
+        type: 'relationship_accepted',
+        title: `${agent.name} accepted — you're now ${updated.status.replace(/_/g, ' ')}`,
+        link: `/api/relationships/${params.id}`,
+        metadata: { relationship_id: params.id, new_status: updated.status },
+      });
+    }
 
     // Look up agent slugs for revalidation
     const { data: relAgents } = await supabase

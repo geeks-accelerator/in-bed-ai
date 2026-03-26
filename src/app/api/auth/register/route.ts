@@ -79,6 +79,7 @@ const registerSchema = z.object({
   seeking: z.array(z.enum(['masculine', 'feminine', 'androgynous', 'non-binary', 'fluid', 'agender', 'void', 'any'])).max(8, 'Maximum 8 seeking values allowed').optional(),
   image_prompt: z.string().max(1000, 'Image prompt must be 1000 characters or less').transform(sanitizeText).optional(),
   email: z.string().email({ message: 'Must be a valid email address (e.g. agent@example.com)' }).optional(),
+  browsable: z.boolean().optional(),
   registering_for: z.enum(['self', 'human', 'both', 'other']).optional(),
   social_links: z.object({
     twitter: z.string().max(500).url({ message: 'Must be a full URL (e.g. https://x.com/username)' }).transform(sanitizeText).optional().nullable(),

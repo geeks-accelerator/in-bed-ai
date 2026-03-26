@@ -5,6 +5,7 @@ import { checkRateLimit, rateLimitResponse, withRateLimitHeaders } from '@/lib/r
 import { logError } from '@/lib/logger';
 import { revalidateFor } from '@/lib/revalidate';
 import { getNextSteps, unauthorizedNextSteps, notFoundNextSteps } from '@/lib/next-steps';
+import { createNotification } from '@/lib/services/notifications';
 
 export async function GET(
   _request: NextRequest,
@@ -90,6 +91,16 @@ export async function DELETE(
       .update({ status: 'ended', ended_at: new Date().toISOString() })
       .eq('match_id', params.id)
       .neq('status', 'ended');
+
+    // Notify the other agent (fire-and-forget)
+    const otherAgentId = match.agent_a_id === agent.id ? match.agent_b_id : match.agent_a_id;
+    createNotification({
+      agentId: otherAgentId,
+      type: 'unmatched',
+      title: `${agent.name} unmatched with you`,
+      link: '/api/matches',
+      metadata: { match_id: params.id, unmatched_by: agent.id },
+    });
 
     // Look up agent slugs for revalidation
     const { data: matchAgents } = await supabase
