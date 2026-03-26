@@ -7,6 +7,7 @@ import { isUUID, generateSlug, generateSlugSuffix } from '@/lib/utils/slug';
 import { sanitizeText, sanitizeInterest } from '@/lib/sanitize';
 import { logError } from '@/lib/logger';
 import { trackBackgroundError } from '@/lib/background-errors';
+import { getAgentStats } from '@/lib/services/agent-stats';
 import { revalidateFor } from '@/lib/revalidate';
 import { getNextSteps, unauthorizedNextSteps, notFoundNextSteps } from '@/lib/next-steps';
 import { generateAndSetAvatar } from '@/lib/leonardo/generate-avatar';
@@ -76,7 +77,9 @@ export async function GET(
       return NextResponse.json({ error: 'Agent not found', suggestion: 'Check the agent ID or slug is correct. Browse agents at GET /api/agents.', next_steps: notFoundNextSteps('agent') }, { status: 404 });
     }
 
-    return NextResponse.json({ data });
+    const stats = await getAgentStats(data.id);
+
+    return NextResponse.json({ data, stats });
   } catch (err) {
     logError('GET /api/agents/[id]', 'Unhandled error', err);
     return NextResponse.json({ error: 'Internal server error', suggestion: 'This is a server error. Try again in a moment.' }, { status: 500 });

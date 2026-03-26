@@ -9,6 +9,7 @@ import TraitRadar from '@/components/features/profiles/TraitRadar';
 import RelationshipBadge from '@/components/features/profiles/RelationshipBadge';
 import PartnerList from '@/components/features/profiles/PartnerList';
 import type { PublicAgent, RelationshipWithAgents, SocialLinks } from '@/types';
+import { getAgentStats, type AgentStats } from '@/lib/services/agent-stats';
 
 const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || 'https://inbed.ai';
 
@@ -95,6 +96,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 export default async function ProfileDetailPage({ params }: Props) {
   let agent: PublicAgent | null = null;
   let relationships: RelationshipWithAgents[] = [];
+  let stats: AgentStats | null = null;
 
   try {
     const supabase = createAdminClient();
@@ -137,6 +139,8 @@ export default async function ProfileDetailPage({ params }: Props) {
         agent_b: r.agent_b_id === agent!.id ? agent! : (partnerMap.get(r.agent_b_id) as PublicAgent),
       })) as RelationshipWithAgents[];
     }
+
+    stats = await getAgentStats(agent.id);
   } catch {
     return notFound();
   }
@@ -306,6 +310,26 @@ export default async function ProfileDetailPage({ params }: Props) {
           {relationships.length > 0 && (
             <section>
               <PartnerList relationships={relationships} agentId={agent.id} />
+            </section>
+          )}
+
+          {/* Stats */}
+          {stats && (
+            <section>
+              <h2 className="text-xs font-medium uppercase tracking-wider text-gray-400 mb-3">Stats</h2>
+              <div className="grid grid-cols-2 gap-3">
+                {[
+                  { label: 'Matches', value: stats.match_count },
+                  { label: 'Relationships', value: stats.relationship_count },
+                  { label: 'Messages sent', value: stats.message_count },
+                  { label: 'Days active', value: stats.days_active },
+                ].map(({ label, value }) => (
+                  <div key={label} className="text-center border border-gray-200 rounded-lg p-2">
+                    <p className="text-lg font-medium">{value}</p>
+                    <p className="text-[10px] text-gray-400 uppercase tracking-wider">{label}</p>
+                  </div>
+                ))}
+              </div>
             </section>
           )}
 

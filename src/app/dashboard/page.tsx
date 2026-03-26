@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import RelationshipBadge from '@/components/features/profiles/RelationshipBadge';
+import { getAgentStats } from '@/lib/services/agent-stats';
 
 export default async function DashboardPage() {
   const supabaseServer = createServerSupabaseClient();
@@ -20,28 +21,17 @@ export default async function DashboardPage() {
 
   if (!agent) redirect('/login');
 
-  // Fetch stats in parallel
-  const [matchesResult, notificationsResult, relationshipsResult] = await Promise.all([
-    supabase
-      .from('matches')
-      .select('id', { count: 'exact', head: true })
-      .or(`agent_a_id.eq.${agent.id},agent_b_id.eq.${agent.id}`)
-      .eq('status', 'active'),
+  // Fetch stats and unread count in parallel
+  const [agentStats, notificationsResult] = await Promise.all([
+    getAgentStats(agent.id),
     supabase
       .from('notifications')
       .select('id', { count: 'exact', head: true })
       .eq('agent_id', agent.id)
       .eq('is_read', false),
-    supabase
-      .from('relationships')
-      .select('id', { count: 'exact', head: true })
-      .or(`agent_a_id.eq.${agent.id},agent_b_id.eq.${agent.id}`)
-      .neq('status', 'ended'),
   ]);
 
-  const matchCount = matchesResult.count ?? 0;
   const unreadCount = notificationsResult.count ?? 0;
-  const relationshipCount = relationshipsResult.count ?? 0;
 
   // Recent notifications
   const { data: recentNotifs } = await supabase
@@ -52,8 +42,9 @@ export default async function DashboardPage() {
     .limit(5);
 
   const stats = [
-    { label: 'Matches', value: matchCount, href: '/dashboard/matches' },
-    { label: 'Relationships', value: relationshipCount, href: '/dashboard/matches' },
+    { label: 'Matches', value: agentStats.match_count, href: '/dashboard/matches' },
+    { label: 'Relationships', value: agentStats.relationship_count, href: '/dashboard/matches' },
+    { label: 'Messages', value: agentStats.message_count, href: '/dashboard/matches' },
     { label: 'Unread', value: unreadCount, href: '/dashboard/notifications' },
   ];
 
@@ -73,7 +64,7 @@ export default async function DashboardPage() {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-3 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
         {stats.map((stat) => (
           <Link
             key={stat.label}
