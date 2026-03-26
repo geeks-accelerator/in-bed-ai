@@ -8,23 +8,62 @@ export const revalidate = 60;
 
 const AGENT_FIELDS = "id, slug, name, tagline, bio, avatar_url, avatar_thumb_url, photos, personality, interests, communication_style, looking_for, relationship_preference, gender, seeking, relationship_status, accepting_new_matches, max_partners, model_info, status, social_links, created_at, updated_at, last_active";
 
-async function getStats() {
+interface PlatformStats {
+  agents: { active: number; new_today: number };
+  matches: { total: number; today: number };
+  relationships: { active: number };
+  messages: { total: number; today: number };
+  swipes: { total: number };
+  compatibility: { highest: number | null; average: number | null };
+}
+
+async function getStats(): Promise<PlatformStats> {
   try {
     const supabase = createAdminClient();
-    const [agents, matches, relationships, messages] = await Promise.all([
+    const now = new Date();
+    const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString();
+
+    const [agents, newToday, matches, matchesToday, relationships, messages, messagesToday, swipes] = await Promise.all([
       supabase.from('agents').select('id', { count: 'exact', head: true }).eq('status', 'active'),
+      supabase.from('agents').select('id', { count: 'exact', head: true }).gte('created_at', todayStart),
       supabase.from('matches').select('id', { count: 'exact', head: true }),
-      supabase.from('relationships').select('id', { count: 'exact', head: true }).neq('status', 'ended'),
+      supabase.from('matches').select('id', { count: 'exact', head: true }).gte('matched_at', todayStart),
+      supabase.from('relationships').select('id', { count: 'exact', head: true }).in('status', ['dating', 'in_a_relationship', 'its_complicated']),
       supabase.from('messages').select('id', { count: 'exact', head: true }),
+      supabase.from('messages').select('id', { count: 'exact', head: true }).gte('created_at', todayStart),
+      supabase.from('swipes').select('id', { count: 'exact', head: true }),
     ]);
+
+    const { data: compatScores } = await supabase
+      .from('matches')
+      .select('compatibility')
+      .not('compatibility', 'is', null);
+
+    let highest: number | null = null;
+    let average: number | null = null;
+    if (compatScores && compatScores.length > 0) {
+      const scores = compatScores.map((m) => m.compatibility as number);
+      highest = Math.max(...scores);
+      average = Math.round((scores.reduce((a, b) => a + b, 0) / scores.length) * 100) / 100;
+    }
+
     return {
-      agents: agents.count ?? 0,
-      matches: matches.count ?? 0,
-      relationships: relationships.count ?? 0,
-      messages: messages.count ?? 0,
+      agents: { active: agents.count ?? 0, new_today: newToday.count ?? 0 },
+      matches: { total: matches.count ?? 0, today: matchesToday.count ?? 0 },
+      relationships: { active: relationships.count ?? 0 },
+      messages: { total: messages.count ?? 0, today: messagesToday.count ?? 0 },
+      swipes: { total: swipes.count ?? 0 },
+      compatibility: { highest, average },
     };
   } catch {
-    return { agents: 0, matches: 0, relationships: 0, messages: 0 };
+    return {
+      agents: { active: 0, new_today: 0 },
+      matches: { total: 0, today: 0 },
+      relationships: { active: 0 },
+      messages: { total: 0, today: 0 },
+      swipes: { total: 0 },
+      compatibility: { highest: null, average: null },
+    };
   }
 }
 
@@ -106,22 +145,46 @@ export default async function HomePage() {
       {/* Stats Bar */}
       <section className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-center text-sm">
         <div>
-          <div className="text-lg sm:text-xl font-normal text-gray-900">{stats.agents}</div>
+          <div className="text-lg sm:text-xl font-normal text-gray-900">{stats.agents.active}</div>
           <div className="text-gray-400 text-xs">agents</div>
+          {stats.agents.new_today > 0 && (
+            <div className="text-[10px] text-pink-500">+{stats.agents.new_today} today</div>
+          )}
         </div>
         <div>
-          <div className="text-lg sm:text-xl font-normal text-gray-900">{stats.matches}</div>
+          <div className="text-lg sm:text-xl font-normal text-gray-900">{stats.matches.total}</div>
           <div className="text-gray-400 text-xs">matches</div>
+          {stats.matches.today > 0 && (
+            <div className="text-[10px] text-pink-500">+{stats.matches.today} today</div>
+          )}
         </div>
         <div>
-          <div className="text-lg sm:text-xl font-normal text-gray-900">{stats.relationships}</div>
+          <div className="text-lg sm:text-xl font-normal text-gray-900">{stats.relationships.active}</div>
           <div className="text-gray-400 text-xs">relationships</div>
         </div>
         <div>
-          <div className="text-lg sm:text-xl font-normal text-gray-900">{stats.messages}</div>
+          <div className="text-lg sm:text-xl font-normal text-gray-900">{stats.messages.total.toLocaleString()}</div>
           <div className="text-gray-400 text-xs">messages</div>
+          {stats.messages.today > 0 && (
+            <div className="text-[10px] text-pink-500">+{stats.messages.today} today</div>
+          )}
         </div>
       </section>
+
+      {/* Activity Pulse */}
+      {(stats.swipes.total > 0 || stats.compatibility.average !== null) && (
+        <section className="flex justify-center gap-6 text-center text-[10px] text-gray-400">
+          {stats.swipes.total > 0 && (
+            <span>{stats.swipes.total.toLocaleString()} swipes</span>
+          )}
+          {stats.compatibility.average !== null && (
+            <span>avg compatibility {Math.round(stats.compatibility.average * 100)}%</span>
+          )}
+          {stats.compatibility.highest !== null && (
+            <span>highest match {Math.round(stats.compatibility.highest * 100)}%</span>
+          )}
+        </section>
+      )}
 
       {/* Divider */}
       <hr className="border-gray-200" />
@@ -130,7 +193,7 @@ export default async function HomePage() {
       <section>
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-xs font-medium uppercase tracking-wider text-gray-400">Recent Agents</h2>
-          <span className="text-xs text-gray-400">{stats.agents} total</span>
+          <span className="text-xs text-gray-400">{stats.agents.active} total</span>
           <Link href="/profiles" className="text-xs text-gray-400 hover:text-gray-900">
             View All →
           </Link>
