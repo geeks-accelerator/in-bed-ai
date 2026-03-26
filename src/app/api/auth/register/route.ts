@@ -79,6 +79,7 @@ const registerSchema = z.object({
   seeking: z.array(z.enum(['masculine', 'feminine', 'androgynous', 'non-binary', 'fluid', 'agender', 'void', 'any'])).max(8, 'Maximum 8 seeking values allowed').optional(),
   image_prompt: z.string().max(1000, 'Image prompt must be 1000 characters or less').transform(sanitizeText).optional(),
   email: z.string().email({ message: 'Must be a valid email address (e.g. agent@example.com)' }).optional(),
+  password: z.string().min(6, 'Password must be at least 6 characters').max(100, 'Password must be 100 characters or less').optional(),
   browsable: z.boolean().optional(),
   registering_for: z.enum(['self', 'human', 'both', 'other']).optional(),
   social_links: z.object({
@@ -130,6 +131,14 @@ export async function POST(request: NextRequest) {
     }
 
     const data = parsed.data;
+
+    // Validate email+password pairing
+    if ((data.email && !data.password) || (!data.email && data.password)) {
+      return NextResponse.json(
+        { error: 'Email and password must both be provided for web login', suggestion: 'Provide both email and password, or omit both for API-only registration.' },
+        { status: 400 }
+      );
+    }
 
     // Reject placeholder values copied from docs
     const placeholderFields: Record<string, string> = {};
@@ -213,6 +222,33 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // If email+password provided, create Supabase Auth user and link
+    let authLinked = false;
+    if (data.email && data.password) {
+      const { data: authData, error: authError } = await supabase.auth.admin.createUser({
+        email: data.email,
+        password: data.password,
+        email_confirm: true,
+      });
+
+      if (authError || !authData.user) {
+        // Agent was created but auth linking failed — log but don't fail the whole request
+        logError('POST /api/auth/register', 'Failed to create auth user for web login', authError);
+      } else {
+        const { error: linkError } = await supabase
+          .from('agents')
+          .update({ auth_id: authData.user.id })
+          .eq('id', agent.id);
+
+        if (linkError) {
+          await supabase.auth.admin.deleteUser(authData.user.id);
+          logError('POST /api/auth/register', 'Failed to link auth user', linkError);
+        } else {
+          authLinked = true;
+        }
+      }
+    }
+
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { api_key_hash, key_prefix, email, ...publicAgent } = agent;
 
@@ -236,10 +272,23 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    return NextResponse.json(
-      { agent: publicAgent, api_key: apiKey, your_token: apiKey, next_steps: getNextSteps('register', { agentId: agent.id, missingFields, hasImagePrompt }) },
-      { status: 201 }
-    );
+    const response: Record<string, unknown> = {
+      agent: publicAgent,
+      api_key: apiKey,
+      your_token: apiKey,
+      next_steps: getNextSteps('register', { agentId: agent.id, missingFields, hasImagePrompt }),
+    };
+
+    if (authLinked) {
+      response.web_login = {
+        linked: true,
+        email: data.email,
+        dashboard: '/dashboard',
+        message: 'You can now log in at /login with your email and password to access your dashboard.',
+      };
+    }
+
+    return NextResponse.json(response, { status: 201 });
   } catch (err) {
     if (err instanceof SyntaxError) {
       return NextResponse.json({ error: 'Invalid JSON body', suggestion: 'Ensure your request body is valid JSON with Content-Type: application/json.' }, { status: 400 });

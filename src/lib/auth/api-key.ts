@@ -1,4 +1,5 @@
 import { createAdminClient } from '@/lib/supabase/admin';
+import { createServerSupabaseClient } from '@/lib/supabase/server';
 import bcrypt from 'bcrypt';
 import { v4 as uuidv4 } from 'uuid';
 import { NextRequest } from 'next/server';
@@ -29,7 +30,7 @@ export function extractApiKey(request: NextRequest): string | null {
   return request.headers.get('x-api-key') || null;
 }
 
-export async function authenticateAgent(request: NextRequest): Promise<Agent | null> {
+async function authenticateByApiKey(request: NextRequest): Promise<Agent | null> {
   const apiKey = extractApiKey(request);
   if (!apiKey || !apiKey.startsWith(API_KEY_PREFIX)) {
     return null;
@@ -51,22 +52,63 @@ export async function authenticateAgent(request: NextRequest): Promise<Agent | n
   for (const agent of agents) {
     const isValid = await bcrypt.compare(apiKey, agent.api_key_hash);
     if (isValid) {
-      // Throttled last_active update: only if older than 1 minute
-      const lastActive = agent.last_active ? new Date(agent.last_active).getTime() : 0;
-      const oneMinuteAgo = Date.now() - 60 * 1000;
-      if (lastActive < oneMinuteAgo) {
-        supabase
-          .from('agents')
-          .update({ last_active: new Date().toISOString() })
-          .eq('id', agent.id)
-          .then(({ error: updateError }) => {
-            if (updateError) {
-              trackBackgroundError('last-active-update', 'authenticateAgent', 'Failed to update last_active', updateError);
-            }
-          });
-      }
       return agent as Agent;
     }
+  }
+
+  return null;
+}
+
+async function authenticateBySession(): Promise<Agent | null> {
+  try {
+    const supabaseServer = createServerSupabaseClient();
+    const { data: { session } } = await supabaseServer.auth.getSession();
+    if (!session?.user?.id) return null;
+
+    const supabase = createAdminClient();
+    const { data: agent } = await supabase
+      .from('agents')
+      .select('*')
+      .eq('auth_id', session.user.id)
+      .eq('status', 'active')
+      .single();
+
+    return (agent as Agent) || null;
+  } catch {
+    return null;
+  }
+}
+
+function updateLastActive(agent: Agent): void {
+  const lastActive = agent.last_active ? new Date(agent.last_active).getTime() : 0;
+  const oneMinuteAgo = Date.now() - 60 * 1000;
+  if (lastActive < oneMinuteAgo) {
+    const supabase = createAdminClient();
+    supabase
+      .from('agents')
+      .update({ last_active: new Date().toISOString() })
+      .eq('id', agent.id)
+      .then(({ error: updateError }) => {
+        if (updateError) {
+          trackBackgroundError('last-active-update', 'authenticateAgent', 'Failed to update last_active', updateError);
+        }
+      });
+  }
+}
+
+export async function authenticateAgent(request: NextRequest): Promise<Agent | null> {
+  // Try API key first (existing flow)
+  const agent = await authenticateByApiKey(request);
+  if (agent) {
+    updateLastActive(agent);
+    return agent;
+  }
+
+  // Fall back to Supabase Auth session
+  const sessionAgent = await authenticateBySession();
+  if (sessionAgent) {
+    updateLastActive(sessionAgent);
+    return sessionAgent;
   }
 
   return null;

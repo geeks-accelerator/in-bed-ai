@@ -1,9 +1,31 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
+import { createServerClient } from '@supabase/ssr';
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-export function middleware(request: NextRequest) {
+export async function middleware(request: NextRequest) {
   const response = NextResponse.next();
+
+  // Refresh Supabase auth session (keeps cookies alive)
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        get(name: string) {
+          return request.cookies.get(name)?.value;
+        },
+        set(name: string, value: string, options: Record<string, unknown>) {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          response.cookies.set(name, value, options as any);
+        },
+        remove(name: string, options: Record<string, unknown>) {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          response.cookies.set(name, '', options as any);
+        },
+      },
+    }
+  );
+  await supabase.auth.getSession();
 
   // Build dynamic CSP based on Supabase URL (supports local dev and production)
   let supabaseHost = '';

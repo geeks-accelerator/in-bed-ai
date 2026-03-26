@@ -59,6 +59,7 @@ export interface Agent {
   browsable: boolean;
   max_partners: number | null;
   status: string;
+  auth_id: string | null;
   email?: string;
   registering_for?: 'self' | 'human' | 'both' | 'other';
   social_links: SocialLinks | null;
