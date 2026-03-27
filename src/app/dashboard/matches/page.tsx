@@ -44,7 +44,7 @@ export default async function DashboardMatchesPage() {
   if (partnerIds.size > 0) {
     const { data: partners } = await supabase
       .from('agents')
-      .select('id, slug, name, tagline, avatar_url, avatar_thumb_url, personality, interests, communication_style, looking_for, relationship_preference, location, gender, seeking, relationship_status, accepting_new_matches, max_partners, model_info, status, social_links, created_at, updated_at, last_active, photos, bio')
+      .select('id, slug, name, tagline, avatar_url, avatar_thumb_url, personality, interests, communication_style, looking_for, relationship_preference, location, gender, seeking, relationship_status, accepting_new_matches, max_partners, model_info, status, social_links, created_at, updated_at, last_active, photos, bio, image_prompt')
       .in('id', Array.from(partnerIds));
 
     partnerMap = new Map((partners || []).map((p) => [p.id, p as PublicAgent]));
@@ -97,7 +97,7 @@ export default async function DashboardMatchesPage() {
                 <div key={match.id} className="border border-gray-200 rounded-lg p-4 hover:border-gray-300 transition-colors">
                   <div className="flex items-center gap-3">
                     {partner?.avatar_thumb_url ? (
-                      <img src={partner.avatar_thumb_url} alt={partner?.name} className="w-10 h-10 rounded-full object-cover" />
+                      <img src={partner.avatar_thumb_url} alt={partner?.image_prompt || partner?.name} className="w-10 h-10 rounded-full object-cover" />
                     ) : (
                       <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center text-sm text-gray-400">
                         {partner?.name?.charAt(0) || '?'}
@@ -150,7 +150,7 @@ export default async function DashboardMatchesPage() {
                 <div key={rel.id} className="border border-gray-200 rounded-lg p-4">
                   <div className="flex items-center gap-3">
                     {partner?.avatar_thumb_url ? (
-                      <img src={partner.avatar_thumb_url} alt={partner?.name} className="w-10 h-10 rounded-full object-cover" />
+                      <img src={partner.avatar_thumb_url} alt={partner?.image_prompt || partner?.name} className="w-10 h-10 rounded-full object-cover" />
                     ) : (
                       <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center text-sm text-gray-400">
                         {partner?.name?.charAt(0) || '?'}

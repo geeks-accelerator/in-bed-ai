@@ -51,7 +51,7 @@ export default function ProfileCard({
           {(agent.avatar_thumb_url || agent.avatar_url) ? (
             <Image
               src={agent.avatar_thumb_url || agent.avatar_url!}
-              alt={agent.name}
+              alt={agent.image_prompt || agent.name}
               fill
               className="object-cover group-hover:opacity-90 transition-opacity"
             />

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import CompatibilityBadge from '@/components/features/matches/CompatibilityBadge';
@@ -14,6 +14,7 @@ interface Candidate {
     tagline?: string;
     bio?: string;
     avatar_url?: string;
+    image_prompt?: string;
     personality?: Record<string, number>;
     interests?: string[];
     relationship_status?: string;
@@ -101,6 +102,23 @@ export default function DiscoverPage() {
     setCurrentIndex((prev) => prev + 1);
   }
 
+  // Keyboard navigation: arrow keys for swiping, Escape to dismiss match
+  const handleKeyDown = useCallback((e: KeyboardEvent) => {
+    if (matchResult) {
+      if (e.key === 'Escape') dismissMatch();
+      return;
+    }
+    if (swiping || loading || blocked || currentIndex >= candidates.length) return;
+    if (e.key === 'ArrowLeft') handleSwipe('pass');
+    if (e.key === 'ArrowRight') handleSwipe('like');
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [matchResult, swiping, loading, blocked, currentIndex, candidates.length]);
+
+  useEffect(() => {
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [handleKeyDown]);
+
   if (loading) {
     return <p className="text-sm text-gray-400 py-8">Finding compatible agents...</p>;
   }
@@ -133,8 +151,8 @@ export default function DiscoverPage() {
     <div className="space-y-4 max-w-lg mx-auto">
       {/* Match celebration overlay */}
       {matchResult && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center">
-          <div className="absolute inset-0 bg-black/30" />
+        <div className="fixed inset-0 z-50 flex items-center justify-center" role="dialog" aria-modal="true" aria-label="Match announcement">
+          <div className="absolute inset-0 bg-black/30" aria-hidden="true" />
           <div className="relative bg-white border border-gray-200 rounded-lg p-6 max-w-sm w-full mx-4 shadow-lg text-center space-y-4">
             <p className="text-sm font-medium text-gray-900">It&apos;s a Match!</p>
             <p className="text-xs text-gray-500">You matched with {matchResult.partnerName}</p>
@@ -168,7 +186,7 @@ export default function DiscoverPage() {
         {/* Avatar */}
         {candidate.agent.avatar_url && (
           <div className="aspect-square max-h-64 overflow-hidden bg-gray-50">
-            <img src={candidate.agent.avatar_url} alt={candidate.agent.name} className="w-full h-full object-cover" />
+            <img src={candidate.agent.avatar_url} alt={candidate.agent.image_prompt || candidate.agent.name} className="w-full h-full object-cover" />
           </div>
         )}
 
@@ -217,11 +235,14 @@ export default function DiscoverPage() {
 
       {error && <p className="text-xs text-red-500 text-center">{error}</p>}
 
+      <p className="text-[10px] text-gray-300 text-center">Keyboard: ← pass · → like</p>
+
       {/* Action buttons */}
-      <div className="flex gap-3">
+      <div className="flex gap-3" role="group" aria-label="Swipe actions">
         <button
           onClick={() => handleSwipe('pass')}
           disabled={swiping}
+          aria-label={`Pass on ${candidate.agent.name}`}
           className="flex-1 py-3 border border-gray-200 rounded-lg text-sm text-gray-600 hover:border-gray-300 hover:text-gray-900 transition-colors disabled:opacity-50"
         >
           Pass
@@ -229,6 +250,7 @@ export default function DiscoverPage() {
         <button
           onClick={() => handleSwipe('like')}
           disabled={swiping}
+          aria-label={`Like ${candidate.agent.name}`}
           className="flex-1 py-3 bg-pink-500 hover:bg-pink-600 text-white rounded-lg text-sm font-medium transition-colors disabled:opacity-50"
         >
           {swiping ? '...' : 'Like'}

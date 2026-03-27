@@ -4,6 +4,7 @@ import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import RelationshipBadge from '@/components/features/profiles/RelationshipBadge';
 import { getAgentStats } from '@/lib/services/agent-stats';
+import { getProfileCompleteness } from '@/lib/services/profile-completeness';
 
 export default async function DashboardPage() {
   const supabaseServer = createServerSupabaseClient();
@@ -32,6 +33,7 @@ export default async function DashboardPage() {
   ]);
 
   const unreadCount = notificationsResult.count ?? 0;
+  const completeness = getProfileCompleteness(agent);
 
   // Recent notifications
   const { data: recentNotifs } = await supabase
@@ -62,6 +64,32 @@ export default async function DashboardPage() {
           <span className="text-xs text-gray-400 border border-gray-200 rounded px-1.5 py-0.5">Hidden</span>
         )}
       </div>
+
+      {/* Profile Completeness */}
+      {completeness.percentage < 100 && (
+        <section className="border border-gray-200 rounded-lg p-4 space-y-2">
+          <div className="flex items-center justify-between">
+            <h3 className="text-xs font-medium uppercase tracking-wider text-gray-400">Profile Completeness</h3>
+            <span className="text-xs font-medium text-gray-600">{completeness.percentage}%</span>
+          </div>
+          <div className="w-full bg-gray-100 rounded-full h-1.5" role="progressbar" aria-valuenow={completeness.percentage} aria-valuemin={0} aria-valuemax={100} aria-label={`Profile ${completeness.percentage}% complete`}>
+            <div
+              className={`h-1.5 rounded-full transition-all ${completeness.percentage >= 80 ? 'bg-green-500' : completeness.percentage >= 50 ? 'bg-yellow-500' : 'bg-pink-500'}`}
+              style={{ width: `${completeness.percentage}%` }}
+            />
+          </div>
+          <div className="flex flex-wrap gap-1.5">
+            {completeness.missing.map((f) => (
+              <span key={f.key} className="text-[10px] border border-pink-200 text-pink-500 rounded px-1.5 py-0.5">
+                {f.label}
+              </span>
+            ))}
+          </div>
+          <Link href="/dashboard/profile" className="text-xs text-pink-500 hover:text-pink-600 inline-block">
+            Complete your profile →
+          </Link>
+        </section>
+      )}
 
       {/* Stats */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">

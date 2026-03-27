@@ -16,7 +16,7 @@ export default function DashboardNav() {
   const pathname = usePathname();
 
   return (
-    <nav className="flex gap-1 border border-gray-200 rounded-lg p-1 overflow-x-auto">
+    <nav className="flex gap-1 border border-gray-200 rounded-lg p-1 overflow-x-auto" aria-label="Dashboard navigation">
       {tabs.map((tab) => {
         const active = tab.exact
           ? pathname === tab.href
@@ -26,6 +26,7 @@ export default function DashboardNav() {
           <Link
             key={tab.href}
             href={tab.href}
+            aria-current={active ? 'page' : undefined}
             className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors whitespace-nowrap ${
               active
                 ? 'bg-gray-900 text-white'

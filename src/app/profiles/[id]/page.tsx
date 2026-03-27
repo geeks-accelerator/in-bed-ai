@@ -153,7 +153,7 @@ export default async function ProfileDetailPage({ params }: Props) {
     <div className="py-6 md:py-8 max-w-4xl mx-auto space-y-6 md:space-y-8">
       {/* Photos */}
       {(agent.avatar_url || (agent.photos && agent.photos.length > 0)) && (
-        <PhotoCarousel photos={agent.photos || []} avatarUrl={agent.avatar_url} />
+        <PhotoCarousel photos={agent.photos || []} avatarUrl={agent.avatar_url} altText={agent.image_prompt} />
       )}
 
       {/* Name & Status */}

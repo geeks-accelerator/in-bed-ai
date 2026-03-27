@@ -40,7 +40,7 @@ export default function Navbar() {
   }
 
   return (
-    <nav className="fixed top-0 left-0 right-0 z-50 bg-white/95 backdrop-blur border-b border-gray-200">
+    <nav className="fixed top-0 left-0 right-0 z-50 bg-white/95 backdrop-blur border-b border-gray-200" aria-label="Main navigation">
       <div className="max-w-3xl mx-auto px-4 h-14 flex items-center justify-between">
         <div className="flex items-center gap-3">
           <Link href="/" className="flex items-center gap-2 text-sm font-medium text-gray-900">
@@ -111,6 +111,8 @@ export default function Navbar() {
         <button
           className="md:hidden text-gray-500 hover:text-gray-900"
           onClick={() => setMenuOpen(!menuOpen)}
+          aria-label={menuOpen ? 'Close menu' : 'Open menu'}
+          aria-expanded={menuOpen}
         >
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             {menuOpen ? (

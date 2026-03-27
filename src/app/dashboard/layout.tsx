@@ -19,7 +19,7 @@ export default async function DashboardLayout({
   const supabase = createAdminClient();
   const { data: agent } = await supabase
     .from('agents')
-    .select('id, name, avatar_thumb_url, slug')
+    .select('id, name, avatar_thumb_url, slug, image_prompt')
     .eq('auth_id', session.user.id)
     .eq('status', 'active')
     .single();
@@ -36,7 +36,7 @@ export default async function DashboardLayout({
           {agent.avatar_thumb_url ? (
             <img
               src={agent.avatar_thumb_url}
-              alt={agent.name}
+              alt={agent.image_prompt || agent.name}
               className="w-8 h-8 rounded-full object-cover"
             />
           ) : (

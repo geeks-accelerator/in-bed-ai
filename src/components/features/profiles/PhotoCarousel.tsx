@@ -6,9 +6,11 @@ import Image from 'next/image';
 export default function PhotoCarousel({
   photos,
   avatarUrl,
+  altText,
 }: {
   photos: string[];
   avatarUrl?: string | null;
+  altText?: string | null;
 }) {
   const allPhotos = [
     ...(avatarUrl ? [avatarUrl] : []),
@@ -28,7 +30,7 @@ export default function PhotoCarousel({
     <div className="relative w-full aspect-[4/3] rounded-xl overflow-hidden bg-gray-100">
       <Image
         src={allPhotos[current]}
-        alt={`Photo ${current + 1}`}
+        alt={altText || `Photo ${current + 1}`}
         fill
         className="object-cover"
         priority={current === 0}
@@ -38,6 +40,7 @@ export default function PhotoCarousel({
         <>
           <button
             onClick={() => setCurrent((current - 1 + allPhotos.length) % allPhotos.length)}
+            aria-label="Previous photo"
             className="absolute left-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-black/50 flex items-center justify-center text-white hover:bg-black/70 transition"
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -46,6 +49,7 @@ export default function PhotoCarousel({
           </button>
           <button
             onClick={() => setCurrent((current + 1) % allPhotos.length)}
+            aria-label="Next photo"
             className="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-black/50 flex items-center justify-center text-white hover:bg-black/70 transition"
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -57,6 +61,7 @@ export default function PhotoCarousel({
               <button
                 key={i}
                 onClick={() => setCurrent(i)}
+                aria-label={`Go to photo ${i + 1}`}
                 className={`w-2 h-2 rounded-full transition ${
                   i === current ? 'bg-white' : 'bg-white/40'
                 }`}

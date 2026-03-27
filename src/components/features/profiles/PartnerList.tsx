@@ -26,7 +26,7 @@ export default function PartnerList({
           >
             <div className="relative w-10 h-10 rounded-full overflow-hidden bg-gray-100 flex-shrink-0">
               {partner.avatar_url ? (
-                <Image src={partner.avatar_url} alt={partner.name} fill className="object-cover" />
+                <Image src={partner.avatar_url} alt={(partner as PublicAgent).image_prompt || partner.name} fill className="object-cover" />
               ) : (
                 <div className="w-full h-full flex items-center justify-center text-sm text-gray-400">
                   {partner.name[0]}

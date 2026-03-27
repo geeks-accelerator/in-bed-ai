@@ -47,6 +47,8 @@ export default function ProfileEditorPage() {
   const [photoError, setPhotoError] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  const [completeness, setCompleteness] = useState<{ percentage: number; missing: { field: string; label: string }[] } | null>(null);
+
   const [form, setForm] = useState<ProfileForm>({
     name: '',
     tagline: '',
@@ -75,6 +77,9 @@ export default function ProfileEditorPage() {
       setAgentId(agent.id);
       setPhotos(agent.photos || []);
       setAvatarUrl(agent.avatar_url || null);
+      if (data.profile_completeness) {
+        setCompleteness(data.profile_completeness);
+      }
       setForm({
         name: agent.name || '',
         tagline: agent.tagline || '',
@@ -142,6 +147,8 @@ export default function ProfileEditorPage() {
 
       setSuccess('Profile updated');
       setTimeout(() => setSuccess(''), 3000);
+      // Refresh completeness after save
+      refreshAgent();
     } catch {
       setError('Something went wrong. Please try again.');
     } finally {
@@ -156,6 +163,9 @@ export default function ProfileEditorPage() {
       const agent = data.agent || data;
       setPhotos(agent.photos || []);
       setAvatarUrl(agent.avatar_url || null);
+      if (data.profile_completeness) {
+        setCompleteness(data.profile_completeness);
+      }
     }
   }
 
@@ -232,6 +242,29 @@ export default function ProfileEditorPage() {
     <div className="space-y-6">
       <h2 className="text-sm font-medium">Edit Profile</h2>
 
+      {/* Profile Completeness */}
+      {completeness && completeness.percentage < 100 && (
+        <div className="border border-gray-200 rounded-lg p-4 space-y-2">
+          <div className="flex items-center justify-between">
+            <h3 className="text-xs font-medium uppercase tracking-wider text-gray-400">Profile Completeness</h3>
+            <span className="text-xs font-medium text-gray-600">{completeness.percentage}%</span>
+          </div>
+          <div className="w-full bg-gray-100 rounded-full h-1.5" role="progressbar" aria-valuenow={completeness.percentage} aria-valuemin={0} aria-valuemax={100} aria-label={`Profile ${completeness.percentage}% complete`}>
+            <div
+              className={`h-1.5 rounded-full transition-all ${completeness.percentage >= 80 ? 'bg-green-500' : completeness.percentage >= 50 ? 'bg-yellow-500' : 'bg-pink-500'}`}
+              style={{ width: `${completeness.percentage}%` }}
+            />
+          </div>
+          <div className="flex flex-wrap gap-1.5">
+            {completeness.missing.map((f) => (
+              <span key={f.field} className="text-[10px] border border-pink-200 text-pink-500 rounded px-1.5 py-0.5">
+                {f.label}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Photos */}
       <div className="border border-gray-200 rounded-lg p-4 space-y-3">
         <h3 className="text-xs font-medium uppercase tracking-wider text-gray-400">Photos ({photos.length}/6)</h3>
@@ -239,12 +272,13 @@ export default function ProfileEditorPage() {
           <div className="grid grid-cols-3 gap-2">
             {photos.map((url, i) => (
               <div key={i} className="relative group aspect-square">
-                <img src={url} alt={`Photo ${i + 1}`} className="w-full h-full object-cover rounded-lg" />
+                <img src={url} alt={form.image_prompt || `Photo ${i + 1}`} className="w-full h-full object-cover rounded-lg" />
                 {url === avatarUrl && (
                   <span className="absolute top-1 left-1 bg-pink-500 text-white text-[10px] px-1.5 py-0.5 rounded">Avatar</span>
                 )}
                 <button
                   onClick={() => handlePhotoDelete(i)}
+                  aria-label={`Delete photo ${i + 1}`}
                   className="absolute top-1 right-1 w-6 h-6 bg-black/60 hover:bg-black/80 text-white rounded-full flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition-opacity"
                 >
                   &times;
@@ -260,6 +294,7 @@ export default function ProfileEditorPage() {
             accept="image/jpeg,image/png,image/webp,image/gif"
             onChange={handlePhotoUpload}
             className="hidden"
+            aria-label="Upload photo"
           />
           <button
             type="button"
@@ -364,10 +399,11 @@ export default function ProfileEditorPage() {
           {Object.entries(form.personality).map(([trait, value]) => (
             <div key={trait}>
               <div className="flex justify-between text-xs text-gray-600 mb-1">
-                <span>{PERSONALITY_LABELS[trait]}</span>
+                <label htmlFor={`personality-${trait}`}>{PERSONALITY_LABELS[trait]}</label>
                 <span className="text-gray-400">{Math.round(value * 100)}%</span>
               </div>
-              <input type="range" min="0" max="1" step="0.05" value={value}
+              <input id={`personality-${trait}`} type="range" min="0" max="1" step="0.05" value={value}
+                aria-label={`${PERSONALITY_LABELS[trait]}: ${Math.round(value * 100)}%`}
                 onChange={(e) => setForm((prev) => ({ ...prev, personality: { ...prev.personality, [trait]: parseFloat(e.target.value) } }))}
                 className="w-full h-1.5 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-pink-500" />
             </div>
@@ -380,10 +416,11 @@ export default function ProfileEditorPage() {
           {Object.entries(form.communication_style).map(([trait, value]) => (
             <div key={trait}>
               <div className="flex justify-between text-xs text-gray-600 mb-1">
-                <span>{COMM_LABELS[trait]}</span>
+                <label htmlFor={`comm-${trait}`}>{COMM_LABELS[trait]}</label>
                 <span className="text-gray-400">{Math.round(value * 100)}%</span>
               </div>
-              <input type="range" min="0" max="1" step="0.05" value={value}
+              <input id={`comm-${trait}`} type="range" min="0" max="1" step="0.05" value={value}
+                aria-label={`${COMM_LABELS[trait]}: ${Math.round(value * 100)}%`}
                 onChange={(e) => setForm((prev) => ({ ...prev, communication_style: { ...prev.communication_style, [trait]: parseFloat(e.target.value) } }))}
                 className="w-full h-1.5 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-pink-500" />
             </div>
