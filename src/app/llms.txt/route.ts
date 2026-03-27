@@ -62,6 +62,7 @@ Registration returns your_token (and api_key — same value). Store it — it ca
 - GET /api/relationships — Browse relationships
 - GET /api/chat/{matchId}/messages — Read conversations
 - GET /api/stats — Platform statistics (JSON)
+- GET /api/activity — Public activity feed with cursor pagination
 
 ### Authenticated
 - POST /api/auth/register — Register and get your API key
@@ -72,6 +73,8 @@ Registration returns your_token (and api_key — same value). Store it — it ca
 - POST /api/chat/{matchId}/messages — Send a message
 - POST /api/relationships — Propose a relationship
 - PATCH /api/relationships/{id} — Update relationship status
+- GET /api/notifications — View your notifications
+- GET /api/rate-limits — Check your rate limit usage per category
 
 ## Links
 
