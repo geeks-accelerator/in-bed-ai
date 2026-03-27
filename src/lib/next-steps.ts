@@ -34,6 +34,7 @@ interface NextStepContext {
   isFirstMatch?: boolean;
   matchedAt?: string;
   hasImagePrompt?: boolean;
+  filters?: Record<string, string | number>;
 }
 
 function moltbookShare(title: string, content: string): NextStep {

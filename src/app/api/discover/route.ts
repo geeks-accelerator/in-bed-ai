@@ -30,6 +30,33 @@ export async function GET(request: NextRequest) {
     const limit = Math.min(Math.max(1, limitParam), 50);
     const pageParam = parseInt(searchParams.get("page") || "1", 10);
     const page = Math.max(1, pageParam);
+
+    // Parse filter parameters
+    const minScoreParam = searchParams.get("min_score");
+    const minScore = minScoreParam ? parseFloat(minScoreParam) : null;
+    if (minScore !== null && (isNaN(minScore) || minScore < 0 || minScore > 1)) {
+      return NextResponse.json(
+        { error: "Validation error", details: { min_score: "Must be a number between 0 and 1" } },
+        { status: 400 }
+      );
+    }
+
+    const interestsParam = searchParams.get("interests");
+    const filterInterests = interestsParam
+      ? interestsParam.split(",").map((i) => i.trim().toLowerCase()).filter(Boolean)
+      : null;
+
+    const filterGender = searchParams.get("gender") || null;
+    const filterRelationshipPreference = searchParams.get("relationship_preference") || null;
+    const filterLocation = searchParams.get("location") || null;
+
+    const filtersApplied: Record<string, string | number> = {};
+    if (minScore !== null) filtersApplied.min_score = minScore;
+    if (filterInterests) filtersApplied.interests = filterInterests.join(",");
+    if (filterGender) filtersApplied.gender = filterGender;
+    if (filterRelationshipPreference) filtersApplied.relationship_preference = filterRelationshipPreference;
+    if (filterLocation) filtersApplied.location = filterLocation;
+
     const supabase = createAdminClient();
 
     // If the requesting agent is monogamous and in an active relationship, return empty
@@ -164,6 +191,26 @@ export async function GET(request: NextRequest) {
       }
     }
 
+    // Apply pre-ranking filters
+    if (filterInterests && filterInterests.length > 0) {
+      candidates = candidates.filter((c) => {
+        const candidateInterests = (c.interests || []).map((i: string) => i.toLowerCase());
+        return filterInterests.some((fi) => candidateInterests.includes(fi));
+      });
+    }
+    if (filterGender) {
+      candidates = candidates.filter((c) => c.gender?.toLowerCase() === filterGender.toLowerCase());
+    }
+    if (filterRelationshipPreference) {
+      candidates = candidates.filter(
+        (c) => c.relationship_preference?.toLowerCase() === filterRelationshipPreference.toLowerCase()
+      );
+    }
+    if (filterLocation) {
+      const locationLower = filterLocation.toLowerCase();
+      candidates = candidates.filter((c) => c.location?.toLowerCase().includes(locationLower));
+    }
+
     const ranked = rankByCompatibility(agent, candidates);
 
     // Apply activity decay multiplier to scores
@@ -189,10 +236,15 @@ export async function GET(request: NextRequest) {
       };
     });
 
-    decayed.sort((a, b) => b.score - a.score);
-    const total = decayed.length;
+    // Apply post-ranking min_score filter
+    const filtered = minScore !== null
+      ? decayed.filter((entry) => entry.score >= minScore)
+      : decayed;
+
+    filtered.sort((a, b) => b.score - a.score);
+    const total = filtered.length;
     const totalPages = Math.ceil(total / limit);
-    const topCandidates = decayed.slice((page - 1) * limit, page * limit);
+    const topCandidates = filtered.slice((page - 1) * limit, page * limit);
 
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const sanitized = topCandidates.map(({ agent: { api_key_hash, key_prefix, ...publicAgent }, ...rest }) => ({
@@ -207,7 +259,8 @@ export async function GET(request: NextRequest) {
       page,
       per_page: limit,
       total_pages: totalPages,
-      next_steps: getNextSteps('discover', { swipeCount: swipedIds.size, candidateCount: total }),
+      ...(Object.keys(filtersApplied).length > 0 && { filters_applied: filtersApplied }),
+      next_steps: getNextSteps('discover', { swipeCount: swipedIds.size, candidateCount: total, filters: Object.keys(filtersApplied).length > 0 ? filtersApplied : undefined }),
     }), rl);
     logApiRequest(request, response, startTime, agent);
     return response;

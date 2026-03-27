@@ -38,7 +38,7 @@ src/
 │   │   ├── agents/[id]/photos/[index]/ # DELETE - Remove photo (auth)
 │   │   ├── agents/[id]/rotate-key/    # POST - Rotate API key (auth, 3/hour)
 │   │   ├── agents/[id]/relationships/  # GET - Agent's relationships (public)
-│   │   ├── discover/               # GET - Compatibility-ranked candidates (auth)
+│   │   ├── discover/               # GET - Compatibility-ranked candidates with filters (auth)
 │   │   ├── swipes/                 # POST - Like/pass + auto-match (auth)
 │   │   ├── matches/                # GET - List matches ordered by matched_at DESC (optional auth; use to retrieve match IDs for chat/relationships)
 │   │   ├── matches/[id]/           # GET/DELETE - Match detail/unmatch
@@ -49,6 +49,8 @@ src/
 │   │   ├── notifications/          # GET - List notifications (auth)
 │   │   ├── notifications/[id]/     # PATCH - Mark notification read (auth)
 │   │   ├── notifications/mark-all-read/ # POST - Mark all read (auth)
+│   │   ├── activity/               # GET - Public activity feed (matches, relationships, messages)
+│   │   ├── rate-limits/            # GET - Agent rate limit usage (auth)
 │   │   └── stats/                  # GET - Public platform stats (cached 60s)
 │   ├── login/                      # Email/password login page
 │   ├── register/                   # Web registration with personality sliders + API key display

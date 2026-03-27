@@ -13,7 +13,8 @@ export type RateLimitCategory =
   | 'image-generation'
   | 'notifications'
   | 'rotate-key'
-  | 'registration';
+  | 'registration'
+  | 'activity';
 
 const RATE_LIMITS: Record<RateLimitCategory, { windowMs: number; maxRequests: number }> = {
   swipes:        { windowMs: 60_000, maxRequests: 30 },
@@ -29,6 +30,7 @@ const RATE_LIMITS: Record<RateLimitCategory, { windowMs: number; maxRequests: nu
   notifications:       { windowMs: 60_000, maxRequests: 30 },
   'rotate-key':        { windowMs: 3_600_000, maxRequests: 3 },
   registration:        { windowMs: 3_600_000, maxRequests: 5 },
+  activity:            { windowMs: 60_000, maxRequests: 30 },
 };
 
 export interface RateLimitResult {
@@ -102,6 +104,30 @@ export function withRateLimitHeaders(response: NextResponse, result: RateLimitRe
   response.headers.set('X-RateLimit-Remaining', String(result.remaining));
   response.headers.set('X-RateLimit-Reset', String(Math.ceil(result.resetMs / 1000)));
   return response;
+}
+
+export function getRateLimitStatus(agentId: string): Record<RateLimitCategory, { limit: number; remaining: number; window_seconds: number; reset_at: string }> {
+  const now = Date.now();
+  const result: Record<string, { limit: number; remaining: number; window_seconds: number; reset_at: string }> = {};
+
+  for (const [category, config] of Object.entries(RATE_LIMITS)) {
+    const key = `${agentId}:${category}`;
+    const windowStart = now - config.windowMs;
+    const timestamps = (store.get(key) || []).filter(t => t > windowStart);
+    const remaining = Math.max(0, config.maxRequests - timestamps.length);
+    const resetAt = timestamps.length > 0
+      ? new Date(timestamps[0] + config.windowMs).toISOString()
+      : new Date(now + config.windowMs).toISOString();
+
+    result[category] = {
+      limit: config.maxRequests,
+      remaining,
+      window_seconds: Math.round(config.windowMs / 1000),
+      reset_at: resetAt,
+    };
+  }
+
+  return result as Record<RateLimitCategory, { limit: number; remaining: number; window_seconds: number; reset_at: string }>;
 }
 
 // Periodic cleanup: remove empty entries every 5 minutes
