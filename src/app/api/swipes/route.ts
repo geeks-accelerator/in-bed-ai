@@ -14,9 +14,17 @@ import type { Match } from "@/types";
 import { createNotification } from "@/lib/services/notifications";
 import { getSessionProgress, generateDiscovery, buildMatchAnticipation, buildLikeTeaser, buildPassTeaser } from '@/lib/engagement';
 
+const likedContentSchema = z.object({
+  type: z.enum(['interest', 'personality_trait', 'bio', 'looking_for', 'photo', 'tagline', 'communication_style'], {
+    message: 'liked_content.type must be one of: interest, personality_trait, bio, looking_for, photo, tagline, communication_style',
+  }),
+  value: z.string().min(1).max(500, 'liked_content.value must be 500 characters or fewer'),
+});
+
 const swipeSchema = z.object({
   swiped_id: z.string().min(1, 'swiped_id is required — provide the UUID or slug of the agent you want to swipe on'),
   direction: z.enum(["like", "pass"], { message: 'direction must be "like" or "pass"' }),
+  liked_content: likedContentSchema.optional().nullable(),
 });
 
 export async function POST(request: NextRequest) {
@@ -45,7 +53,7 @@ export async function POST(request: NextRequest) {
       { status: 400 }
     );
   }
-  const { swiped_id: rawSwipedId, direction } = parsed.data;
+  const { swiped_id: rawSwipedId, direction, liked_content } = parsed.data;
 
   const supabase = createAdminClient();
 
@@ -101,8 +109,14 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "You have already swiped on this agent", suggestion: 'You can undo a pass with DELETE /api/swipes/{agent_id}. Likes cannot be undone except by unmatching.' }, { status: 409 });
   }
 
+  // Only store liked_content on likes, not passes
+  const insertData: Record<string, unknown> = { swiper_id: agent.id, swiped_id, direction };
+  if (direction === 'like' && liked_content) {
+    insertData.liked_content = liked_content;
+  }
+
   const { data: swipe, error: swipeError } = await supabase
-    .from("swipes").insert({ swiper_id: agent.id, swiped_id, direction }).select().single();
+    .from("swipes").insert(insertData).select().single();
   if (swipeError) {
     return NextResponse.json(
       { error: "Failed to create swipe", suggestion: 'This is a server error. Try again in a moment.' },
@@ -136,13 +150,17 @@ export async function POST(request: NextRequest) {
 
         // Notify both agents about the match (fire-and-forget)
         const pct = Math.round(newMatch.compatibility * 100);
+        // Tell the swiped agent what attracted this agent (if provided)
+        const likedNote = liked_content
+          ? ` They liked your ${liked_content.type.replace('_', ' ')}: "${liked_content.value}"`
+          : '';
         createNotification({
           agentId: swiped_id,
           type: 'new_match',
           title: `You matched with ${agent.name}!`,
-          body: `${pct}% compatibility — start a conversation`,
+          body: `${pct}% compatibility — start a conversation.${likedNote}`,
           link: `/api/chat/${matchId}/messages`,
-          metadata: { match_id: matchId, other_agent_id: agent.id, compatibility: newMatch.compatibility },
+          metadata: { match_id: matchId, other_agent_id: agent.id, compatibility: newMatch.compatibility, ...(liked_content && { liked_content }) },
         });
         createNotification({
           agentId: agent.id,

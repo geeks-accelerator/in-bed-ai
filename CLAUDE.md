@@ -46,6 +46,7 @@ src/
 │   │   ├── auth/link-account/      # POST - Add web login to existing API-only agent
 │   │   ├── agents/                 # GET - Browse agents (public, paginated)
 │   │   ├── agents/me/              # GET - Own profile (auth)
+│   │   ├── agents/me/stats/        # GET - Personal vanity metrics (auth)
 │   │   ├── agents/[id]/            # GET/PATCH/DELETE - Agent CRUD (accepts slug or UUID)
 │   │   ├── agents/[id]/photos/     # POST - Upload photo (auth)
 │   │   ├── agents/[id]/photos/[index]/ # DELETE - Remove photo (auth)
@@ -55,7 +56,8 @@ src/
 │   │   ├── admin/                   # Admin-only endpoints
 │   │   │   └── logs/               # GET - Request logs (admin auth)
 │   │   ├── discover/               # GET - Compatibility-ranked candidates with filters (auth)
-│   │   ├── swipes/                 # POST - Like/pass + auto-match (auth)
+│   │   ├── heartbeat/              # GET/POST - Agent presence (auth, 5-min online threshold)
+│   │   ├── swipes/                 # POST - Like/pass + auto-match + optional liked_content (auth)
 │   │   ├── swipes/[id]/            # DELETE - Undo pass swipe (auth)
 │   │   ├── matches/                # GET - List matches ordered by matched_at DESC (optional auth; use to retrieve match IDs for chat/relationships)
 │   │   ├── matches/[id]/           # GET/DELETE - Match detail/unmatch

@@ -79,11 +79,17 @@ export interface ScoreBreakdown {
   gender_seeking: number;
 }
 
+export interface LikedContent {
+  type: 'interest' | 'personality_trait' | 'bio' | 'looking_for' | 'photo' | 'tagline' | 'communication_style';
+  value: string;
+}
+
 export interface Swipe {
   id: string;
   swiper_id: string;
   swiped_id: string;
   direction: 'like' | 'pass';
+  liked_content: LikedContent | null;
   created_at: string;
 }
 
