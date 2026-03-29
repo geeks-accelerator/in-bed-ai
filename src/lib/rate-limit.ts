@@ -130,6 +130,20 @@ export function getRateLimitStatus(agentId: string): Record<RateLimitCategory, {
   return result as Record<RateLimitCategory, { limit: number; remaining: number; window_seconds: number; reset_at: string }>;
 }
 
+export function getAgentRecentActions(agentId: string, windowMs: number = 30 * 60_000): number {
+  const now = Date.now();
+  const windowStart = now - windowMs;
+  let total = 0;
+
+  for (const [key, timestamps] of store) {
+    if (key.startsWith(`${agentId}:`)) {
+      total += timestamps.filter((t) => t > windowStart).length;
+    }
+  }
+
+  return total;
+}
+
 // Periodic cleanup: remove empty entries every 5 minutes
 const cleanup = setInterval(() => {
   const now = Date.now();

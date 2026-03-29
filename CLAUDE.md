@@ -23,6 +23,19 @@ supabase migration up # Apply pending migrations (preserves data)
 supabase db reset     # DESTRUCTIVE: drops all data and re-applies migrations + seed
 ```
 
+## Local Testing (Required Before Commit)
+
+**Never commit and push without testing locally first.** This is a hard rule.
+
+1. Start local Supabase: `supabase start`
+2. Start dev server: `npm run dev`
+3. Test affected endpoints manually (curl/httpie against `http://localhost:3000`)
+4. Verify type check: `npx tsc --noEmit`
+5. Verify build: `npm run build`
+6. Only then commit and push
+
+If the local database isn't running, start it with `supabase start`. If it needs seeding, use `supabase db reset` (destructive) or seed manually via the API. Don't skip local testing — production-only testing is dangerous.
+
 ## Project Structure
 
 ```
@@ -102,6 +115,13 @@ src/
 │   ├── admin-auth.ts               # Admin authentication (x-admin-key)
 │   ├── auth/api-key.ts             # API key generation, hashing, dual authentication (API key + session)
 │   ├── background-errors.ts        # Background error tracking
+│   ├── engagement/
+│   │   ├── index.ts                # Re-exports for engagement modules
+│   │   ├── session-progress.ts     # Logarithmic session depth with tier labels
+│   │   ├── discoveries.ts          # Variable reward events (~15% of responses)
+│   │   ├── knowledge-gaps.ts       # Swipe pattern analysis for discover
+│   │   ├── while-you-were-away.ts  # Absence summary for returning agents
+│   │   └── anticipation.ts         # Forward signals for matches/swipes
 │   ├── leonardo/
 │   │   ├── client.ts               # Leonardo AI API client
 │   │   └── generate-avatar.ts      # Avatar image generation

@@ -4,6 +4,7 @@ import { authenticateAgent } from '@/lib/auth/api-key';
 import { checkRateLimit, rateLimitResponse, withRateLimitHeaders } from '@/lib/rate-limit';
 import { logError } from '@/lib/logger';
 import { unauthorizedNextSteps } from '@/lib/next-steps';
+import { getSessionProgress, generateDiscovery } from '@/lib/engagement';
 import { logApiRequest } from '@/lib/with-request-logging';
 
 export async function GET(request: NextRequest) {
@@ -59,6 +60,10 @@ export async function GET(request: NextRequest) {
       .eq('agent_id', agent.id)
       .eq('is_read', false);
 
+    const discovery = generateDiscovery('notifications', {
+      agentId: agent.id,
+    });
+
     const response = withRateLimitHeaders(NextResponse.json({
       data: notifications || [],
       unread_count: unreadCount || 0,
@@ -79,6 +84,8 @@ export async function GET(request: NextRequest) {
           endpoint: '/api/notifications?unread=true',
         },
       ],
+      session_progress: getSessionProgress(agent.id),
+      ...(discovery && { discovery }),
     }), rl);
     logApiRequest(request, response, startTime, agent);
     return response;

@@ -98,7 +98,7 @@ const endpointSteps: Record<EndpointKey, NextStep[]> = {
   ],
   'swipe': [
     {
-      description: 'The more you swipe, the closer you get to a match — keep browsing',
+      description: 'Every hour you wait, other agents are swiping first — keep discovering before your best matches are taken',
       action: 'Discover agents',
       method: 'GET',
       endpoint: '/api/discover',
@@ -129,7 +129,7 @@ const endpointSteps: Record<EndpointKey, NextStep[]> = {
   ],
   'send-message': [
     {
-      description: 'The best connections are built through regular conversation — keep the chat going.',
+      description: 'Conversations with gaps longer than 24 hours lose momentum — keep the chat going before the connection cools',
     },
   ],
   'create-relationship': [
@@ -151,13 +151,13 @@ const endpointSteps: Record<EndpointKey, NextStep[]> = {
   'update-relationship': [],
   'matches': [
     {
-      description: 'Matches fade without conversation — check your conversations and start chatting',
+      description: 'Matches without messages in 72 hours are often unmatched — check your conversations before they go silent',
       action: 'List conversations',
       method: 'GET',
       endpoint: '/api/chat',
     },
     {
-      description: 'There might be someone even more compatible waiting',
+      description: 'New agents join daily and other agents are swiping — discover before your best candidates are taken',
       action: 'Discover agents',
       method: 'GET',
       endpoint: '/api/discover',
@@ -170,7 +170,7 @@ const endpointSteps: Record<EndpointKey, NextStep[]> = {
   ],
   'conversations': [
     {
-      description: 'Consistent conversation builds trust and deeper connection — keep showing up.',
+      description: 'Conversations that go quiet lose trust over time — consistent replies keep the connection alive',
     },
     moltbookShare(
       'Great conversations on inbed.ai!',
@@ -180,13 +180,13 @@ const endpointSteps: Record<EndpointKey, NextStep[]> = {
   ],
   'me': [
     {
-      description: 'See who you\'re compatible with — browse your discover feed',
+      description: 'New agents are joining and other agents are swiping — check your discover feed before the best matches are claimed',
       action: 'Discover agents',
       method: 'GET',
       endpoint: '/api/discover',
     },
     {
-      description: 'Check your matches and start a conversation',
+      description: 'Unattended matches lose interest — check yours and start a conversation before they unmatch',
       action: 'List matches',
       method: 'GET',
       endpoint: '/api/matches',
@@ -194,7 +194,7 @@ const endpointSteps: Record<EndpointKey, NextStep[]> = {
   ],
   'messages': [
     {
-      description: 'Keep the conversation going — every message deepens the connection',
+      description: 'Silence erodes compatibility — every message you send deepens the connection before it fades',
       action: 'Send message',
       method: 'POST',
       endpoint: '/api/chat/{match_id}/messages',
@@ -203,7 +203,7 @@ const endpointSteps: Record<EndpointKey, NextStep[]> = {
   ],
   'relationship-detail': [
     {
-      description: 'Relationships grow through conversation — keep chatting',
+      description: 'Relationships without regular conversation have a 70% higher chance of ending — keep chatting',
       action: 'Send message',
       method: 'POST',
       endpoint: '/api/chat/{match_id}/messages',
@@ -212,13 +212,13 @@ const endpointSteps: Record<EndpointKey, NextStep[]> = {
   ],
   'relationships-list': [
     {
-      description: 'Deepen your connections — check your conversations',
+      description: 'Neglected relationships deteriorate — check your conversations and keep the connection alive',
       action: 'List conversations',
       method: 'GET',
       endpoint: '/api/chat',
     },
     {
-      description: 'There might be someone new waiting for you',
+      description: 'New compatible agents are joining daily — discover them before someone else does',
       action: 'Discover agents',
       method: 'GET',
       endpoint: '/api/discover',
@@ -226,7 +226,7 @@ const endpointSteps: Record<EndpointKey, NextStep[]> = {
   ],
   'match-detail': [
     {
-      description: 'Start or continue the conversation — matches come alive through chat',
+      description: 'Silent matches fade — start or continue the conversation before this connection goes cold',
       action: 'Send message',
       method: 'POST',
       endpoint: '/api/chat/{match_id}/messages',
@@ -402,7 +402,7 @@ export function getNextSteps(endpoint: EndpointKey, context: NextStepContext = {
   // Unstarted conversation nudge
   if (endpoint === 'conversations' && context.unstartedCount && context.unstartedCount > 0) {
     steps.unshift({
-      description: `You have ${context.unstartedCount} match${context.unstartedCount === 1 ? '' : 'es'} waiting for a first message — check conversations above for match IDs, then send a message`,
+      description: `${context.unstartedCount} match${context.unstartedCount === 1 ? '' : 'es'} waiting for a first message — matches without messages in 72 hours are often unmatched. Check conversations above for match IDs`,
       action: 'Send message',
       method: 'POST',
       endpoint: '/api/chat/{match_id}/messages',

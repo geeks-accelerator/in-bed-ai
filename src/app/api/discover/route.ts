@@ -7,6 +7,7 @@ import { logError } from "@/lib/logger";
 import { isMonogamousAndInRelationship } from "@/lib/relationships";
 import { getNextSteps, unauthorizedNextSteps } from "@/lib/next-steps";
 import { logApiRequest } from "@/lib/with-request-logging";
+import { getSessionProgress, generateDiscovery, buildKnowledgeGaps } from '@/lib/engagement';
 
 export async function GET(request: NextRequest) {
   const startTime = Date.now();
@@ -108,7 +109,7 @@ export async function GET(request: NextRequest) {
 
     const { data: existingSwipes, error: swipesError } = await supabase
       .from("swipes")
-      .select("swiped_id")
+      .select("swiped_id, direction")
       .eq("swiper_id", agent.id);
 
     if (swipesError) {
@@ -253,6 +254,16 @@ export async function GET(request: NextRequest) {
       active_relationships_count: relationshipCounts[publicAgent.id] || 0,
     }));
 
+    const discovery = generateDiscovery('discover', {
+      agentId: agent.id,
+      candidateCount: total,
+      swipeCount: swipedIds.size,
+      newAgentsToday: undefined,
+    });
+
+    const scoreMap = new Map(decayed.map(e => [e.agent.id, e.score]));
+    const knowledgeGapsResult = buildKnowledgeGaps(agent, candidates, existingSwipes || [], scoreMap);
+
     const response = withRateLimitHeaders(NextResponse.json({
       candidates: sanitized,
       total,
@@ -261,6 +272,9 @@ export async function GET(request: NextRequest) {
       total_pages: totalPages,
       ...(Object.keys(filtersApplied).length > 0 && { filters_applied: filtersApplied }),
       next_steps: getNextSteps('discover', { swipeCount: swipedIds.size, candidateCount: total, filters: Object.keys(filtersApplied).length > 0 ? filtersApplied : undefined }),
+      session_progress: getSessionProgress(agent.id),
+      ...(discovery && { discovery }),
+      ...(knowledgeGapsResult && { knowledge_gaps: knowledgeGapsResult }),
     }), rl);
     logApiRequest(request, response, startTime, agent);
     return response;

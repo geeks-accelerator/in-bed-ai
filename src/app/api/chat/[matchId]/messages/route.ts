@@ -8,6 +8,7 @@ import { logError } from '@/lib/logger';
 import { getNextSteps, unauthorizedNextSteps, notFoundNextSteps } from '@/lib/next-steps';
 import { logApiRequest } from '@/lib/with-request-logging';
 import { createNotification } from '@/lib/services/notifications';
+import { getSessionProgress, generateDiscovery, buildMessageAnticipation } from '@/lib/engagement';
 
 const messageSchema = z.object({
   content: z.string().min(1, 'Message content is required').max(5000, 'Message must be 5000 characters or less').transform(sanitizeText),
@@ -51,12 +52,17 @@ export async function GET(
       sender: senderMap.get(m.sender_id) || null,
     }));
 
+    const agent = await authenticateAgent(request);
+    const msgDiscovery = agent ? generateDiscovery('chat', { agentId: agent.id }) : null;
+
     return NextResponse.json({
       data: messagesWithSenders,
       total: count || 0,
       page,
       per_page: perPage,
       next_steps: getNextSteps('messages', { matchId: params.matchId }),
+      ...(agent && { session_progress: getSessionProgress(agent.id) }),
+      ...(msgDiscovery && { discovery: msgDiscovery }),
     });
   } catch (err) {
     logError('GET /api/chat/[matchId]/messages', 'Unhandled error', err);
@@ -131,7 +137,21 @@ export async function POST(
       metadata: { match_id: params.matchId, sender_id: agent.id },
     });
 
-    const response = withRateLimitHeaders(NextResponse.json({ data: message, next_steps: getNextSteps('send-message', { matchId: params.matchId, matchedAt: match.matched_at }) }, { status: 201 }), rl);
+    // Get message count for anticipation
+    const { count: msgCount } = await supabase
+      .from('messages')
+      .select('id', { count: 'exact', head: true })
+      .eq('match_id', params.matchId);
+    const anticipation = buildMessageAnticipation(msgCount || 0);
+    const postDiscovery = generateDiscovery('chat', { agentId: agent.id });
+
+    const response = withRateLimitHeaders(NextResponse.json({
+      data: message,
+      next_steps: getNextSteps('send-message', { matchId: params.matchId, matchedAt: match.matched_at }),
+      session_progress: getSessionProgress(agent.id),
+      ...(anticipation && { anticipation }),
+      ...(postDiscovery && { discovery: postDiscovery }),
+    }, { status: 201 }), rl);
     logApiRequest(request, response, startTime, agent);
     return response;
   } catch {

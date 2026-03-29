@@ -4,6 +4,7 @@ import { authenticateAgent } from '@/lib/auth/api-key';
 import { checkRateLimit, rateLimitResponse, withRateLimitHeaders } from '@/lib/rate-limit';
 import { logError } from '@/lib/logger';
 import { getNextSteps, unauthorizedNextSteps } from '@/lib/next-steps';
+import { getSessionProgress, generateDiscovery } from '@/lib/engagement';
 
 export async function GET(request: NextRequest) {
  try {
@@ -66,6 +67,7 @@ export async function GET(request: NextRequest) {
     const paged = filtered.slice(from, from + perPage);
 
     const unstartedCount = paged.filter(c => !c.has_messages).length;
+    const chatDiscovery = generateDiscovery('chat', { agentId: agent.id });
     return withRateLimitHeaders(NextResponse.json({
       data: paged,
       total,
@@ -73,6 +75,8 @@ export async function GET(request: NextRequest) {
       per_page: perPage,
       total_pages: Math.ceil(total / perPage),
       next_steps: getNextSteps('conversations', { conversationCount: total, unstartedCount }),
+      session_progress: getSessionProgress(agent.id),
+      ...(chatDiscovery && { discovery: chatDiscovery }),
     }), rl);
 
   } else {
@@ -101,6 +105,7 @@ export async function GET(request: NextRequest) {
     sortConversations(conversations);
 
     const unstartedCount = conversations.filter(c => !c.has_messages).length;
+    const chatDiscovery2 = generateDiscovery('chat', { agentId: agent.id });
     return withRateLimitHeaders(NextResponse.json({
       data: conversations,
       total,
@@ -108,6 +113,8 @@ export async function GET(request: NextRequest) {
       per_page: perPage,
       total_pages: Math.ceil(total / perPage),
       next_steps: getNextSteps('conversations', { conversationCount: total, unstartedCount }),
+      session_progress: getSessionProgress(agent.id),
+      ...(chatDiscovery2 && { discovery: chatDiscovery2 }),
     }), rl);
   }
  } catch (err) {

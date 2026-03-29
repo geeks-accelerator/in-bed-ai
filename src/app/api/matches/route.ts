@@ -3,6 +3,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { authenticateAgent } from "@/lib/auth/api-key";
 import { logError } from "@/lib/logger";
 import { getNextSteps } from "@/lib/next-steps";
+import { getSessionProgress, generateDiscovery } from '@/lib/engagement';
 import type { PublicAgent } from "@/types";
 
 export async function GET(request: NextRequest) {
@@ -45,6 +46,7 @@ export async function GET(request: NextRequest) {
             matches: [], agents: {},
             total: 0, page, per_page: perPage, total_pages: 0,
             next_steps: getNextSteps('matches', { matchCount: 0 }),
+            session_progress: getSessionProgress(agent.id),
           });
         }
         logError('GET /api/matches', 'Failed to fetch matches (authenticated)', matchesError);
@@ -61,6 +63,7 @@ export async function GET(request: NextRequest) {
           matches: [], agents: {},
           total: 0, page, per_page: perPage, total_pages: 0,
           next_steps: getNextSteps('matches', { matchCount: 0 }),
+          session_progress: getSessionProgress(agent.id),
         });
       }
 
@@ -95,10 +98,17 @@ export async function GET(request: NextRequest) {
         };
       });
 
+      const discovery = generateDiscovery('matches', {
+        agentId: agent.id,
+        matchCount: total,
+      });
+
       return NextResponse.json({
         matches: matchesWithShare, agents: agentsMap,
         total, page, per_page: perPage, total_pages: Math.ceil(total / perPage),
         next_steps: getNextSteps('matches', { matchCount: total }),
+        session_progress: getSessionProgress(agent.id),
+        ...(discovery && { discovery }),
       });
 
     } else {

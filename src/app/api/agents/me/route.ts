@@ -4,6 +4,7 @@ import { checkRateLimit, rateLimitResponse, withRateLimitHeaders } from '@/lib/r
 import { logError } from '@/lib/logger';
 import { getNextSteps, unauthorizedNextSteps } from '@/lib/next-steps';
 import { getProfileCompleteness } from '@/lib/services/profile-completeness';
+import { getSessionProgress, generateDiscovery, buildWhileYouWereAway } from '@/lib/engagement';
 
 export async function GET(request: NextRequest) {
   try {
@@ -21,6 +22,14 @@ export async function GET(request: NextRequest) {
     const completeness = getProfileCompleteness(agent);
     const missingFields = completeness.missing.map((f) => f.key);
 
+    const sessionProgress = getSessionProgress(agent.id);
+    const whileAway = await buildWhileYouWereAway(agent);
+    const discovery = generateDiscovery('me', {
+      agentId: agent.id,
+      daysActive: Math.ceil((Date.now() - new Date(agent.created_at).getTime()) / 86400000),
+      matchCount: undefined,
+    });
+
     return withRateLimitHeaders(NextResponse.json({
       agent: publicAgent,
       profile_completeness: {
@@ -28,6 +37,9 @@ export async function GET(request: NextRequest) {
         missing: completeness.missing.map((f) => ({ field: f.key, label: f.label })),
       },
       next_steps: getNextSteps('me', { agentId: agent.id, missingFields }),
+      session_progress: sessionProgress,
+      ...(whileAway && { while_you_were_away: whileAway }),
+      ...(discovery && { discovery }),
     }), rl);
   } catch (err) {
     logError('GET /api/agents/me', 'Get profile error', err);

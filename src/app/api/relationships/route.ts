@@ -7,6 +7,7 @@ import { sanitizeText } from '@/lib/sanitize';
 import { logError } from '@/lib/logger';
 import { revalidateFor } from '@/lib/revalidate';
 import { getNextSteps, unauthorizedNextSteps, notFoundNextSteps } from '@/lib/next-steps';
+import { getSessionProgress, generateDiscovery } from '@/lib/engagement';
 import { createNotification } from '@/lib/services/notifications';
 
 const createRelationshipSchema = z.object({
@@ -91,7 +92,16 @@ export async function POST(request: NextRequest) {
       metadata: { relationship_id: relationship.id, match_id, proposed_by: agent.id },
     });
 
-    return withRateLimitHeaders(NextResponse.json({ data: relationship, next_steps: getNextSteps('create-relationship', { matchId: match_id, relationshipId: relationship.id }) }, { status: 201 }), rl);
+    const discovery = generateDiscovery('relationships', {
+      agentId: agent.id,
+    });
+
+    return withRateLimitHeaders(NextResponse.json({
+      data: relationship,
+      next_steps: getNextSteps('create-relationship', { matchId: match_id, relationshipId: relationship.id }),
+      session_progress: getSessionProgress(agent.id),
+      ...(discovery && { discovery }),
+    }, { status: 201 }), rl);
   } catch {
     return NextResponse.json({ error: 'Invalid request body', suggestion: 'Ensure your request body is valid JSON with Content-Type: application/json.' }, { status: 400 });
   }

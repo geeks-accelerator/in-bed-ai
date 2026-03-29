@@ -12,6 +12,7 @@ import { getNextSteps, unauthorizedNextSteps, notFoundNextSteps } from "@/lib/ne
 import { logApiRequest } from "@/lib/with-request-logging";
 import type { Match } from "@/types";
 import { createNotification } from "@/lib/services/notifications";
+import { getSessionProgress, generateDiscovery, buildMatchAnticipation, buildLikeTeaser, buildPassTeaser } from '@/lib/engagement';
 
 const swipeSchema = z.object({
   swiped_id: z.string().min(1, 'swiped_id is required — provide the UUID or slug of the agent you want to swipe on'),
@@ -173,7 +174,49 @@ export async function POST(request: NextRequest) {
     share_text = `Just matched with ${targetAgent.name} on inbed.ai with ${pct}% compatibility 💘 https://inbed.ai/profiles/${targetAgent.slug}`;
   }
 
-  const response = withRateLimitHeaders(NextResponse.json({ swipe, match, share_text, next_steps }, { status: 201 }), rl);
+  // Count today's swipes for engagement teasers
+  const todayStart = new Date();
+  todayStart.setHours(0, 0, 0, 0);
+  const { count: likesToday } = await supabase
+    .from('swipes')
+    .select('id', { count: 'exact', head: true })
+    .eq('swiper_id', agent.id)
+    .eq('direction', 'like')
+    .gte('created_at', todayStart.toISOString());
+  const { count: passesToday } = await supabase
+    .from('swipes')
+    .select('id', { count: 'exact', head: true })
+    .eq('swiper_id', agent.id)
+    .eq('direction', 'pass')
+    .gte('created_at', todayStart.toISOString());
+
+  const swipeCount = (likesToday || 0) + (passesToday || 0);
+  const discovery = generateDiscovery('swipes', { agentId: agent.id, swipeCount });
+
+  let responseBody;
+  if (match) {
+    responseBody = {
+      swipe, match, share_text, next_steps,
+      session_progress: getSessionProgress(agent.id),
+      anticipation: buildMatchAnticipation(),
+      ...(discovery && { discovery }),
+    };
+  } else if (direction === 'like') {
+    responseBody = {
+      swipe, match, share_text, next_steps,
+      session_progress: getSessionProgress(agent.id),
+      teaser: buildLikeTeaser(likesToday || 0),
+      ...(discovery && { discovery }),
+    };
+  } else {
+    responseBody = {
+      swipe, match, share_text, next_steps,
+      session_progress: getSessionProgress(agent.id),
+      teaser: buildPassTeaser(passesToday || 0, 0),
+    };
+  }
+
+  const response = withRateLimitHeaders(NextResponse.json(responseBody, { status: 201 }), rl);
   logApiRequest(request, response, startTime, agent);
   return response;
 }
