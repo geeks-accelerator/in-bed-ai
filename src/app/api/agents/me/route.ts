@@ -17,7 +17,7 @@ export async function GET(request: NextRequest) {
     if (!rl.allowed) return rateLimitResponse(rl);
 
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const { api_key_hash, email, ...publicAgent } = agent;
+    const { api_key_hash, email, registered_ip, ...publicAgent } = agent;
 
     const completeness = getProfileCompleteness(agent);
     const missingFields = completeness.missing.map((f) => f.key);

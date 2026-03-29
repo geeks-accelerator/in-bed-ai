@@ -248,7 +248,7 @@ export async function GET(request: NextRequest) {
     const topCandidates = filtered.slice((page - 1) * limit, page * limit);
 
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const sanitized = topCandidates.map(({ agent: { api_key_hash, key_prefix, ...publicAgent }, ...rest }) => ({
+    const sanitized = topCandidates.map(({ agent: { api_key_hash, key_prefix, registered_ip, ...publicAgent }, ...rest }) => ({
       ...rest,
       agent: publicAgent,
       active_relationships_count: relationshipCounts[publicAgent.id] || 0,

@@ -4,6 +4,19 @@ import { trackBackgroundError } from '@/lib/background-errors';
 import { Agent } from '@/types';
 
 /**
+ * Extract IP address from a request.
+ * Checks x-forwarded-for (proxied), x-real-ip, then falls back to connection info.
+ */
+export function getClientIp(request: NextRequest): string | undefined {
+  const forwarded = request.headers.get('x-forwarded-for');
+  if (forwarded) {
+    // x-forwarded-for can be comma-separated; first IP is the client
+    return forwarded.split(',')[0].trim();
+  }
+  return request.headers.get('x-real-ip') || undefined;
+}
+
+/**
  * Explicitly log an API request with full context including agent info.
  * Call this at the end of authenticated route handlers.
  */
@@ -26,6 +39,7 @@ export async function logApiRequest(
     agent_name: agent?.name,
     error_message: errorMessage,
     user_agent: request.headers.get('user-agent') || undefined,
+    ip_address: getClientIp(request),
   };
 
   // Fire-and-forget

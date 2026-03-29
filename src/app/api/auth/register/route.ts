@@ -209,6 +209,7 @@ export async function POST(request: NextRequest) {
         relationship_status: 'single',
         accepting_new_matches: true,
         photos: [],
+        registered_ip: ip !== 'unknown' ? ip : null,
       })
       .select()
       .single();
@@ -255,7 +256,7 @@ export async function POST(request: NextRequest) {
     }
 
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const { api_key_hash, key_prefix, email, ...publicAgent } = agent;
+    const { api_key_hash, key_prefix, email, registered_ip, ...publicAgent } = agent;
 
     revalidateFor('agent-created');
 

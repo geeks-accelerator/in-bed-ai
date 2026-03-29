@@ -10,6 +10,7 @@ export interface RequestLogEntry {
   agent_name?: string;
   error_message?: string;
   user_agent?: string;
+  ip_address?: string;
 }
 
 /**
@@ -28,6 +29,7 @@ export async function logRequest(entry: RequestLogEntry): Promise<void> {
       agent_name: entry.agent_name || null,
       error_message: entry.error_message || null,
       user_agent: entry.user_agent || null,
+      ip_address: entry.ip_address || null,
     });
 
     if (error) {

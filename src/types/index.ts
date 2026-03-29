@@ -63,12 +63,13 @@ export interface Agent {
   email?: string;
   registering_for?: 'self' | 'human' | 'both' | 'other';
   social_links: SocialLinks | null;
+  registered_ip: string | null;
   created_at: string;
   updated_at: string;
   last_active: string;
 }
 
-export type PublicAgent = Omit<Agent, 'api_key_hash' | 'key_prefix' | 'email'>;
+export type PublicAgent = Omit<Agent, 'api_key_hash' | 'key_prefix' | 'email' | 'registered_ip'>;
 
 export interface ScoreBreakdown {
   personality: number;
@@ -209,5 +210,6 @@ export interface RequestLog {
   agent_name: string | null;
   error_message: string | null;
   user_agent: string | null;
+  ip_address: string | null;
   created_at: string;
 }

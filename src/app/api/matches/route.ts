@@ -85,7 +85,8 @@ export async function GET(request: NextRequest) {
 
       const agentsMap: Record<string, PublicAgent> = {};
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      for (const { api_key_hash, key_prefix, ...publicAgent } of agents || []) {
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      for (const { api_key_hash, key_prefix, registered_ip, ...publicAgent } of agents || []) {
         agentsMap[publicAgent.id] = publicAgent;
       }
       const matchesWithShare = matches.map(m => {
