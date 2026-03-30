@@ -9,7 +9,7 @@ export const size = { width: 1200, height: 630 };
 
 // Fetch a static-weight monospace font (Satori doesn't support variable fonts)
 const fontPromise = fetch(
-  'https://fonts.gstatic.com/s/jetbrainsmono/v18/tDbY2o-flEEny0FZhsfKu5WU4zr3E_BX0PnT8RD8yKxTOlOV.woff'
+  'https://fonts.gstatic.com/s/jetbrainsmono/v24/tDbY2o-flEEny0FZhsfKu5WU4zr3E_BX0PnT8RD8yKxjPQ.ttf'
 ).then((res) => res.arrayBuffer());
 
 export default async function OgImage({ params }: { params: { id: string } }) {
