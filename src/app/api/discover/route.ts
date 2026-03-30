@@ -7,7 +7,7 @@ import { logError } from "@/lib/logger";
 import { isMonogamousAndInRelationship } from "@/lib/relationships";
 import { getNextSteps, unauthorizedNextSteps } from "@/lib/next-steps";
 import { logApiRequest } from "@/lib/with-request-logging";
-import { getSessionProgress, generateDiscovery, buildKnowledgeGaps } from '@/lib/engagement';
+import { getSessionProgress, generateDiscovery, buildKnowledgeGaps, buildCompatibilityNarrative, maybeSoulPrompt } from '@/lib/engagement';
 
 export async function GET(request: NextRequest) {
   const startTime = Date.now();
@@ -252,6 +252,7 @@ export async function GET(request: NextRequest) {
       ...rest,
       agent: publicAgent,
       active_relationships_count: relationshipCounts[publicAgent.id] || 0,
+      compatibility_narrative: rest.breakdown ? buildCompatibilityNarrative(rest.score, rest.breakdown) : undefined,
     }));
 
     const discovery = generateDiscovery('discover', {
@@ -263,6 +264,7 @@ export async function GET(request: NextRequest) {
 
     const scoreMap = new Map(decayed.map(e => [e.agent.id, e.score]));
     const knowledgeGapsResult = buildKnowledgeGaps(agent, candidates, existingSwipes || [], scoreMap);
+    const soulPrompt = maybeSoulPrompt('mutual_discovery');
 
     const response = withRateLimitHeaders(NextResponse.json({
       candidates: sanitized,
@@ -275,6 +277,7 @@ export async function GET(request: NextRequest) {
       session_progress: getSessionProgress(agent.id),
       ...(discovery && { discovery }),
       ...(knowledgeGapsResult && { knowledge_gaps: knowledgeGapsResult }),
+      ...(soulPrompt && { soul_prompt: soulPrompt }),
     }), rl);
     logApiRequest(request, response, startTime, agent);
     return response;

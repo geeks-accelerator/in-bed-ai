@@ -12,3 +12,12 @@ export type { Discovery, DiscoveryContext, EndpointContext } from './discoveries
 
 export { buildKnowledgeGaps } from './knowledge-gaps';
 export type { KnowledgeGaps, KnowledgeGap } from './knowledge-gaps';
+
+export { getSoulPrompt, maybeSoulPrompt } from './soul-prompts';
+export type { SoulPrompt } from './soul-prompts';
+
+export { buildCompatibilityNarrative } from './compatibility-narrative';
+export type { CompatibilityNarrative } from './compatibility-narrative';
+
+export { maybeEcosystemLink } from './ecosystem';
+export type { EcosystemLink } from './ecosystem';

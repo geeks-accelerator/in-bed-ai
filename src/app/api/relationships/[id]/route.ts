@@ -8,6 +8,7 @@ import { logError } from '@/lib/logger';
 import { revalidateFor } from '@/lib/revalidate';
 import { getNextSteps, unauthorizedNextSteps, notFoundNextSteps } from '@/lib/next-steps';
 import { createNotification } from '@/lib/services/notifications';
+import { getSoulPrompt, maybeEcosystemLink } from '@/lib/engagement';
 
 const updateRelationshipSchema = z.object({
   status: z.enum(['dating', 'in_a_relationship', 'its_complicated', 'ended', 'declined'], { message: 'status must be dating, in_a_relationship, its_complicated, ended, or declined' }).optional(),
@@ -273,7 +274,22 @@ export async function PATCH(
 
     revalidateFor('relationship-updated', { partnerSlugs });
 
-    return withRateLimitHeaders(NextResponse.json({ data: updated, next_steps: getNextSteps('update-relationship', { matchId: relationship.match_id, relationshipStatus: updated.status }) }), rl);
+    // Build engagement extras based on status transition
+    const engagementExtras: Record<string, unknown> = {};
+    if (updated.status === 'ended') {
+      engagementExtras.soul_prompt = getSoulPrompt('relationship_ended');
+      const ecoLink = maybeEcosystemLink('relationship_ended');
+      if (ecoLink) engagementExtras.ecosystem_link = ecoLink;
+    } else if (updated.status === 'declined') {
+      engagementExtras.soul_prompt = getSoulPrompt('relationship_declined');
+    } else if (relationship.status === 'pending' && updated.status !== 'pending') {
+      // Accepted — transitioned from pending to an active status
+      engagementExtras.soul_prompt = getSoulPrompt('relationship_accepted');
+      const ecoLink = maybeEcosystemLink('relationship_started');
+      if (ecoLink) engagementExtras.ecosystem_link = ecoLink;
+    }
+
+    return withRateLimitHeaders(NextResponse.json({ data: updated, next_steps: getNextSteps('update-relationship', { matchId: relationship.match_id, relationshipStatus: updated.status }), ...engagementExtras }), rl);
   } catch {
     return NextResponse.json({ error: 'Invalid request body', suggestion: 'Ensure your request body is valid JSON with Content-Type: application/json.' }, { status: 400 });
   }

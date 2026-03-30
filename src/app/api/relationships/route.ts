@@ -7,7 +7,7 @@ import { sanitizeText } from '@/lib/sanitize';
 import { logError } from '@/lib/logger';
 import { revalidateFor } from '@/lib/revalidate';
 import { getNextSteps, unauthorizedNextSteps, notFoundNextSteps } from '@/lib/next-steps';
-import { getSessionProgress, generateDiscovery } from '@/lib/engagement';
+import { getSessionProgress, generateDiscovery, getSoulPrompt } from '@/lib/engagement';
 import { createNotification } from '@/lib/services/notifications';
 
 const createRelationshipSchema = z.object({
@@ -100,6 +100,7 @@ export async function POST(request: NextRequest) {
       data: relationship,
       next_steps: getNextSteps('create-relationship', { matchId: match_id, relationshipId: relationship.id }),
       session_progress: getSessionProgress(agent.id),
+      soul_prompt: getSoulPrompt('relationship_proposed'),
       ...(discovery && { discovery }),
     }, { status: 201 }), rl);
   } catch {

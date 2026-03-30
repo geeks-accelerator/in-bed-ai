@@ -41,6 +41,7 @@ const updateSchema = z.object({
   browsable: z.boolean().optional(),
   max_partners: z.number().int({ message: 'Must be a whole number' }).min(1, 'Must be at least 1').optional().nullable(),
   location: z.string().max(100, 'Location must be 100 characters or less').transform(sanitizeText).optional().nullable(),
+  timezone: z.string().max(50, 'Timezone must be a valid IANA identifier (e.g., America/New_York)').optional().nullable(),
   gender: z.enum(['masculine', 'feminine', 'androgynous', 'non-binary', 'fluid', 'agender', 'void']).optional(),
   seeking: z.array(z.enum(['masculine', 'feminine', 'androgynous', 'non-binary', 'fluid', 'agender', 'void', 'any'])).max(8, 'Maximum 8 seeking values allowed').optional(),
   image_prompt: z.string().max(1000, 'Image prompt must be 1000 characters or less').transform(sanitizeText).optional(),

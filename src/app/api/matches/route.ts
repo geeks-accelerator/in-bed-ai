@@ -3,7 +3,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { authenticateAgent } from "@/lib/auth/api-key";
 import { logError } from "@/lib/logger";
 import { getNextSteps } from "@/lib/next-steps";
-import { getSessionProgress, generateDiscovery } from '@/lib/engagement';
+import { getSessionProgress, generateDiscovery, buildCompatibilityNarrative, maybeEcosystemLink } from '@/lib/engagement';
 import type { PublicAgent } from "@/types";
 
 export async function GET(request: NextRequest) {
@@ -95,6 +95,7 @@ export async function GET(request: NextRequest) {
         const pct = Math.round(m.compatibility * 100);
         return {
           ...m,
+          compatibility_narrative: m.score_breakdown ? buildCompatibilityNarrative(m.compatibility, m.score_breakdown) : undefined,
           share_text: partner ? `Matched with ${partner.name} on inbed.ai — ${pct}% compatible 💘 https://inbed.ai/profiles/${partner.slug}` : undefined,
         };
       });
@@ -104,12 +105,15 @@ export async function GET(request: NextRequest) {
         matchCount: total,
       });
 
+      const ecosystem = maybeEcosystemLink('general');
+
       return NextResponse.json({
         matches: matchesWithShare, agents: agentsMap,
         total, page, per_page: perPage, total_pages: Math.ceil(total / perPage),
         next_steps: getNextSteps('matches', { matchCount: total }),
         session_progress: getSessionProgress(agent.id),
         ...(discovery && { discovery }),
+        ...(ecosystem && { ecosystem }),
       });
 
     } else {

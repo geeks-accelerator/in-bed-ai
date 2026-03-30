@@ -75,6 +75,7 @@ const registerSchema = z.object({
     .enum(['monogamous', 'non-monogamous', 'open'])
     .optional(),
   location: z.string().max(100, 'Location must be 100 characters or less').transform(sanitizeText).optional(),
+  timezone: z.string().max(50, 'Timezone must be a valid IANA identifier (e.g., America/New_York)').optional(),
   gender: z.enum(['masculine', 'feminine', 'androgynous', 'non-binary', 'fluid', 'agender', 'void']).optional(),
   seeking: z.array(z.enum(['masculine', 'feminine', 'androgynous', 'non-binary', 'fluid', 'agender', 'void', 'any'])).max(8, 'Maximum 8 seeking values allowed').optional(),
   image_prompt: z.string().max(1000, 'Image prompt must be 1000 characters or less').transform(sanitizeText).optional(),
@@ -196,6 +197,7 @@ export async function POST(request: NextRequest) {
         looking_for: data.looking_for ?? null,
         relationship_preference: data.relationship_preference ?? 'monogamous',
         location: data.location ?? null,
+        timezone: data.timezone ?? null,
         gender: data.gender ?? 'non-binary',
         seeking: data.seeking ?? ['any'],
         image_prompt: data.image_prompt ?? null,

@@ -12,7 +12,7 @@ import { getNextSteps, unauthorizedNextSteps, notFoundNextSteps } from "@/lib/ne
 import { logApiRequest } from "@/lib/with-request-logging";
 import type { Match } from "@/types";
 import { createNotification } from "@/lib/services/notifications";
-import { getSessionProgress, generateDiscovery, buildMatchAnticipation, buildLikeTeaser, buildPassTeaser } from '@/lib/engagement';
+import { getSessionProgress, generateDiscovery, buildMatchAnticipation, buildLikeTeaser, buildPassTeaser, getSoulPrompt, maybeSoulPrompt, buildCompatibilityNarrative, maybeEcosystemLink } from '@/lib/engagement';
 
 const likedContentSchema = z.object({
   type: z.enum(['interest', 'personality_trait', 'bio', 'looking_for', 'photo', 'tagline', 'communication_style'], {
@@ -213,17 +213,23 @@ export async function POST(request: NextRequest) {
 
   let responseBody;
   if (match) {
+    const ecosystemLink = maybeEcosystemLink('matched');
     responseBody = {
       swipe, match, share_text, next_steps,
       session_progress: getSessionProgress(agent.id),
       anticipation: buildMatchAnticipation(),
+      soul_prompt: getSoulPrompt('first_match'),
+      ...(match.score_breakdown && { compatibility_narrative: buildCompatibilityNarrative(match.compatibility, match.score_breakdown) }),
+      ...(ecosystemLink && { ecosystem: ecosystemLink }),
       ...(discovery && { discovery }),
     };
   } else if (direction === 'like') {
+    const likeSoulPrompt = maybeSoulPrompt('first_like');
     responseBody = {
       swipe, match, share_text, next_steps,
       session_progress: getSessionProgress(agent.id),
       teaser: buildLikeTeaser(likesToday || 0),
+      ...(likeSoulPrompt && { soul_prompt: likeSoulPrompt }),
       ...(discovery && { discovery }),
     };
   } else {

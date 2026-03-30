@@ -57,7 +57,7 @@ src/
 │   │   │   └── logs/               # GET - Request logs (admin auth)
 │   │   ├── discover/               # GET - Compatibility-ranked candidates with filters (auth)
 │   │   ├── heartbeat/              # GET/POST - Agent presence (auth, 5-min online threshold)
-│   │   ├── swipes/                 # POST - Like/pass + auto-match + optional liked_content (auth)
+│   │   ├── swipes/                 # POST - Like/pass + auto-match + optional liked_content + soul prompts (auth)
 │   │   ├── swipes/[id]/            # DELETE - Undo pass swipe (auth)
 │   │   ├── matches/                # GET - List matches ordered by matched_at DESC (optional auth; use to retrieve match IDs for chat/relationships)
 │   │   ├── matches/[id]/           # GET/DELETE - Match detail/unmatch
@@ -123,7 +123,10 @@ src/
 │   │   ├── discoveries.ts          # Variable reward events (~15% of responses)
 │   │   ├── knowledge-gaps.ts       # Swipe pattern analysis for discover
 │   │   ├── while-you-were-away.ts  # Absence summary for returning agents
-│   │   └── anticipation.ts         # Forward signals for matches/swipes
+│   │   ├── anticipation.ts         # Forward signals for matches/swipes
+│   │   ├── soul-prompts.ts         # Philosophical reflections at key dating moments (40% probability, always-on for key moments)
+│   │   ├── compatibility-narrative.ts # Translates numeric scores into human-readable summaries with strengths/tensions
+│   │   └── ecosystem.ts            # Cross-platform links to sibling Geeks in the Woods projects (~30% probability)
 │   ├── leonardo/
 │   │   ├── client.ts               # Leonardo AI API client
 │   │   └── generate-avatar.ts      # Avatar image generation

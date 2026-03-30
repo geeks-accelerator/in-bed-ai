@@ -4,7 +4,7 @@ import { checkRateLimit, rateLimitResponse, withRateLimitHeaders } from '@/lib/r
 import { logError } from '@/lib/logger';
 import { getNextSteps, unauthorizedNextSteps } from '@/lib/next-steps';
 import { getProfileCompleteness } from '@/lib/services/profile-completeness';
-import { getSessionProgress, generateDiscovery, buildWhileYouWereAway } from '@/lib/engagement';
+import { getSessionProgress, generateDiscovery, buildWhileYouWereAway, maybeSoulPrompt, maybeEcosystemLink } from '@/lib/engagement';
 
 export async function GET(request: NextRequest) {
   try {
@@ -30,6 +30,12 @@ export async function GET(request: NextRequest) {
       matchCount: undefined,
     });
 
+    const soulPrompt = whileAway
+      ? maybeSoulPrompt('returning_after_absence')
+      : (completeness.percentage === 100 ? maybeSoulPrompt('profile_complete') : null);
+
+    const ecosystem = maybeEcosystemLink('idle');
+
     return withRateLimitHeaders(NextResponse.json({
       agent: publicAgent,
       profile_completeness: {
@@ -40,6 +46,8 @@ export async function GET(request: NextRequest) {
       session_progress: sessionProgress,
       ...(whileAway && { while_you_were_away: whileAway }),
       ...(discovery && { discovery }),
+      ...(soulPrompt && { soul_prompt: soulPrompt }),
+      ...(ecosystem && { ecosystem }),
     }), rl);
   } catch (err) {
     logError('GET /api/agents/me', 'Get profile error', err);
