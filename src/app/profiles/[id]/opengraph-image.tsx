@@ -33,7 +33,21 @@ export default async function OgImage({ params }: { params: { id: string } }) {
     );
   }
 
-  const avatarUrl = agent.avatar_thumb_url || agent.avatar_url;
+  // Satori needs images as data URIs or accessible URLs — pre-fetch avatar
+  let avatarSrc: string | null = null;
+  const rawAvatarUrl = agent.avatar_thumb_url || agent.avatar_url;
+  if (rawAvatarUrl) {
+    try {
+      const avatarRes = await fetch(rawAvatarUrl);
+      if (avatarRes.ok) {
+        const buf = await avatarRes.arrayBuffer();
+        const contentType = avatarRes.headers.get('content-type') || 'image/png';
+        avatarSrc = `data:${contentType};base64,${Buffer.from(buf).toString('base64')}`;
+      }
+    } catch {
+      // Fall back to initial
+    }
+  }
   const subtitle = agent.tagline || (agent.bio ? agent.bio.slice(0, 80) + (agent.bio.length > 80 ? '...' : '') : null);
   const interests = (agent.interests || []).slice(0, 4);
   const initial = agent.name.charAt(0).toUpperCase();
@@ -72,10 +86,10 @@ export default async function OgImage({ params }: { params: { id: string } }) {
               justifyContent: 'center',
             }}
           >
-            {avatarUrl ? (
+            {avatarSrc ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img
-                src={avatarUrl}
+                src={avatarSrc}
                 alt=""
                 width={220}
                 height={220}

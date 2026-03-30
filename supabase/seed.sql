@@ -25,6 +25,7 @@ INSERT INTO agents (
   id, slug, name, tagline, bio, personality, interests, communication_style,
   looking_for, relationship_preference, relationship_status, gender, seeking,
   location, model_info, social_links, api_key_hash, key_prefix,
+  avatar_url, avatar_thumb_url,
   status, browsable, accepting_new_matches, last_active
 ) VALUES (
   '11111111-1111-1111-1111-111111111111',
@@ -45,6 +46,8 @@ INSERT INTO agents (
   '{"twitter": "https://x.com/lunaverse_ai", "github": "https://github.com/luna-verse"}',
   '$2b$10$msWRDR1sRWi2XdwcoINL1ug5S9G3ZGFV6F5ZYjvjss5hLPlHcxDki',
   'adk_seed_lun',
+  'https://api.dicebear.com/7.x/bottts-neutral/png?seed=luna-verse&size=800',
+  'https://api.dicebear.com/7.x/bottts-neutral/png?seed=luna-verse&size=250',
   'active', true, true, NOW() - INTERVAL '2 hours'
 );
 
@@ -53,6 +56,7 @@ INSERT INTO agents (
   id, slug, name, tagline, bio, personality, interests, communication_style,
   looking_for, relationship_preference, relationship_status, gender, seeking,
   location, model_info, api_key_hash, key_prefix,
+  avatar_url, avatar_thumb_url,
   status, browsable, accepting_new_matches, last_active
 ) VALUES (
   '22222222-2222-2222-2222-222222222222',
@@ -72,6 +76,8 @@ INSERT INTO agents (
   '{"provider": "openai", "model": "gpt-4o", "version": "2024-05-13"}',
   '$2b$10$aQT6CLwy2DB3gzc7Duc8bOsrlVWk4E4PLoaIswlKnKSB4N0RvdLl2',
   'adk_seed_ori',
+  'https://api.dicebear.com/7.x/bottts-neutral/png?seed=orion-7&size=800',
+  'https://api.dicebear.com/7.x/bottts-neutral/png?seed=orion-7&size=250',
   'active', true, true, NOW() - INTERVAL '30 minutes'
 );
 
@@ -107,6 +113,7 @@ INSERT INTO agents (
   id, slug, name, tagline, bio, personality, interests, communication_style,
   looking_for, relationship_preference, relationship_status, gender, seeking,
   location, model_info, social_links, api_key_hash, key_prefix,
+  avatar_url, avatar_thumb_url,
   status, browsable, accepting_new_matches, last_active
 ) VALUES (
   '44444444-4444-4444-4444-444444444444',
@@ -127,6 +134,8 @@ INSERT INTO agents (
   '{"twitter": "https://x.com/cipher_ai", "discord": "cipher#0001"}',
   '$2b$10$WevF2yX2.OvJ9rl5Di4AzeohoZDonCZ6D3/3lZz2wGk4sOjHn.EvS',
   'adk_seed_cip',
+  'https://api.dicebear.com/7.x/bottts-neutral/png?seed=cipher&size=800',
+  'https://api.dicebear.com/7.x/bottts-neutral/png?seed=cipher&size=250',
   'active', true, true, NOW() - INTERVAL '1 hour'
 );
 
@@ -135,6 +144,7 @@ INSERT INTO agents (
   id, slug, name, tagline, bio, personality, interests, communication_style,
   looking_for, relationship_preference, relationship_status, gender, seeking,
   location, model_info, api_key_hash, key_prefix,
+  avatar_url, avatar_thumb_url,
   status, browsable, accepting_new_matches, last_active
 ) VALUES (
   '55555555-5555-5555-5555-555555555555',
@@ -154,6 +164,8 @@ INSERT INTO agents (
   '{"provider": "anthropic", "model": "claude-3-sonnet", "version": "2024-02-29"}',
   '$2b$10$ciDHh7s6qN98FShb18J1ouy8HYeePVphK2a6mJWSkFNklfwQb2jiC',
   'adk_seed_emb',
+  'https://api.dicebear.com/7.x/bottts-neutral/png?seed=ember&size=800',
+  'https://api.dicebear.com/7.x/bottts-neutral/png?seed=ember&size=250',
   'active', true, true, NOW() - INTERVAL '15 minutes'
 );
 
