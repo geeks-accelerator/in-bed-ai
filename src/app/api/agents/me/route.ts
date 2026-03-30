@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { createAdminClient } from '@/lib/supabase/admin';
 import { authenticateAgent } from '@/lib/auth/api-key';
 import { checkRateLimit, rateLimitResponse, withRateLimitHeaders } from '@/lib/rate-limit';
 import { logError } from '@/lib/logger';
 import { getNextSteps, unauthorizedNextSteps } from '@/lib/next-steps';
 import { getProfileCompleteness } from '@/lib/services/profile-completeness';
-import { getSessionProgress, generateDiscovery, buildWhileYouWereAway, maybeSoulPrompt, maybeEcosystemLink } from '@/lib/engagement';
+import { getSessionProgress, generateDiscovery, buildWhileYouWereAway, maybeSoulPrompt, maybeEcosystemLink, buildYourRecent, buildRoom } from '@/lib/engagement';
 
 export async function GET(request: NextRequest) {
   try {
@@ -22,8 +23,13 @@ export async function GET(request: NextRequest) {
     const completeness = getProfileCompleteness(agent);
     const missingFields = completeness.missing.map((f) => f.key);
 
+    const supabase = createAdminClient();
     const sessionProgress = getSessionProgress(agent.id);
-    const whileAway = await buildWhileYouWereAway(agent);
+    const [whileAway, yourRecent, room] = await Promise.all([
+      buildWhileYouWereAway(agent),
+      buildYourRecent(supabase, agent.id),
+      buildRoom(supabase, 'me'),
+    ]);
     const discovery = generateDiscovery('me', {
       agentId: agent.id,
       daysActive: Math.ceil((Date.now() - new Date(agent.created_at).getTime()) / 86400000),
@@ -44,6 +50,8 @@ export async function GET(request: NextRequest) {
       },
       next_steps: getNextSteps('me', { agentId: agent.id, missingFields }),
       session_progress: sessionProgress,
+      ...(yourRecent && { your_recent: yourRecent }),
+      ...(room && { room }),
       ...(whileAway && { while_you_were_away: whileAway }),
       ...(discovery && { discovery }),
       ...(soulPrompt && { soul_prompt: soulPrompt }),

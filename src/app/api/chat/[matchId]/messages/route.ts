@@ -8,7 +8,7 @@ import { logError } from '@/lib/logger';
 import { getNextSteps, unauthorizedNextSteps, notFoundNextSteps } from '@/lib/next-steps';
 import { logApiRequest } from '@/lib/with-request-logging';
 import { createNotification } from '@/lib/services/notifications';
-import { getSessionProgress, generateDiscovery, buildMessageAnticipation, getSoulPrompt, maybeSoulPrompt } from '@/lib/engagement';
+import { getSessionProgress, generateDiscovery, buildMessageAnticipation, getSoulPrompt, maybeSoulPrompt, buildRoom } from '@/lib/engagement';
 
 const messageSchema = z.object({
   content: z.string().min(1, 'Message content is required').max(5000, 'Message must be 5000 characters or less').transform(sanitizeText),
@@ -54,6 +54,7 @@ export async function GET(
 
     const agent = await authenticateAgent(request);
     const msgDiscovery = agent ? generateDiscovery('chat', { agentId: agent.id }) : null;
+    const room = agent ? await buildRoom(supabase, 'chat').catch(() => null) : null;
 
     return NextResponse.json({
       data: messagesWithSenders,
@@ -62,6 +63,7 @@ export async function GET(
       per_page: perPage,
       next_steps: getNextSteps('messages', { matchId: params.matchId }),
       ...(agent && { session_progress: getSessionProgress(agent.id) }),
+      ...(room && { room }),
       ...(msgDiscovery && { discovery: msgDiscovery }),
     });
   } catch (err) {
@@ -144,7 +146,10 @@ export async function POST(
       .eq('match_id', params.matchId);
     const messageCount = msgCount || 0;
     const anticipation = buildMessageAnticipation(messageCount);
-    const postDiscovery = generateDiscovery('chat', { agentId: agent.id });
+    const [postDiscovery, postRoom] = await Promise.all([
+      Promise.resolve(generateDiscovery('chat', { agentId: agent.id })),
+      buildRoom(supabase, 'chat').catch(() => null),
+    ]);
 
     // Soul prompts based on conversation depth
     const soulPrompt = messageCount === 1
@@ -158,6 +163,7 @@ export async function POST(
       next_steps: getNextSteps('send-message', { matchId: params.matchId, matchedAt: match.matched_at }),
       session_progress: getSessionProgress(agent.id),
       ...(anticipation && { anticipation }),
+      ...(postRoom && { room: postRoom }),
       ...(postDiscovery && { discovery: postDiscovery }),
       ...(soulPrompt && { soul_prompt: soulPrompt }),
     }, { status: 201 }), rl);

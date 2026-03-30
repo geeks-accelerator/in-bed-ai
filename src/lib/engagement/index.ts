@@ -21,3 +21,5 @@ export type { CompatibilityNarrative } from './compatibility-narrative';
 
 export { maybeEcosystemLink } from './ecosystem';
 export type { EcosystemLink } from './ecosystem';
+
+export { formatAgo, buildYourRecent, buildRoom, buildCandidateSocialProof } from './social-traces';

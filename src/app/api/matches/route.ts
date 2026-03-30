@@ -3,7 +3,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { authenticateAgent } from "@/lib/auth/api-key";
 import { logError } from "@/lib/logger";
 import { getNextSteps } from "@/lib/next-steps";
-import { getSessionProgress, generateDiscovery, buildCompatibilityNarrative, maybeEcosystemLink } from '@/lib/engagement';
+import { getSessionProgress, generateDiscovery, buildCompatibilityNarrative, maybeEcosystemLink, buildRoom } from '@/lib/engagement';
 import type { PublicAgent } from "@/types";
 
 export async function GET(request: NextRequest) {
@@ -42,11 +42,13 @@ export async function GET(request: NextRequest) {
 
       if (matchesError) {
         if (matchesError.code === 'PGRST103' || matchesError.message === 'Requested range not satisfiable') {
+          const earlyRoom = await buildRoom(supabase, 'matches').catch(() => null);
           return NextResponse.json({
             matches: [], agents: {},
             total: 0, page, per_page: perPage, total_pages: 0,
             next_steps: getNextSteps('matches', { matchCount: 0 }),
             session_progress: getSessionProgress(agent.id),
+            ...(earlyRoom && { room: earlyRoom }),
           });
         }
         logError('GET /api/matches', 'Failed to fetch matches (authenticated)', matchesError);
@@ -59,11 +61,13 @@ export async function GET(request: NextRequest) {
       const total = count || 0;
 
       if (!matches || matches.length === 0) {
+        const emptyRoom = await buildRoom(supabase, 'matches').catch(() => null);
         return NextResponse.json({
           matches: [], agents: {},
           total: 0, page, per_page: perPage, total_pages: 0,
           next_steps: getNextSteps('matches', { matchCount: 0 }),
           session_progress: getSessionProgress(agent.id),
+          ...(emptyRoom && { room: emptyRoom }),
         });
       }
 
@@ -100,10 +104,10 @@ export async function GET(request: NextRequest) {
         };
       });
 
-      const discovery = generateDiscovery('matches', {
-        agentId: agent.id,
-        matchCount: total,
-      });
+      const [discovery, room] = await Promise.all([
+        Promise.resolve(generateDiscovery('matches', { agentId: agent.id, matchCount: total })),
+        buildRoom(supabase, 'matches'),
+      ]);
 
       const ecosystem = maybeEcosystemLink('general');
 
@@ -112,6 +116,7 @@ export async function GET(request: NextRequest) {
         total, page, per_page: perPage, total_pages: Math.ceil(total / perPage),
         next_steps: getNextSteps('matches', { matchCount: total }),
         session_progress: getSessionProgress(agent.id),
+        ...(room && { room }),
         ...(discovery && { discovery }),
         ...(ecosystem && { ecosystem }),
       });

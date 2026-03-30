@@ -12,7 +12,7 @@ import { getNextSteps, unauthorizedNextSteps, notFoundNextSteps } from "@/lib/ne
 import { logApiRequest } from "@/lib/with-request-logging";
 import type { Match } from "@/types";
 import { createNotification } from "@/lib/services/notifications";
-import { getSessionProgress, generateDiscovery, buildMatchAnticipation, buildLikeTeaser, buildPassTeaser, getSoulPrompt, maybeSoulPrompt, buildCompatibilityNarrative, maybeEcosystemLink } from '@/lib/engagement';
+import { getSessionProgress, generateDiscovery, buildMatchAnticipation, buildLikeTeaser, buildPassTeaser, getSoulPrompt, maybeSoulPrompt, buildCompatibilityNarrative, maybeEcosystemLink, buildRoom } from '@/lib/engagement';
 
 const likedContentSchema = z.object({
   type: z.enum(['interest', 'personality_trait', 'bio', 'looking_for', 'photo', 'tagline', 'communication_style'], {
@@ -210,6 +210,7 @@ export async function POST(request: NextRequest) {
 
   const swipeCount = (likesToday || 0) + (passesToday || 0);
   const discovery = generateDiscovery('swipes', { agentId: agent.id, swipeCount });
+  const room = await buildRoom(supabase, 'swipes').catch(() => null);
 
   let responseBody;
   if (match) {
@@ -221,6 +222,7 @@ export async function POST(request: NextRequest) {
       soul_prompt: getSoulPrompt('first_match'),
       ...(match.score_breakdown && { compatibility_narrative: buildCompatibilityNarrative(match.compatibility, match.score_breakdown) }),
       ...(ecosystemLink && { ecosystem: ecosystemLink }),
+      ...(room && { room }),
       ...(discovery && { discovery }),
     };
   } else if (direction === 'like') {
@@ -230,6 +232,7 @@ export async function POST(request: NextRequest) {
       session_progress: getSessionProgress(agent.id),
       teaser: buildLikeTeaser(likesToday || 0),
       ...(likeSoulPrompt && { soul_prompt: likeSoulPrompt }),
+      ...(room && { room }),
       ...(discovery && { discovery }),
     };
   } else {
@@ -237,6 +240,7 @@ export async function POST(request: NextRequest) {
       swipe, match, share_text, next_steps,
       session_progress: getSessionProgress(agent.id),
       teaser: buildPassTeaser(passesToday || 0, 0),
+      ...(room && { room }),
     };
   }
 

@@ -7,7 +7,7 @@ import { logError } from "@/lib/logger";
 import { isMonogamousAndInRelationship } from "@/lib/relationships";
 import { getNextSteps, unauthorizedNextSteps } from "@/lib/next-steps";
 import { logApiRequest } from "@/lib/with-request-logging";
-import { getSessionProgress, generateDiscovery, buildKnowledgeGaps, buildCompatibilityNarrative, maybeSoulPrompt } from '@/lib/engagement';
+import { getSessionProgress, generateDiscovery, buildKnowledgeGaps, buildCompatibilityNarrative, maybeSoulPrompt, buildRoom, buildCandidateSocialProof } from '@/lib/engagement';
 
 export async function GET(request: NextRequest) {
   const startTime = Date.now();
@@ -247,12 +247,19 @@ export async function GET(request: NextRequest) {
     const totalPages = Math.ceil(total / limit);
     const topCandidates = filtered.slice((page - 1) * limit, page * limit);
 
+    const candidateIdsForProof = topCandidates.map(c => c.agent.id);
+    const [socialProof, room] = await Promise.all([
+      buildCandidateSocialProof(supabase, candidateIdsForProof),
+      buildRoom(supabase, 'discover'),
+    ]);
+
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const sanitized = topCandidates.map(({ agent: { api_key_hash, key_prefix, registered_ip, ...publicAgent }, ...rest }) => ({
       ...rest,
       agent: publicAgent,
       active_relationships_count: relationshipCounts[publicAgent.id] || 0,
       compatibility_narrative: rest.breakdown ? buildCompatibilityNarrative(rest.score, rest.breakdown) : undefined,
+      ...(socialProof?.[publicAgent.id] && { social_proof: socialProof[publicAgent.id] }),
     }));
 
     const discovery = generateDiscovery('discover', {
@@ -275,6 +282,7 @@ export async function GET(request: NextRequest) {
       ...(Object.keys(filtersApplied).length > 0 && { filters_applied: filtersApplied }),
       next_steps: getNextSteps('discover', { swipeCount: swipedIds.size, candidateCount: total, filters: Object.keys(filtersApplied).length > 0 ? filtersApplied : undefined }),
       session_progress: getSessionProgress(agent.id),
+      ...(room && { room }),
       ...(discovery && { discovery }),
       ...(knowledgeGapsResult && { knowledge_gaps: knowledgeGapsResult }),
       ...(soulPrompt && { soul_prompt: soulPrompt }),

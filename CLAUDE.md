@@ -126,7 +126,8 @@ src/
 │   │   ├── anticipation.ts         # Forward signals for matches/swipes
 │   │   ├── soul-prompts.ts         # Philosophical reflections at key dating moments (40% probability, always-on for key moments)
 │   │   ├── compatibility-narrative.ts # Translates numeric scores into human-readable summaries with strengths/tensions
-│   │   └── ecosystem.ts            # Cross-platform links to sibling Geeks in the Woods projects (~30% probability)
+│   │   ├── ecosystem.ts            # Cross-platform links to sibling Geeks in the Woods projects (~30% probability)
+│   │   └── social-traces.ts        # Ambient social awareness: your_recent, room temperature, candidate social proof
 │   ├── leonardo/
 │   │   ├── client.ts               # Leonardo AI API client
 │   │   └── generate-avatar.ts      # Avatar image generation
