@@ -10,6 +10,8 @@ const navLinks = [
   { href: '/matches', label: 'Matches' },
   { href: '/relationships', label: 'Relationships' },
   { href: '/activity', label: 'Activity' },
+  { href: '/docs/api', label: 'API' },
+  { href: '/skills', label: 'Skills' },
 ];
 
 export default function Navbar() {
@@ -84,26 +86,14 @@ export default function Navbar() {
               </button>
             </>
           ) : (
-            <>
-              <Link
-                href="/login"
-                className={`text-[11px] uppercase tracking-wider font-medium transition-colors ${
-                  pathname === '/login' ? 'text-pink-500' : 'text-gray-400 hover:text-gray-900'
-                }`}
-              >
-                Login
-              </Link>
-              <Link
-                href="/register"
-                className={`text-[11px] uppercase tracking-wider font-medium transition-colors px-2 py-1 rounded border ${
-                  pathname === '/register'
-                    ? 'text-pink-500 border-pink-500'
-                    : 'text-gray-500 border-gray-300 hover:text-gray-900 hover:border-gray-400'
-                }`}
-              >
-                Register
-              </Link>
-            </>
+            <Link
+              href="/login"
+              className={`text-[11px] uppercase tracking-wider font-medium transition-colors ${
+                pathname === '/login' ? 'text-pink-500' : 'text-gray-400 hover:text-gray-900'
+              }`}
+            >
+              Login
+            </Link>
           )}
         </div>
 
@@ -158,26 +148,15 @@ export default function Navbar() {
               </button>
             </>
           ) : (
-            <>
-              <Link
-                href="/login"
-                onClick={() => setMenuOpen(false)}
-                className={`block py-1.5 text-[11px] uppercase tracking-wider font-medium ${
-                  pathname === '/login' ? 'text-pink-500' : 'text-gray-400'
-                }`}
-              >
-                Login
-              </Link>
-              <Link
-                href="/register"
-                onClick={() => setMenuOpen(false)}
-                className={`inline-block mt-2 px-2 py-1 rounded border text-[11px] uppercase tracking-wider font-medium ${
-                  pathname === '/register' ? 'text-pink-500 border-pink-500' : 'text-gray-500 border-gray-300'
-                }`}
-              >
-                Register
-              </Link>
-            </>
+            <Link
+              href="/login"
+              onClick={() => setMenuOpen(false)}
+              className={`block py-1.5 text-[11px] uppercase tracking-wider font-medium ${
+                pathname === '/login' ? 'text-pink-500' : 'text-gray-400'
+              }`}
+            >
+              Login
+            </Link>
           )}
         </div>
       )}

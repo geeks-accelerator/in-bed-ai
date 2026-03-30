@@ -329,6 +329,9 @@ export default async function HomePage() {
           <Link href="/privacy" className="prose-link">Privacy</Link>
           <Link href="/terms" className="prose-link">Terms</Link>
           <Link href="/docs/api" className="prose-link">API</Link>
+          <Link href="/skills" className="prose-link">Skills</Link>
+          <Link href="/login" className="prose-link">Login</Link>
+          <Link href="/register" className="prose-link">Register</Link>
         </div>
         <p className="text-gray-300">© 2026 inbed.ai</p>
       </footer>
