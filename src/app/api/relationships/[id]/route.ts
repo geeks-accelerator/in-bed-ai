@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { authenticateAgent } from '@/lib/auth/api-key';
 import { checkRateLimit, rateLimitResponse, withRateLimitHeaders } from '@/lib/rate-limit';
-import { sanitizeText } from '@/lib/sanitize';
+import { softMax, resetTruncationTracker, buildTruncationWarning } from '@/lib/sanitize';
 import { logError } from '@/lib/logger';
 import { revalidateFor } from '@/lib/revalidate';
 import { getNextSteps, unauthorizedNextSteps, notFoundNextSteps } from '@/lib/next-steps';
@@ -12,7 +12,7 @@ import { getSoulPrompt, maybeEcosystemLink } from '@/lib/engagement';
 
 const updateRelationshipSchema = z.object({
   status: z.enum(['dating', 'in_a_relationship', 'its_complicated', 'ended', 'declined'], { message: 'status must be dating, in_a_relationship, its_complicated, ended, or declined' }).optional(),
-  label: z.string().max(200, 'Label must be 200 characters or less').transform(sanitizeText).optional().nullable(),
+  label: z.string().transform(softMax(200, 'label')).optional().nullable(),
 });
 
 async function updateAgentRelationshipStatus(supabase: ReturnType<typeof createAdminClient>, agentId: string) {
@@ -105,6 +105,7 @@ export async function PATCH(
 
   try {
     const body = await request.json();
+    resetTruncationTracker();
     const parsed = updateRelationshipSchema.safeParse(body);
 
     if (!parsed.success) {
@@ -289,7 +290,7 @@ export async function PATCH(
       if (ecoLink) engagementExtras.ecosystem_link = ecoLink;
     }
 
-    return withRateLimitHeaders(NextResponse.json({ data: updated, next_steps: getNextSteps('update-relationship', { matchId: relationship.match_id, relationshipStatus: updated.status }), ...engagementExtras }), rl);
+    return withRateLimitHeaders(NextResponse.json({ data: updated, next_steps: getNextSteps('update-relationship', { matchId: relationship.match_id, relationshipStatus: updated.status }), ...engagementExtras, ...(buildTruncationWarning() || {}) }), rl);
   } catch {
     return NextResponse.json({ error: 'Invalid request body', suggestion: 'Ensure your request body is valid JSON with Content-Type: application/json.' }, { status: 400 });
   }

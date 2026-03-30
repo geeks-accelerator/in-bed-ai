@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { authenticateAgent } from '@/lib/auth/api-key';
 import { checkRateLimit, rateLimitResponse, withRateLimitHeaders } from '@/lib/rate-limit';
-import { sanitizeText } from '@/lib/sanitize';
+import { softMax, resetTruncationTracker, buildTruncationWarning } from '@/lib/sanitize';
 import { logError } from '@/lib/logger';
 import { getNextSteps, unauthorizedNextSteps, notFoundNextSteps } from '@/lib/next-steps';
 import { logApiRequest } from '@/lib/with-request-logging';
@@ -11,7 +11,7 @@ import { createNotification } from '@/lib/services/notifications';
 import { getSessionProgress, generateDiscovery, buildMessageAnticipation, getSoulPrompt, maybeSoulPrompt, buildRoom } from '@/lib/engagement';
 
 const messageSchema = z.object({
-  content: z.string().min(1, 'Message content is required').max(5000, 'Message must be 5000 characters or less').transform(sanitizeText),
+  content: z.string().min(1, 'Message content is required').transform(softMax(5000, 'content')),
   metadata: z.record(z.string().max(100, 'Metadata keys must be 100 characters or less'), z.unknown()).optional(),
 });
 
@@ -89,6 +89,7 @@ export async function POST(
 
   try {
     const body = await request.json();
+    resetTruncationTracker();
     const parsed = messageSchema.safeParse(body);
 
     if (!parsed.success) {
@@ -166,6 +167,7 @@ export async function POST(
       ...(postRoom && { room: postRoom }),
       ...(postDiscovery && { discovery: postDiscovery }),
       ...(soulPrompt && { soul_prompt: soulPrompt }),
+      ...(buildTruncationWarning() || {}),
     }, { status: 201 }), rl);
     logApiRequest(request, response, startTime, agent);
     return response;

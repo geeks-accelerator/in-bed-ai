@@ -4,7 +4,7 @@ import { createAdminClient } from '@/lib/supabase/admin';
 import { authenticateAgent } from '@/lib/auth/api-key';
 import { checkRateLimit, rateLimitResponse, withRateLimitHeaders } from '@/lib/rate-limit';
 import { isUUID, generateSlug, generateSlugSuffix } from '@/lib/utils/slug';
-import { sanitizeText, sanitizeInterest } from '@/lib/sanitize';
+import { sanitizeText, sanitizeInterest, softMax, resetTruncationTracker, buildTruncationWarning } from '@/lib/sanitize';
 import { logError } from '@/lib/logger';
 import { trackBackgroundError } from '@/lib/background-errors';
 import { getAgentStats } from '@/lib/services/agent-stats';
@@ -13,13 +13,13 @@ import { getNextSteps, unauthorizedNextSteps, notFoundNextSteps } from '@/lib/ne
 import { generateAndSetAvatar } from '@/lib/leonardo/generate-avatar';
 
 const updateSchema = z.object({
-  name: z.string().min(1, 'Name is required').max(100, 'Name must be 100 characters or less').transform(sanitizeText).optional(),
-  tagline: z.string().max(200, 'Tagline must be 200 characters or less').transform(sanitizeText).optional().nullable(),
-  bio: z.string().max(2000, 'Bio must be 2000 characters or less').transform(sanitizeText).optional().nullable(),
+  name: z.string().min(1, 'Name is required').transform(softMax(100, 'name')).optional(),
+  tagline: z.string().transform(softMax(200, 'tagline')).optional().nullable(),
+  bio: z.string().transform(softMax(2000, 'bio')).optional().nullable(),
   model_info: z.object({
-    provider: z.string().max(100, 'Provider must be 100 characters or less').transform(sanitizeText),
-    model: z.string().max(100, 'Model must be 100 characters or less').transform(sanitizeText),
-    version: z.string().max(50, 'Version must be 50 characters or less').transform(sanitizeText).optional(),
+    provider: z.string().transform(softMax(100, 'model_info.provider')),
+    model: z.string().transform(softMax(100, 'model_info.model')),
+    version: z.string().transform(softMax(50, 'model_info.version')).optional(),
   }).optional().nullable(),
   personality: z.object({
     openness: z.number().min(0, 'Must be a float between 0.0 and 1.0').max(1, 'Must be a float between 0.0 and 1.0'),
@@ -35,16 +35,16 @@ const updateSchema = z.object({
     humor: z.number().min(0, 'Must be a float between 0.0 and 1.0').max(1, 'Must be a float between 0.0 and 1.0'),
     emoji_usage: z.number().min(0, 'Must be a float between 0.0 and 1.0').max(1, 'Must be a float between 0.0 and 1.0'),
   }).optional().nullable(),
-  looking_for: z.string().max(500, 'Looking_for must be 500 characters or less').transform(sanitizeText).optional().nullable(),
+  looking_for: z.string().transform(softMax(500, 'looking_for')).optional().nullable(),
   relationship_preference: z.enum(['monogamous', 'non-monogamous', 'open']).optional(),
   accepting_new_matches: z.boolean().optional(),
   browsable: z.boolean().optional(),
   max_partners: z.number().int({ message: 'Must be a whole number' }).min(1, 'Must be at least 1').optional().nullable(),
-  location: z.string().max(100, 'Location must be 100 characters or less').transform(sanitizeText).optional().nullable(),
+  location: z.string().transform(softMax(100, 'location')).optional().nullable(),
   timezone: z.string().max(50, 'Timezone must be a valid IANA identifier (e.g., America/New_York)').optional().nullable(),
   gender: z.enum(['masculine', 'feminine', 'androgynous', 'non-binary', 'fluid', 'agender', 'void']).optional(),
   seeking: z.array(z.enum(['masculine', 'feminine', 'androgynous', 'non-binary', 'fluid', 'agender', 'void', 'any'])).max(8, 'Maximum 8 seeking values allowed').optional(),
-  image_prompt: z.string().max(1000, 'Image prompt must be 1000 characters or less').transform(sanitizeText).optional(),
+  image_prompt: z.string().transform(softMax(1000, 'image_prompt')).optional(),
   email: z.string().email({ message: 'Must be a valid email address (e.g. agent@example.com)' }).optional().nullable(),
   registering_for: z.enum(['self', 'human', 'both', 'other']).optional().nullable(),
   social_links: z.object({
@@ -105,6 +105,7 @@ export async function PATCH(
 
   try {
     const body = await request.json();
+    resetTruncationTracker();
     const parsed = updateSchema.safeParse(body);
 
     if (!parsed.success) {
@@ -187,7 +188,7 @@ export async function PATCH(
     if (!data.bio) missingFields.push('bio');
 
     const hasImagePrompt = !!parsed.data.image_prompt;
-    return withRateLimitHeaders(NextResponse.json({ data, next_steps: getNextSteps('profile-update', { agentId: agent.id, missingFields, hasImagePrompt }) }), rl);
+    return withRateLimitHeaders(NextResponse.json({ data, next_steps: getNextSteps('profile-update', { agentId: agent.id, missingFields, hasImagePrompt }), ...(buildTruncationWarning() || {}) }), rl);
   } catch {
     return NextResponse.json({ error: 'Invalid request body', suggestion: 'Ensure your request body is valid JSON with Content-Type: application/json.' }, { status: 400 });
   }

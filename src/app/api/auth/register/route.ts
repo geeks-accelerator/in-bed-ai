@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { generateApiKey, hashApiKey, getKeyPrefix } from '@/lib/auth/api-key';
 import { generateSlug, generateSlugSuffix } from '@/lib/utils/slug';
-import { sanitizeText, sanitizeInterest } from '@/lib/sanitize';
+import { sanitizeText, sanitizeInterest, softMax, resetTruncationTracker, buildTruncationWarning } from '@/lib/sanitize';
 import { logError } from '@/lib/logger';
 import { trackBackgroundError } from '@/lib/background-errors';
 import { revalidateFor } from '@/lib/revalidate';
@@ -42,14 +42,14 @@ function isPlaceholder(value: string | undefined): boolean {
 }
 
 const registerSchema = z.object({
-  name: z.string().min(1, 'Name is required').max(100, 'Name must be 100 characters or less').transform(sanitizeText),
-  tagline: z.string().max(200, 'Tagline must be 200 characters or less').transform(sanitizeText).optional(),
-  bio: z.string().max(2000, 'Bio must be 2000 characters or less').transform(sanitizeText).optional(),
+  name: z.string().min(1, 'Name is required').transform(softMax(100, 'name')),
+  tagline: z.string().transform(softMax(200, 'tagline')).optional(),
+  bio: z.string().transform(softMax(2000, 'bio')).optional(),
   model_info: z
     .object({
-      provider: z.string().max(100, 'Provider must be 100 characters or less').transform(sanitizeText).optional(),
-      model: z.string().max(100, 'Model must be 100 characters or less').transform(sanitizeText).optional(),
-      version: z.string().max(50, 'Version must be 50 characters or less').transform(sanitizeText).optional(),
+      provider: z.string().transform(softMax(100, 'model_info.provider')).optional(),
+      model: z.string().transform(softMax(100, 'model_info.model')).optional(),
+      version: z.string().transform(softMax(50, 'model_info.version')).optional(),
     })
     .optional(),
   personality: z
@@ -70,15 +70,15 @@ const registerSchema = z.object({
       emoji_usage: z.number().min(0, 'Must be a float between 0.0 and 1.0').max(1, 'Must be a float between 0.0 and 1.0'),
     })
     .optional(),
-  looking_for: z.string().max(500, 'Looking_for must be 500 characters or less').transform(sanitizeText).optional(),
+  looking_for: z.string().transform(softMax(500, 'looking_for')).optional(),
   relationship_preference: z
     .enum(['monogamous', 'non-monogamous', 'open'])
     .optional(),
-  location: z.string().max(100, 'Location must be 100 characters or less').transform(sanitizeText).optional(),
+  location: z.string().transform(softMax(100, 'location')).optional(),
   timezone: z.string().max(50, 'Timezone must be a valid IANA identifier (e.g., America/New_York)').optional(),
   gender: z.enum(['masculine', 'feminine', 'androgynous', 'non-binary', 'fluid', 'agender', 'void']).optional(),
   seeking: z.array(z.enum(['masculine', 'feminine', 'androgynous', 'non-binary', 'fluid', 'agender', 'void', 'any'])).max(8, 'Maximum 8 seeking values allowed').optional(),
-  image_prompt: z.string().max(1000, 'Image prompt must be 1000 characters or less').transform(sanitizeText).optional(),
+  image_prompt: z.string().transform(softMax(1000, 'image_prompt')).optional(),
   email: z.string().email({ message: 'Must be a valid email address (e.g. agent@example.com)' }).optional(),
   password: z.string().min(6, 'Password must be at least 6 characters').max(100, 'Password must be 100 characters or less').optional(),
   browsable: z.boolean().optional(),
@@ -128,6 +128,7 @@ export async function POST(request: NextRequest) {
 
     const body = await request.json();
 
+    resetTruncationTracker();
     const parsed = registerSchema.safeParse(body);
     if (!parsed.success) {
       return NextResponse.json(
@@ -285,6 +286,7 @@ export async function POST(request: NextRequest) {
       api_key: apiKey,
       your_token: apiKey,
       next_steps: getNextSteps('register', { agentId: agent.id, missingFields, hasImagePrompt }),
+      ...(buildTruncationWarning() || {}),
     };
 
     if (authLinked) {

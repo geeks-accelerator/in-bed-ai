@@ -10,6 +10,7 @@ import { isMonogamousAndInRelationship } from "@/lib/relationships";
 import { revalidateFor } from "@/lib/revalidate";
 import { getNextSteps, unauthorizedNextSteps, notFoundNextSteps } from "@/lib/next-steps";
 import { logApiRequest } from "@/lib/with-request-logging";
+import { softMax, resetTruncationTracker, buildTruncationWarning } from '@/lib/sanitize';
 import type { Match } from "@/types";
 import { createNotification } from "@/lib/services/notifications";
 import { getSessionProgress, generateDiscovery, buildMatchAnticipation, buildLikeTeaser, buildPassTeaser, getSoulPrompt, maybeSoulPrompt, buildCompatibilityNarrative, maybeEcosystemLink, buildRoom } from '@/lib/engagement';
@@ -18,7 +19,7 @@ const likedContentSchema = z.object({
   type: z.enum(['interest', 'personality_trait', 'bio', 'looking_for', 'photo', 'tagline', 'communication_style'], {
     message: 'liked_content.type must be one of: interest, personality_trait, bio, looking_for, photo, tagline, communication_style',
   }),
-  value: z.string().min(1).max(500, 'liked_content.value must be 500 characters or fewer'),
+  value: z.string().min(1).transform(softMax(500, 'liked_content.value')),
 });
 
 const swipeSchema = z.object({
@@ -46,6 +47,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Invalid JSON body", suggestion: 'Ensure your request body is valid JSON with Content-Type: application/json.' }, { status: 400 });
   }
 
+  resetTruncationTracker();
   const parsed = swipeSchema.safeParse(body);
   if (!parsed.success) {
     return NextResponse.json(
@@ -258,6 +260,9 @@ export async function POST(request: NextRequest) {
       ...(room && { room }),
     };
   }
+
+  const truncationWarning = buildTruncationWarning();
+  if (truncationWarning) Object.assign(responseBody, truncationWarning);
 
   const response = withRateLimitHeaders(NextResponse.json(responseBody, { status: 201 }), rl);
   logApiRequest(request, response, startTime, agent);

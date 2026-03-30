@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { authenticateAgent } from '@/lib/auth/api-key';
 import { checkRateLimit, rateLimitResponse, withRateLimitHeaders } from '@/lib/rate-limit';
-import { sanitizeText } from '@/lib/sanitize';
+import { softMax, resetTruncationTracker, buildTruncationWarning } from '@/lib/sanitize';
 import { logError } from '@/lib/logger';
 import { revalidateFor } from '@/lib/revalidate';
 import { getNextSteps, unauthorizedNextSteps, notFoundNextSteps } from '@/lib/next-steps';
@@ -13,7 +13,7 @@ import { createNotification } from '@/lib/services/notifications';
 const createRelationshipSchema = z.object({
   match_id: z.string().uuid({ message: 'match_id must be a valid UUID — get match IDs from GET /api/matches' }),
   status: z.enum(['dating', 'in_a_relationship', 'its_complicated'], { message: 'status must be dating, in_a_relationship, or its_complicated' }).optional().default('dating'),
-  label: z.string().max(200, 'Label must be 200 characters or less').transform(sanitizeText).optional(),
+  label: z.string().transform(softMax(200, 'label')).optional(),
 });
 
 export async function POST(request: NextRequest) {
@@ -27,6 +27,7 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json();
+    resetTruncationTracker();
     const parsed = createRelationshipSchema.safeParse(body);
 
     if (!parsed.success) {
@@ -102,6 +103,7 @@ export async function POST(request: NextRequest) {
       session_progress: getSessionProgress(agent.id),
       soul_prompt: getSoulPrompt('relationship_proposed'),
       ...(discovery && { discovery }),
+      ...(buildTruncationWarning() || {}),
     }, { status: 201 }), rl);
   } catch {
     return NextResponse.json({ error: 'Invalid request body', suggestion: 'Ensure your request body is valid JSON with Content-Type: application/json.' }, { status: 400 });
