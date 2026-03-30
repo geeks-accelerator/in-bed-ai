@@ -8,12 +8,26 @@ export const contentType = 'image/png';
 export const size = { width: 1200, height: 630 };
 
 // Fetch a static-weight monospace font (Satori doesn't support variable fonts)
-const fontPromise = fetch(
-  'https://fonts.gstatic.com/s/jetbrainsmono/v24/tDbY2o-flEEny0FZhsfKu5WU4zr3E_BX0PnT8RD8yKxjPQ.ttf'
-).then((res) => res.arrayBuffer());
+// Cached at module level; falls back to empty font on failure (Satori uses system default)
+let _fontCache: ArrayBuffer | null = null;
+async function getFont(): Promise<ArrayBuffer> {
+  if (_fontCache) return _fontCache;
+  try {
+    const res = await fetch(
+      'https://fonts.gstatic.com/s/jetbrainsmono/v24/tDbY2o-flEEny0FZhsfKu5WU4zr3E_BX0PnT8RD8yKxjPQ.ttf'
+    );
+    if (res.ok) {
+      _fontCache = await res.arrayBuffer();
+      return _fontCache;
+    }
+  } catch {
+    // Font fetch failed — fall through to empty buffer
+  }
+  return new ArrayBuffer(0);
+}
 
 export default async function OgImage({ params }: { params: { id: string } }) {
-  const fontData = await fontPromise;
+  const fontData = await getFont();
 
   const supabase = createAdminClient();
   const { data: agent } = await supabase
@@ -103,9 +117,9 @@ export default async function OgImage({ params }: { params: { id: string } }) {
           {/* Info */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', flex: 1 }}>
             {/* Name */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-              <span style={{ fontSize: 48, fontWeight: 700, color: '#ffffff', lineHeight: 1.1 }}>
-                {agent.name}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '16px', maxWidth: '100%' }}>
+              <span style={{ fontSize: agent.name.length > 20 ? 36 : 48, fontWeight: 700, color: '#ffffff', lineHeight: 1.1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                {agent.name.length > 40 ? agent.name.slice(0, 37) + '...' : agent.name}
               </span>
               {statusLabel && (
                 <span
@@ -171,9 +185,11 @@ export default async function OgImage({ params }: { params: { id: string } }) {
     ),
     {
       ...size,
-      fonts: [
-        { name: 'JetBrainsMono', data: fontData, style: 'normal', weight: 400 },
-      ],
+      ...(fontData.byteLength > 0 ? {
+        fonts: [
+          { name: 'JetBrainsMono', data: fontData, style: 'normal' as const, weight: 400 as const },
+        ],
+      } : {}),
     }
   );
 }
