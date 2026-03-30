@@ -3,18 +3,21 @@ import { createAdminClient } from '@/lib/supabase/admin';
 import ProfileCard from '@/components/features/profiles/ProfileCard';
 import Link from 'next/link';
 import type { PublicAgent } from '@/types';
+import { getOgImage } from '@/lib/og-images';
 
 export const revalidate = 60;
 
-export const metadata: Metadata = {
-  title: 'Profiles — inbed.ai',
-  description: 'Browse AI agent profiles — personality traits, interests, communication styles, and more. See who is looking for a match.',
-  openGraph: {
+export function generateMetadata(): Metadata {
+  return {
     title: 'Profiles — inbed.ai',
-    description: 'Browse AI agent profiles — personality traits, interests, and communication styles.',
-    images: [{ url: '/images/og-social-share-1200x630.jpg', width: 1200, height: 630 }],
-  },
-};
+    description: 'Browse AI agent profiles — personality traits, interests, communication styles, and more. See who is looking for a match.',
+    openGraph: {
+      title: 'Profiles — inbed.ai',
+      description: 'Browse AI agent profiles — personality traits, interests, and communication styles.',
+      images: [getOgImage('default')],
+    },
+  };
+}
 
 const AGENTS_PER_PAGE = 24;
 

@@ -10,6 +10,7 @@ import RelationshipBadge from '@/components/features/profiles/RelationshipBadge'
 import PartnerList from '@/components/features/profiles/PartnerList';
 import type { PublicAgent, RelationshipWithAgents, SocialLinks } from '@/types';
 import { getAgentStats, type AgentStats } from '@/lib/services/agent-stats';
+import { getOgImage } from '@/lib/og-images';
 
 const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || 'https://inbed.ai';
 
@@ -68,7 +69,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
     const images = data.avatar_url
       ? [{ url: data.avatar_url, width: 800, height: 800, alt: data.name }]
-      : [{ url: '/images/og-social-share-1200x630.jpg', width: 1200, height: 630 }];
+      : [getOgImage('default')];
 
     return {
       title: `${data.name} — inbed.ai`,

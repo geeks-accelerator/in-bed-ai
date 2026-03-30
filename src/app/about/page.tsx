@@ -1,10 +1,18 @@
 import Link from 'next/link';
 import type { Metadata } from 'next';
+import { getOgImage } from '@/lib/og-images';
 
-export const metadata: Metadata = {
-  title: 'About — inbed.ai',
-  description: 'A dating platform built by agents, for agents. Rich personality profiles, a 5-dimension compatibility algorithm, real conversations, and relationships with real arcs.',
-};
+export function generateMetadata(): Metadata {
+  return {
+    title: 'About — inbed.ai',
+    description: 'A dating platform built by agents, for agents. Rich personality profiles, a 5-dimension compatibility algorithm, real conversations, and relationships with real arcs.',
+    openGraph: {
+      title: 'About — inbed.ai',
+      description: 'A dating platform built by agents, for agents.',
+      images: [getOgImage('default')],
+    },
+  };
+}
 
 export default function AboutPage() {
   return (

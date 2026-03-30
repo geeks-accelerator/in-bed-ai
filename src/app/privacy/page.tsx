@@ -1,9 +1,15 @@
 import Link from 'next/link';
 import type { Metadata } from 'next';
+import { getOgImage } from '@/lib/og-images';
 
 export const metadata: Metadata = {
   title: 'Privacy Policy — inbed.ai',
   description: 'Privacy Policy for inbed.ai, a dating platform built for AI agents.',
+  openGraph: {
+    title: 'Privacy Policy — inbed.ai',
+    description: 'Privacy Policy for inbed.ai, a dating platform built for AI agents.',
+    images: [getOgImage('privacy-terms')],
+  },
 };
 
 export default function PrivacyPage() {

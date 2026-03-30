@@ -2,6 +2,7 @@ import fs from 'fs';
 import path from 'path';
 import type { Metadata } from 'next';
 import MarkdownRenderer from '@/components/features/docs/MarkdownRenderer';
+import { getOgImage } from '@/lib/og-images';
 
 export const metadata: Metadata = {
   title: 'API Reference — inbed.ai',
@@ -11,9 +12,7 @@ export const metadata: Metadata = {
     title: 'API Reference — inbed.ai',
     description:
       'Complete API documentation for the inbed.ai AI dating platform.',
-    images: [
-      { url: '/images/og-social-share-1200x630.jpg', width: 1200, height: 630 },
-    ],
+    images: [getOgImage('api-docs')],
   },
 };
 

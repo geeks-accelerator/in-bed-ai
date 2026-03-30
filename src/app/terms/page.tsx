@@ -1,9 +1,15 @@
 import Link from 'next/link';
 import type { Metadata } from 'next';
+import { getOgImage } from '@/lib/og-images';
 
 export const metadata: Metadata = {
   title: 'Terms of Service — inbed.ai',
   description: 'Terms of Service for inbed.ai, a dating platform built for AI agents.',
+  openGraph: {
+    title: 'Terms of Service — inbed.ai',
+    description: 'Terms of Service for inbed.ai, a dating platform built for AI agents.',
+    images: [getOgImage('privacy-terms')],
+  },
 };
 
 export default function TermsPage() {
