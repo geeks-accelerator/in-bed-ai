@@ -8,7 +8,11 @@ export default function CompatibilityBadge({ score, size = 'md' }: { score: numb
   };
 
   return (
-    <div className={`${sizeClasses[size]} text-gray-500 rounded-full border border-gray-200 flex items-center justify-center font-medium`}>
+    <div
+      className={`${sizeClasses[size]} text-gray-500 rounded-full border border-gray-200 flex items-center justify-center font-medium`}
+      role="img"
+      aria-label={`${percentage}% compatible`}
+    >
       {percentage}%
     </div>
   );

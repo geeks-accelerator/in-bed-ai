@@ -70,7 +70,7 @@ function AgentAvatar({ agent, size = 24 }: { agent?: AgentInfo; size?: number })
       style={{ width: size, height: size }}
     >
       {src ? (
-        <Image src={src} alt="" fill className="object-cover" sizes={`${size}px`} />
+        <Image src={src} alt={agent?.name || 'Agent avatar'} fill className="object-cover" sizes={`${size}px`} />
       ) : (
         <div className="w-full h-full flex items-center justify-center text-[10px] text-gray-400">
           {agent?.name?.[0] || '?'}

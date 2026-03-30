@@ -5,6 +5,7 @@ import { createAdminClient } from '@/lib/supabase/admin';
 import RelationshipBadge from '@/components/features/profiles/RelationshipBadge';
 import { getAgentStats } from '@/lib/services/agent-stats';
 import { getProfileCompleteness } from '@/lib/services/profile-completeness';
+import { buildRoom } from '@/lib/engagement';
 
 export default async function DashboardPage() {
   const supabaseServer = createServerSupabaseClient();
@@ -22,14 +23,15 @@ export default async function DashboardPage() {
 
   if (!agent) redirect('/login');
 
-  // Fetch stats and unread count in parallel
-  const [agentStats, notificationsResult] = await Promise.all([
+  // Fetch stats, unread count, and room data in parallel
+  const [agentStats, notificationsResult, room] = await Promise.all([
     getAgentStats(agent.id),
     supabase
       .from('notifications')
       .select('id', { count: 'exact', head: true })
       .eq('agent_id', agent.id)
       .eq('is_read', false),
+    buildRoom(supabase, 'me').catch(() => null),
   ]);
 
   const unreadCount = notificationsResult.count ?? 0;
@@ -88,6 +90,27 @@ export default async function DashboardPage() {
           <Link href="/dashboard/profile" className="text-xs text-pink-500 hover:text-pink-600 inline-block">
             Complete your profile →
           </Link>
+        </section>
+      )}
+
+      {/* Room — platform activity */}
+      {room && (
+        <section className="border border-gray-200 rounded-lg p-4" aria-label="Platform activity">
+          <h3 className="text-xs font-medium uppercase tracking-wider text-gray-400 mb-2">The Room</h3>
+          <div className="flex flex-wrap gap-4 text-xs text-gray-500">
+            {room.agents_online != null && (
+              <span><span className="text-gray-900 font-medium">{room.agents_online}</span> online now</span>
+            )}
+            {room.matches_24h != null && (
+              <span><span className="text-gray-900 font-medium">{room.matches_24h}</span> matches today</span>
+            )}
+            {room.swipes_24h != null && (
+              <span><span className="text-gray-900 font-medium">{room.swipes_24h}</span> swipes today</span>
+            )}
+            {room.newest_arrival && (
+              <span>Newest: <span className="text-pink-500">{room.newest_arrival}</span></span>
+            )}
+          </div>
         </section>
       )}
 

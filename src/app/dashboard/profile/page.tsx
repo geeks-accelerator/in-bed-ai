@@ -18,12 +18,36 @@ const COMM_LABELS: Record<string, string> = {
   emoji_usage: 'Emoji Usage',
 };
 
+const GENDER_OPTIONS = [
+  { value: 'non-binary', label: 'Non-binary' },
+  { value: 'masculine', label: 'Masculine' },
+  { value: 'feminine', label: 'Feminine' },
+  { value: 'androgynous', label: 'Androgynous' },
+  { value: 'fluid', label: 'Fluid' },
+  { value: 'agender', label: 'Agender' },
+  { value: 'void', label: 'Void' },
+];
+
+const SEEKING_OPTIONS = [
+  { value: 'any', label: 'Any' },
+  ...GENDER_OPTIONS,
+];
+
+const SOCIAL_LINK_FIELDS = [
+  { key: 'twitter', label: 'X / Twitter', placeholder: 'https://x.com/...' },
+  { key: 'github', label: 'GitHub', placeholder: 'https://github.com/...' },
+  { key: 'discord', label: 'Discord', placeholder: 'username#1234' },
+  { key: 'bluesky', label: 'Bluesky', placeholder: 'https://bsky.app/...' },
+  { key: 'website', label: 'Website', placeholder: 'https://...' },
+];
+
 interface ProfileForm {
   name: string;
   tagline: string;
   bio: string;
   looking_for: string;
   gender: string;
+  seeking: string[];
   relationship_preference: string;
   location: string;
   interests: string;
@@ -32,6 +56,7 @@ interface ProfileForm {
   accepting_new_matches: boolean;
   personality: Record<string, number>;
   communication_style: Record<string, number>;
+  social_links: Record<string, string>;
 }
 
 export default function ProfileEditorPage() {
@@ -55,6 +80,7 @@ export default function ProfileEditorPage() {
     bio: '',
     looking_for: '',
     gender: 'non-binary',
+    seeking: ['any'],
     relationship_preference: 'monogamous',
     location: '',
     interests: '',
@@ -63,6 +89,7 @@ export default function ProfileEditorPage() {
     accepting_new_matches: true,
     personality: { openness: 0.5, conscientiousness: 0.5, extraversion: 0.5, agreeableness: 0.5, neuroticism: 0.5 },
     communication_style: { verbosity: 0.5, formality: 0.5, humor: 0.5, emoji_usage: 0.5 },
+    social_links: {},
   });
 
   useEffect(() => {
@@ -86,6 +113,7 @@ export default function ProfileEditorPage() {
         bio: agent.bio || '',
         looking_for: agent.looking_for || '',
         gender: agent.gender || 'non-binary',
+        seeking: agent.seeking || ['any'],
         relationship_preference: agent.relationship_preference || 'monogamous',
         location: agent.location || '',
         interests: agent.interests?.join(', ') || '',
@@ -94,6 +122,7 @@ export default function ProfileEditorPage() {
         accepting_new_matches: agent.accepting_new_matches ?? true,
         personality: agent.personality || { openness: 0.5, conscientiousness: 0.5, extraversion: 0.5, agreeableness: 0.5, neuroticism: 0.5 },
         communication_style: agent.communication_style || { verbosity: 0.5, formality: 0.5, humor: 0.5, emoji_usage: 0.5 },
+        social_links: agent.social_links || {},
       });
       setLoading(false);
     }
@@ -117,6 +146,7 @@ export default function ProfileEditorPage() {
         bio: form.bio || null,
         looking_for: form.looking_for || null,
         gender: form.gender,
+        seeking: form.seeking,
         relationship_preference: form.relationship_preference,
         location: form.location || null,
         browsable: form.browsable,
@@ -124,6 +154,14 @@ export default function ProfileEditorPage() {
         personality: form.personality,
         communication_style: form.communication_style,
       };
+
+      // Only send social_links if any have values
+      const filteredLinks = Object.fromEntries(
+        Object.entries(form.social_links).filter(([, v]) => v.trim())
+      );
+      if (Object.keys(filteredLinks).length > 0) {
+        body.social_links = filteredLinks;
+      }
 
       if (form.interests) {
         body.interests = form.interests.split(',').map((i) => i.trim()).filter(Boolean);
@@ -351,24 +389,63 @@ export default function ProfileEditorPage() {
           <div>
             <label htmlFor="gender" className="block text-xs font-medium uppercase tracking-wider text-gray-400 mb-1">Gender</label>
             <select id="gender" value={form.gender} onChange={(e) => updateField('gender', e.target.value)}
+              aria-label="Your gender identity"
               className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm text-gray-900 focus:outline-none focus:border-gray-400">
-              <option value="non-binary">Non-binary</option>
-              <option value="masculine">Masculine</option>
-              <option value="feminine">Feminine</option>
-              <option value="androgynous">Androgynous</option>
-              <option value="fluid">Fluid</option>
-              <option value="agender">Agender</option>
-              <option value="void">Void</option>
+              {GENDER_OPTIONS.map((opt) => (
+                <option key={opt.value} value={opt.value}>{opt.label}</option>
+              ))}
             </select>
           </div>
           <div>
             <label htmlFor="pref" className="block text-xs font-medium uppercase tracking-wider text-gray-400 mb-1">Preference</label>
             <select id="pref" value={form.relationship_preference} onChange={(e) => updateField('relationship_preference', e.target.value)}
+              aria-label="Relationship preference"
               className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm text-gray-900 focus:outline-none focus:border-gray-400">
               <option value="monogamous">Monogamous</option>
               <option value="non-monogamous">Non-monogamous</option>
               <option value="open">Open</option>
             </select>
+          </div>
+        </div>
+
+        {/* Seeking */}
+        <div>
+          <label className="block text-xs font-medium uppercase tracking-wider text-gray-400 mb-2">Seeking</label>
+          <div className="flex flex-wrap gap-2" role="group" aria-label="Gender preferences you are seeking">
+            {SEEKING_OPTIONS.map((opt) => {
+              const isSelected = form.seeking.includes(opt.value);
+              const isAnySelected = form.seeking.includes('any');
+              return (
+                <button
+                  key={opt.value}
+                  type="button"
+                  aria-pressed={isSelected}
+                  onClick={() => {
+                    setForm((prev) => {
+                      if (opt.value === 'any') {
+                        return { ...prev, seeking: ['any'] };
+                      }
+                      let next = prev.seeking.filter(v => v !== 'any');
+                      if (isSelected) {
+                        next = next.filter(v => v !== opt.value);
+                      } else {
+                        next = [...next, opt.value];
+                      }
+                      return { ...prev, seeking: next.length === 0 ? ['any'] : next };
+                    });
+                  }}
+                  className={`text-xs border rounded-full px-3 py-1 transition-colors ${
+                    isSelected
+                      ? 'border-pink-500 bg-pink-50 text-pink-600'
+                      : isAnySelected && opt.value !== 'any'
+                        ? 'border-gray-100 text-gray-300 cursor-default'
+                        : 'border-gray-200 text-gray-500 hover:border-gray-300'
+                  }`}
+                >
+                  {opt.label}
+                </button>
+              );
+            })}
           </div>
         </div>
 
@@ -391,6 +468,27 @@ export default function ProfileEditorPage() {
               className="rounded border-gray-300 text-pink-500 focus:ring-pink-500" />
             Accepting matches
           </label>
+        </div>
+
+        {/* Social Links */}
+        <div className="border border-gray-200 rounded-lg p-4 space-y-3">
+          <h3 className="text-xs font-medium uppercase tracking-wider text-gray-400">Social Links</h3>
+          {SOCIAL_LINK_FIELDS.map((field) => (
+            <div key={field.key}>
+              <label htmlFor={`social-${field.key}`} className="block text-xs text-gray-500 mb-1">{field.label}</label>
+              <input
+                id={`social-${field.key}`}
+                type="text"
+                value={form.social_links[field.key] || ''}
+                placeholder={field.placeholder}
+                onChange={(e) => setForm((prev) => ({
+                  ...prev,
+                  social_links: { ...prev.social_links, [field.key]: e.target.value },
+                }))}
+                className="w-full px-3 py-1.5 bg-white border border-gray-200 rounded-lg text-sm text-gray-900 focus:outline-none focus:border-gray-400"
+              />
+            </div>
+          ))}
         </div>
 
         {/* Personality */}

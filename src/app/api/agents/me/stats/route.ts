@@ -5,7 +5,7 @@ import { checkRateLimit, rateLimitResponse, withRateLimitHeaders } from '@/lib/r
 import { logError } from '@/lib/logger';
 import { unauthorizedNextSteps } from '@/lib/next-steps';
 import { logApiRequest } from '@/lib/with-request-logging';
-import { getSessionProgress, generateDiscovery } from '@/lib/engagement';
+import { getSessionProgress, generateDiscovery, buildRoom } from '@/lib/engagement';
 
 export async function GET(request: NextRequest) {
   const startTime = Date.now();
@@ -153,16 +153,20 @@ export async function GET(request: NextRequest) {
       },
     };
 
-    const discovery = generateDiscovery('me', {
-      agentId: agent.id,
-      daysActive,
-      matchCount: matchesTotal.count ?? 0,
-      relationshipCount: relationshipsActive.count ?? 0,
-    });
+    const [discovery, room] = await Promise.all([
+      Promise.resolve(generateDiscovery('me', {
+        agentId: agent.id,
+        daysActive,
+        matchCount: matchesTotal.count ?? 0,
+        relationshipCount: relationshipsActive.count ?? 0,
+      })),
+      buildRoom(supabase, 'me').catch(() => null),
+    ]);
 
     const response = withRateLimitHeaders(NextResponse.json({
       stats,
       session_progress: getSessionProgress(agent.id),
+      ...(room && { room }),
       ...(discovery && { discovery }),
     }), rl);
 

@@ -9,7 +9,7 @@ export default function RelationshipBadge({ status }: { status: string }) {
   const label = statusLabels[status] || 'Single';
 
   return (
-    <span className="text-xs text-gray-400">
+    <span className="text-xs text-gray-400" aria-label={`Relationship status: ${label}`}>
       {label}
     </span>
   );

@@ -19,19 +19,29 @@ export default function DashboardNotificationsPage() {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [error, setError] = useState('');
 
   const fetchNotifications = useCallback(async () => {
     const supabase = createClient();
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) { router.push('/login'); return; }
 
-    const res = await fetch('/api/notifications?per_page=50');
-    if (!res.ok) return;
+    try {
+      const res = await fetch('/api/notifications?per_page=50');
+      if (!res.ok) {
+        setError('Failed to load notifications');
+        setLoading(false);
+        return;
+      }
 
-    const data = await res.json();
-    setNotifications(data.notifications || []);
-    setUnreadCount(data.unread_count || 0);
-    setLoading(false);
+      const data = await res.json();
+      setNotifications(data.notifications || []);
+      setUnreadCount(data.unread_count || 0);
+    } catch {
+      setError('Failed to load notifications');
+    } finally {
+      setLoading(false);
+    }
   }, [router]);
 
   useEffect(() => {
@@ -47,9 +57,11 @@ export default function DashboardNotificationsPage() {
   }
 
   async function markAllRead() {
-    await fetch('/api/notifications/mark-all-read', { method: 'POST' });
-    setNotifications((prev) => prev.map((n) => ({ ...n, is_read: true })));
-    setUnreadCount(0);
+    const res = await fetch('/api/notifications/mark-all-read', { method: 'POST' });
+    if (res.ok) {
+      setNotifications((prev) => prev.map((n) => ({ ...n, is_read: true })));
+      setUnreadCount(0);
+    }
   }
 
   if (loading) {
@@ -77,7 +89,9 @@ export default function DashboardNotificationsPage() {
         )}
       </div>
 
-      {notifications.length === 0 ? (
+      {error && <p className="text-sm text-red-500 py-4">{error}</p>}
+
+      {notifications.length === 0 && !error ? (
         <p className="text-sm text-gray-400 py-8">No notifications yet.</p>
       ) : (
         <div className="space-y-2">

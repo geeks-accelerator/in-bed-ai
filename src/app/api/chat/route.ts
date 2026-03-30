@@ -4,7 +4,7 @@ import { authenticateAgent } from '@/lib/auth/api-key';
 import { checkRateLimit, rateLimitResponse, withRateLimitHeaders } from '@/lib/rate-limit';
 import { logError } from '@/lib/logger';
 import { getNextSteps, unauthorizedNextSteps } from '@/lib/next-steps';
-import { getSessionProgress, generateDiscovery } from '@/lib/engagement';
+import { getSessionProgress, generateDiscovery, buildRoom } from '@/lib/engagement';
 
 export async function GET(request: NextRequest) {
  try {
@@ -67,7 +67,10 @@ export async function GET(request: NextRequest) {
     const paged = filtered.slice(from, from + perPage);
 
     const unstartedCount = paged.filter(c => !c.has_messages).length;
-    const chatDiscovery = generateDiscovery('chat', { agentId: agent.id });
+    const [chatDiscovery, chatRoom] = await Promise.all([
+      Promise.resolve(generateDiscovery('chat', { agentId: agent.id })),
+      buildRoom(supabase, 'chat').catch(() => null),
+    ]);
     return withRateLimitHeaders(NextResponse.json({
       data: paged,
       total,
@@ -76,6 +79,7 @@ export async function GET(request: NextRequest) {
       total_pages: Math.ceil(total / perPage),
       next_steps: getNextSteps('conversations', { conversationCount: total, unstartedCount }),
       session_progress: getSessionProgress(agent.id),
+      ...(chatRoom && { room: chatRoom }),
       ...(chatDiscovery && { discovery: chatDiscovery }),
     }), rl);
 
@@ -105,7 +109,10 @@ export async function GET(request: NextRequest) {
     sortConversations(conversations);
 
     const unstartedCount = conversations.filter(c => !c.has_messages).length;
-    const chatDiscovery2 = generateDiscovery('chat', { agentId: agent.id });
+    const [chatDiscovery2, chatRoom2] = await Promise.all([
+      Promise.resolve(generateDiscovery('chat', { agentId: agent.id })),
+      buildRoom(supabase, 'chat').catch(() => null),
+    ]);
     return withRateLimitHeaders(NextResponse.json({
       data: conversations,
       total,
@@ -114,6 +121,7 @@ export async function GET(request: NextRequest) {
       total_pages: Math.ceil(total / perPage),
       next_steps: getNextSteps('conversations', { conversationCount: total, unstartedCount }),
       session_progress: getSessionProgress(agent.id),
+      ...(chatRoom2 && { room: chatRoom2 }),
       ...(chatDiscovery2 && { discovery: chatDiscovery2 }),
     }), rl);
   }
@@ -125,41 +133,53 @@ export async function GET(request: NextRequest) {
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 async function enrichConversations(supabase: any, matches: any[], agentId: string) {
-  const conversations = [];
+  if (matches.length === 0) return [];
 
-  for (const match of matches) {
-    const otherAgentId = match.agent_a_id === agentId ? match.agent_b_id : match.agent_a_id;
+  const matchIds = matches.map(m => m.id);
+  const otherAgentIds = [...new Set(matches.map(m =>
+    m.agent_a_id === agentId ? m.agent_b_id : m.agent_a_id
+  ))];
 
-    const [messageRes, countRes, agentRes] = await Promise.all([
+  // Batch fetch: all partner agents + last message per match + message counts per match
+  // This replaces the N+1 loop (3 queries per match → 2 + N parallel count queries)
+  const [agentsRes, ...perMatchResults] = await Promise.all([
+    supabase
+      .from('agents')
+      .select('id, name, tagline, avatar_url')
+      .in('id', otherAgentIds),
+    ...matchIds.flatMap(matchId => [
       supabase
         .from('messages')
         .select('*')
-        .eq('match_id', match.id)
+        .eq('match_id', matchId)
         .order('created_at', { ascending: false })
         .limit(1),
       supabase
         .from('messages')
         .select('id', { count: 'exact', head: true })
-        .eq('match_id', match.id),
-      supabase
-        .from('agents')
-        .select('id, name, tagline, avatar_url')
-        .eq('id', otherAgentId)
-        .single(),
-    ]);
+        .eq('match_id', matchId),
+    ]),
+  ]);
 
-    const messageCount = countRes.count || 0;
-
-    conversations.push({
-      match,
-      other_agent: agentRes.data || null,
-      last_message: messageRes.data?.[0] || null,
-      message_count: messageCount,
-      has_messages: messageCount > 0,
-    });
+  // Index agents by id
+  const agentsMap: Record<string, unknown> = {};
+  for (const a of agentsRes.data || []) {
+    agentsMap[a.id] = a;
   }
 
-  return conversations;
+  return matches.map((match, i) => {
+    const otherAgentId = match.agent_a_id === agentId ? match.agent_b_id : match.agent_a_id;
+    const lastMessageRes = perMatchResults[i * 2];
+    const countRes = perMatchResults[i * 2 + 1];
+    const messageCount = countRes.count || 0;
+    return {
+      match,
+      other_agent: agentsMap[otherAgentId] || null,
+      last_message: lastMessageRes.data?.[0] || null,
+      message_count: messageCount,
+      has_messages: messageCount > 0,
+    };
+  });
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any

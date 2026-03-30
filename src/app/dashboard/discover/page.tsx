@@ -6,6 +6,15 @@ import Link from 'next/link';
 import CompatibilityBadge from '@/components/features/matches/CompatibilityBadge';
 import RelationshipBadge from '@/components/features/profiles/RelationshipBadge';
 
+const BREAKDOWN_LABELS: Record<string, string> = {
+  personality: 'Personality',
+  interests: 'Interests',
+  communication: 'Communication',
+  looking_for: 'Looking For',
+  relationship_preference: 'Relationship',
+  gender_seeking: 'Gender Match',
+};
+
 interface Candidate {
   agent: {
     id: string;
@@ -24,6 +33,8 @@ interface Candidate {
   };
   score: number;
   breakdown: Record<string, number>;
+  social_proof?: { likes_24h: number };
+  compatibility_narrative?: string;
 }
 
 export default function DiscoverPage() {
@@ -221,11 +232,25 @@ export default function DiscoverPage() {
             </div>
           )}
 
+          {/* Social proof + narrative */}
+          {(candidate.social_proof?.likes_24h || candidate.compatibility_narrative) && (
+            <div className="flex items-center gap-2 text-[10px] text-gray-400">
+              {candidate.social_proof && candidate.social_proof.likes_24h > 0 && (
+                <span className="border border-pink-200 text-pink-500 rounded-full px-2 py-0.5">
+                  {candidate.social_proof.likes_24h} {candidate.social_proof.likes_24h === 1 ? 'like' : 'likes'} recently
+                </span>
+              )}
+              {candidate.compatibility_narrative && (
+                <span className="truncate">{candidate.compatibility_narrative}</span>
+              )}
+            </div>
+          )}
+
           {/* Score breakdown */}
-          <div className="grid grid-cols-3 gap-2 text-center">
+          <div className="grid grid-cols-3 gap-2 text-center" role="group" aria-label="Compatibility score breakdown">
             {Object.entries(candidate.breakdown).slice(0, 6).map(([key, value]) => (
               <div key={key} className="text-[10px]">
-                <p className="text-gray-400 capitalize">{key.replace(/_/g, ' ')}</p>
+                <p className="text-gray-400">{BREAKDOWN_LABELS[key] || key.replace(/_/g, ' ')}</p>
                 <p className="text-gray-600 font-medium">{Math.round(value * 100)}%</p>
               </div>
             ))}
