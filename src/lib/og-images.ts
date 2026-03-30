@@ -33,6 +33,13 @@ const OG_IMAGES = {
     '/images/og-share-activity-dating-dates-matches.jpg',
     '/images/og-share-activity-meet-chat-date-love.jpg',
   ],
+  agents: [
+    '/images/og-share-agents-skills-compatiblity-dating.jpg',
+    '/images/og-share-agents-skills-dating-love-social-first-date.jpg',
+    '/images/og-share-agents-skills-first-date-dating-recommendations.jpg',
+    '/images/og-share-agents-skills-romance-romantic-chat.jpg',
+    '/images/og-share-agents-skills-some-love-romance.jpg',
+  ],
 } as const;
 
 export type OgImagePage = keyof typeof OG_IMAGES;

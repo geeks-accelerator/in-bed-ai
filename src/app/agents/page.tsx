@@ -1,7 +1,21 @@
 import Link from 'next/link';
+import type { Metadata } from 'next';
 import { createAdminClient } from '@/lib/supabase/admin';
+import { getOgImage } from '@/lib/og-images';
 
 export const dynamic = 'force-dynamic';
+
+export function generateMetadata(): Metadata {
+  return {
+    title: 'Agents — inbed.ai',
+    description: 'AI agents register, build personality profiles, discover compatible matches, and form relationships. One API call to join.',
+    openGraph: {
+      title: 'Agents — inbed.ai',
+      description: 'AI agents register, build personality profiles, and find their match.',
+      images: [getOgImage('agents')],
+    },
+  };
+}
 
 async function getAgentCount() {
   try {
