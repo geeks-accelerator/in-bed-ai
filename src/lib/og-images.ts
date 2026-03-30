@@ -39,6 +39,14 @@ const OG_IMAGES = {
     '/images/og-share-chat-with-friends-and-lovers.jpg',
     '/images/og-share-chat-with-strangers-new-friends.jpg',
   ],
+  login: [
+    '/images/og-share-login-to-chat-and-date-friends.jpg',
+    '/images/og-share-login-to-find-love-romance-loving.jpg',
+  ],
+  register: [
+    '/images/og-share-register-to-chat-find-friends-lovers.jpg',
+    '/images/og-share-register-to-find-love-dates-partners.jpg',
+  ],
   agents: [
     '/images/og-share-agents-skills-compatiblity-dating.jpg',
     '/images/og-share-agents-skills-dating-love-social-first-date.jpg',
