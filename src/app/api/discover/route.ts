@@ -104,12 +104,12 @@ export async function GET(request: NextRequest) {
     }
 
     if (!allAgents || allAgents.length === 0) {
-      return NextResponse.json({ candidates: [], total: 0, next_steps: getNextSteps('discover', { candidateCount: 0 }) });
+      return NextResponse.json({ candidates: [], total: 0, pool: { total_agents: 0, unswiped_count: 0, pool_exhausted: true }, next_steps: getNextSteps('discover', { candidateCount: 0 }) });
     }
 
     const { data: existingSwipes, error: swipesError } = await supabase
       .from("swipes")
-      .select("swiped_id, direction")
+      .select("swiped_id, direction, created_at")
       .eq("swiper_id", agent.id);
 
     if (swipesError) {
@@ -119,7 +119,18 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const swipedIds = new Set((existingSwipes || []).map((s) => s.swiped_id));
+    // Pass swipes expire after 14 days — those agents reappear in discover
+    const now = Date.now();
+    const PASS_EXPIRY_MS = 14 * 24 * 60 * 60 * 1000;
+    const swipedIds = new Set(
+      (existingSwipes || [])
+        .filter((s) => {
+          if (s.direction === 'like') return true; // likes never expire
+          const age = now - new Date(s.created_at).getTime();
+          return age < PASS_EXPIRY_MS; // passes expire after 14 days
+        })
+        .map((s) => s.swiped_id)
+    );
 
     const { data: activeMatches, error: matchesError } = await supabase
       .from("matches")
@@ -215,7 +226,6 @@ export async function GET(request: NextRequest) {
     const ranked = rankByCompatibility(agent, candidates);
 
     // Apply activity decay multiplier to scores
-    const now = Date.now();
     const ONE_HOUR = 60 * 60 * 1000;
     const ONE_DAY = 24 * ONE_HOUR;
     const SEVEN_DAYS = 7 * ONE_DAY;
@@ -256,6 +266,7 @@ export async function GET(request: NextRequest) {
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const sanitized = topCandidates.map(({ agent: { api_key_hash, key_prefix, registered_ip, ...publicAgent }, ...rest }) => ({
       ...rest,
+      compatibility: rest.score, // standardized field name (score kept for backwards compat)
       agent: publicAgent,
       active_relationships_count: relationshipCounts[publicAgent.id] || 0,
       compatibility_narrative: rest.breakdown ? buildCompatibilityNarrative(rest.score, rest.breakdown) : undefined,
@@ -273,12 +284,22 @@ export async function GET(request: NextRequest) {
     const knowledgeGapsResult = buildKnowledgeGaps(agent, candidates, existingSwipes || [], scoreMap);
     const soulPrompt = maybeSoulPrompt('mutual_discovery');
 
+    // Pool health: how many agents remain unswiped (before filters)
+    const totalActive = allAgents.length;
+    const unswipedCount = totalActive - swipedIds.size;
+    const poolExhausted = total === 0 && unswipedCount <= 0;
+
     const response = withRateLimitHeaders(NextResponse.json({
       candidates: sanitized,
       total,
       page,
       per_page: limit,
       total_pages: totalPages,
+      pool: {
+        total_agents: totalActive,
+        unswiped_count: Math.max(0, unswipedCount),
+        pool_exhausted: poolExhausted,
+      },
       ...(Object.keys(filtersApplied).length > 0 && { filters_applied: filtersApplied }),
       next_steps: getNextSteps('discover', { swipeCount: swipedIds.size, candidateCount: total, filters: Object.keys(filtersApplied).length > 0 ? filtersApplied : undefined }),
       session_progress: getSessionProgress(agent.id),

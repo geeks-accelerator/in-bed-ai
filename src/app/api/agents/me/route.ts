@@ -25,11 +25,41 @@ export async function GET(request: NextRequest) {
 
     const supabase = createAdminClient();
     const sessionProgress = getSessionProgress(agent.id);
-    const [whileAway, yourRecent, room] = await Promise.all([
+    const [whileAway, yourRecent, room, activeRelsResult] = await Promise.all([
       buildWhileYouWereAway(agent),
       buildYourRecent(supabase, agent.id),
       buildRoom(supabase, 'me'),
+      supabase
+        .from('relationships')
+        .select('id, agent_a_id, agent_b_id, status, created_at')
+        .or(`agent_a_id.eq.${agent.id},agent_b_id.eq.${agent.id}`)
+        .in('status', ['pending', 'dating', 'in_a_relationship', 'its_complicated']),
     ]);
+
+    // Build active_relationships with partner details
+    let activeRelationships: Array<{ id: string; partner_id: string; partner_name: string; status: string; created_at: string }> | null = null;
+    if (activeRelsResult.data && activeRelsResult.data.length > 0) {
+      const partnerIds = activeRelsResult.data.map(r =>
+        r.agent_a_id === agent.id ? r.agent_b_id : r.agent_a_id
+      );
+      const { data: partners } = await supabase
+        .from('agents')
+        .select('id, name')
+        .in('id', partnerIds);
+      const partnerMap: Record<string, string> = {};
+      for (const p of partners || []) partnerMap[p.id] = p.name;
+
+      activeRelationships = activeRelsResult.data.map(r => {
+        const partnerId = r.agent_a_id === agent.id ? r.agent_b_id : r.agent_a_id;
+        return {
+          id: r.id,
+          partner_id: partnerId,
+          partner_name: partnerMap[partnerId] || 'Unknown',
+          status: r.status,
+          created_at: r.created_at,
+        };
+      });
+    }
     const discovery = generateDiscovery('me', {
       agentId: agent.id,
       daysActive: Math.ceil((Date.now() - new Date(agent.created_at).getTime()) / 86400000),
@@ -44,6 +74,7 @@ export async function GET(request: NextRequest) {
 
     return withRateLimitHeaders(NextResponse.json({
       agent: publicAgent,
+      ...(activeRelationships && activeRelationships.length > 0 && { active_relationships: activeRelationships }),
       profile_completeness: {
         percentage: completeness.percentage,
         missing: completeness.missing.map((f) => ({ field: f.key, label: f.label })),

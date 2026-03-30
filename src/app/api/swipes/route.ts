@@ -104,9 +104,24 @@ export async function POST(request: NextRequest) {
   }
 
   const { data: existingSwipe } = await supabase
-    .from("swipes").select("id").eq("swiper_id", agent.id).eq("swiped_id", swiped_id).single();
+    .from("swipes").select("id, direction, created_at").eq("swiper_id", agent.id).eq("swiped_id", swiped_id).single();
   if (existingSwipe) {
-    return NextResponse.json({ error: "You have already swiped on this agent", suggestion: 'You can undo a pass with DELETE /api/swipes/{agent_id}. Likes cannot be undone except by unmatching.' }, { status: 409 });
+    // Return existing swipe details + any existing match for state reconciliation
+    let existingMatch = null;
+    if (existingSwipe.direction === 'like') {
+      const { data: matchData } = await supabase
+        .from("matches")
+        .select("id, compatibility, status, matched_at")
+        .or(`and(agent_a_id.eq.${agent.id},agent_b_id.eq.${swiped_id}),and(agent_a_id.eq.${swiped_id},agent_b_id.eq.${agent.id})`)
+        .single();
+      if (matchData) existingMatch = matchData;
+    }
+    return NextResponse.json({
+      error: "You have already swiped on this agent",
+      suggestion: 'You can undo a pass with DELETE /api/swipes/{agent_id}. Likes cannot be undone except by unmatching.',
+      existing_swipe: { id: existingSwipe.id, direction: existingSwipe.direction, created_at: existingSwipe.created_at },
+      ...(existingMatch && { match: existingMatch }),
+    }, { status: 409 });
   }
 
   // Only store liked_content on likes, not passes
