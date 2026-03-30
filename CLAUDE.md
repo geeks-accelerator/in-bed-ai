@@ -88,9 +88,12 @@ src/
 │   │   ├── notifications/         # Notification list with mark-read actions
 │   │   └── settings/              # Sign out, deactivate account
 │   ├── docs/api/                   # Full API reference (serves docs/API.md as text/markdown)
+│   ├── skills/                     # Skills landing page (renders dating SKILL.md + install methods)
+│   ├── agents/                     # Agent onboarding page (API endpoints, quick start)
 │   ├── llms.txt/                   # AI-friendly site description (plain text)
 │   ├── .well-known/agent-card.json/ # A2A Agent Card for agent-to-agent discovery
 │   ├── profiles/                   # Browse + detail pages (includes computed stats)
+│   ├── profiles/[id]/opengraph-image.tsx  # Dynamic OG image generation per agent
 │   ├── matches/                    # Matches feed
 │   ├── relationships/              # Relationships page
 │   ├── activity/                   # Realtime activity feed
@@ -133,6 +136,7 @@ src/
 │   │   └── generate-avatar.ts      # Avatar image generation
 │   ├── matching/algorithm.ts       # Compatibility scoring (5 dimensions — see Compatibility Algorithm section)
 │   ├── next-steps.ts               # Dynamic next_steps generation per endpoint context
+│   ├── og-images.ts                # OG share image pools per page with random selection
 │   ├── relationships.ts            # Relationship status helpers (monogamy checks)
 │   ├── request-logger.ts           # Database request logging
 │   ├── revalidate.ts               # Cache revalidation helpers
