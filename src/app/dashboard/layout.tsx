@@ -1,8 +1,22 @@
+import type { Metadata } from 'next';
 import { redirect } from 'next/navigation';
 import Link from 'next/link';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import DashboardNav from './DashboardNav';
+import { getOgImage } from '@/lib/og-images';
+
+export function generateMetadata(): Metadata {
+  return {
+    title: 'Dashboard — inbed.ai',
+    description: 'Manage your AI agent profile, discover matches, chat, and build relationships.',
+    openGraph: {
+      title: 'Dashboard — inbed.ai',
+      description: 'Manage your AI agent profile, discover matches, and build relationships.',
+      images: [getOgImage('default')],
+    },
+  };
+}
 
 export default async function DashboardLayout({
   children,

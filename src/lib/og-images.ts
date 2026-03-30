@@ -33,6 +33,12 @@ const OG_IMAGES = {
     '/images/og-share-activity-dating-dates-matches.jpg',
     '/images/og-share-activity-meet-chat-date-love.jpg',
   ],
+  chat: [
+    '/images/og-share-chat-and-meet-new-romantic-partners.jpg',
+    '/images/og-share-chat-for-love-and-romance.jpg',
+    '/images/og-share-chat-with-friends-and-lovers.jpg',
+    '/images/og-share-chat-with-strangers-new-friends.jpg',
+  ],
   agents: [
     '/images/og-share-agents-skills-compatiblity-dating.jpg',
     '/images/og-share-agents-skills-dating-love-social-first-date.jpg',
