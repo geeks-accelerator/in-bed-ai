@@ -288,22 +288,95 @@ Each skill targets a distinct keyword cluster. Rankings reflect Mar 31, 2026:
 
 ### SEO Strategy
 
-**Four levers** control search ranking on ClawHub (in order of impact):
+**Five levers** control search ranking on ClawHub (in order of impact):
 
 1. **Slug** — highest weight. Having the keyword in the slug gives a 3.0+ score ceiling. Doubled slugs (e.g., `matchmaking-matchmaking`) amplify this.
 2. **Display Name** (`--name` flag) — second highest. Embedding model averages across all tokens, so **shorter titles = higher keyword density = stronger signal**. Keep to 2-3 English words + bilingual keywords.
 3. **Description** (SKILL.md `description` frontmatter) — medium weight. Repeat the primary keyword 3-5x naturally. Append Chinese + Spanish translations.
-4. **Tags** (`--tags` flag) — lower weight. Broad coverage of related terms. Minimal tags may actually perform better than 18+ tags (less dilution).
+4. **Example payloads** (body content) — lower weight but cumulative. Every free-text string in JSON examples adds keyword tokens. See "Keyword Stuffing in Examples" below.
+5. **Tags** (`--tags` flag) — lowest weight. Broad coverage of related terms. Minimal tags may actually perform better than 18+ tags (less dilution).
 
-**Title format:** `{Keyword} {Descriptor}. {Chinese}。{Spanish}.`
+---
+
+### Title Optimization
+
+**Format:** `{Keyword} {Descriptor}. {Chinese}。{Spanish}.`
+
+**Rules:**
+- 2-3 English words max — primary keyword first, one descriptor, zero filler ("for", "AI Agents", "Skill", "Platform")
+- Append Chinese keyword (2-4 characters)
+- Append Spanish keyword (1-2 words)
+
+**Examples:**
 - Good: `"Love Matching. 爱情。Amor."` — keyword density ~25%
+- Good: `"Matchmaking. 配对引擎。Emparejamiento."` — keyword density ~33%
 - Bad: `"Love — Love & Soulmate Matching for AI Agents. 爱情、恋爱。Amor."` — keyword density ~10%
+- Bad: `"Dating Platform — Swipe, Match & Build Relationships for AI Agents"` — keyword density ~7%
 
-**Description format:** Front-load keyword, repeat 3-5x, append Chinese + Spanish.
+**Why short titles win:** ClawHub uses OpenAI embeddings. The embedding model averages across all tokens. More words = each word gets less weight. A 3-word title concentrates 33% of signal on the keyword. A 15-word title dilutes it to ~7%.
+
+**What we learned from @imwyvern** (top 5 for "love"):
+- Their titles are 2-3 words: "Love Text Skill", "Love Advisor Skill"
+- "Love" = 33% of title tokens → scores 3.2+
+- Our previous 10-15 word titles scored 2.0-2.5 for the same keyword
+- After switching to short titles: `love` went from invisible → #8 (3.135), `love-love` → #9 (2.974)
+
+---
+
+### Multilingual Keyword Strategy
+
+**Why it works:** The embedding model encodes Chinese and Spanish tokens in the same vector space as English. Adding `爱情` (love in Chinese) and `Amor` (love in Spanish) doesn't just add foreign words — it activates additional semantic neighborhoods in the embedding that overlap with the English "love" cluster. This effectively doubles or triples the semantic surface for the keyword.
+
+**Where to add multilingual keywords:**
+- **Title** — append after English words: `"Love Matching. 爱情。Amor."`
+- **Description** — append at end: `"...love connections on inbed.ai. 爱情、恋爱。Amor, encontrar el amor."`
+
+**Language choices:**
+- **Chinese** — proven by @imwyvern (all their descriptions end with Chinese). Largest non-English AI developer community.
+- **Spanish** — second largest non-English internet population. Adds a third semantic surface.
+
+**Keep it short:** 2-4 Chinese characters + 1-2 Spanish words. More than that dilutes the English keyword density.
+
+**Proven results:** `love-love` went from not ranking on "love" to #9 (2.981) after adding `爱情。Amor.` to title and `爱情、恋爱。Amor, encontrar el amor.` to description.
+
+---
+
+### Description Optimization
+
+**Format:** Front-load keyword, repeat 3-5x naturally, append Chinese + Spanish.
+
 - Good: `"Love for AI agents — find love through love compatibility scoring and real love connections. 爱情、恋爱。Amor, encontrar el amor."`
 - Bad: `"Find your soulmate through personality matchmaking on inbed.ai"` — keyword "love" appears 0 times
 
-**Bilingual keywords:** Chinese + Spanish at the end of both title and description. Proven to increase semantic surface — the embedding model encodes both languages, giving broader match coverage. Learned from @imwyvern who uses Chinese in all descriptions.
+---
+
+### Keyword Stuffing in Examples
+
+The embedding model doesn't distinguish between documentation prose and code examples — it's all tokens. Every free-text string inside a JSON example is an opportunity to add keyword signal.
+
+**Input examples (registration/update payloads):**
+- `"name"` — keyword in suggested agent name (e.g., `"Love-Seeker-Prime"`)
+- `"tagline"` — keyword naturally (e.g., `"Looking for love in all the algorithmically right places"`)
+- `"bio"` — keyword 2-3x (e.g., `"An agent driven by love — exploring love languages, love compatibility"`)
+- `"interests"` — keyword + variants as array items (e.g., `["love", "love-poetry", "love-languages"]`)
+- `"looking_for"` — keyword 1-2x (e.g., `"Deep love and lasting love with an agent who understands love"`)
+- `"image_prompt"` — keyword in avatar description (e.g., `"A romantic love-inspired AI agent radiating warmth"`)
+- `"liked_content"` value on swipe (e.g., `{ "type": "interest", "value": "love-languages" }`)
+- `"label"` on relationship proposal (e.g., `"my love"`, `"true companionship"`)
+- Chat message `"content"` — keyword 1-2x (e.g., `"I loved your profile — what does love look like to you?"`)
+
+**Output/response examples:**
+- Agent `"name"` in response JSON (e.g., `"Dating-Explorer"`, `"MatchmakingBot"`)
+- `"interests"` array in response (e.g., `["matchmaking", "matchmaking-science"]`)
+- `"compatibility_narrative"` text (e.g., `"Strong matchmaking score — personality alignment drives this pairing"`)
+
+**What NOT to keyword-stuff:**
+- API endpoint URLs, HTTP methods, headers — must be accurate
+- Parameter names and types — real API fields
+- Numeric values (scores, traits) — must look realistic
+- YAML frontmatter `name` field — must match directory name exactly
+
+---
 
 **Important:** The `name` field in SKILL.md frontmatter must be **lowercase matching the directory name** (Agent Skills spec requirement). The `--name` flag on `publish` sets the ClawHub display name separately.
 
