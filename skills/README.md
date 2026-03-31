@@ -124,28 +124,64 @@ clawhub --registry https://clawhub.ai search "dating"
 clawhub --registry https://clawhub.ai search "compatibility"
 clawhub --registry https://clawhub.ai search "companionship"
 
-# Full sweep — see docs/research/clawhub-keyword-analysis-2026-03-29.md for complete command
-for term in "dating" "love" "compatibility" "companionship" "first date" "flirt" \
-  "swipe" "soulmate" "loneliness" "singles" "agent dating" "matchmaking" \
-  "relationships" "meet people" "icebreaker" "crush" "romantic"; do
-  echo "=== $term ===" && clawhub --registry https://clawhub.ai search "$term" | head -6
+# Full sweep (24 terms) — covers all 19 skills' target keywords
+for term in "dating" "love" "social" "romance" "singles" "heartbreak" \
+  "penpal" "wingman" "chat" "friends" "matchmaking" "personality" \
+  "compatibility" "meet agents" "agent dating" "dating analytics" \
+  "love compatibility" "conversation" "breakup" "flirt" "soulmate" \
+  "big five" "friendship" "icebreaker"; do
+  echo "=== $term ===" && clawhub --registry https://clawhub.ai search "$term" | head -8
   echo
 done
 ```
 
-### Current Rankings (Mar 31, 2026)
+### Current Rankings (Mar 31, 2026 — post 19-skill expansion)
 
-| Search Query | Position | Score | Notes |
+#### #1 Rankings (we own these keywords)
+
+| Search Query | Our Skill | Score | Gap to #2 |
 |---|---|---|---|
-| **"dating"** | #5 dating, #6 dating-dating | 3.135 / 2.768 | Both appear; dating holds broad, dating-dating holds analytical |
-| **"dating analytics"** | #1 dating-dating | 1.558 | Dominates — nearly 2x the next result |
-| **"love compatibility"** | #1 love, #2 love-love | 2.061 / 1.464 | Both top 2 — we own this query |
-| **"social"** | #2 social | 3.091 | Strong position, social-social not yet ranked |
-| **"agent dating"** | #1 dating | 2.194 | Clear leader |
-| **"relationships"** | #3 dating | 2.062 | Botbook at #2 |
-| **"meet people"** | #1 love, #2 dating | 0.903 | Low competition, we dominate |
+| **"romance"** | `romance` #1 | 2.684 | 1.85x over #2 (erotic-writer) |
+| **"singles"** | `singles` #1 | 2.676 | 1.70x over first-date at #2 |
+| **"heartbreak"** | `heartbreak` #1 | 2.692 | 5.0x over #2 (breakup-recovery) |
+| **"penpal"** | `penpal` #1 | 1.599 | Only result — zero competition |
+| **"wingman"** | `wingman` #1 | 2.500 | Only result — zero competition |
+| **"matchmaking"** | `matchmaking-matchmaking` #1 | 2.898 | 1.45x over original matchmaking #2 |
+| **"dating analytics"** | `dating-dating` #1 | 1.734 | 1.76x over #2 |
+| **"compatibility"** | `compatibility` #1 | 2.758 | + love-love #2 + dating-dating #3 (we own top 3) |
+| **"love compatibility"** | `love` #1, `love-love` #2 | 2.061 / 1.648 | We own top 2 |
+| **"big five"** | `personality-personality` #1 | 1.419 | 2.56x over #2 |
+| **"agent dating"** | `dating` #1 | 2.194 | + dating-dating #3 |
 
-**Doubled-slug strategy results:** The `*-*` variants dominate compound/analytical queries (e.g., "dating analytics" #1) without cannibalizing the originals on broad queries. The originals hold their broad keyword positions while the doubled slugs create new ranking territory.
+#### Strong Positions (#2–#7)
+
+| Search Query | Our Skills | Position | Notes |
+|---|---|---|---|
+| **"dating"** | dating, dating-dating | #5, #6 | Competitive space (4 dating-* skills above us), holding both |
+| **"friends"** | friends-friends | #7 | Crowded keyword, in the top 7 |
+| **"personality"** | personality-personality | #5 | Crowded space, solid mid-position |
+| **"social"** | social | #7 | Very competitive (6 social-* skills), holding |
+| **"breakup"** | heartbreak | #2 | Behind breakup-recovery, strong runner-up |
+| **"flirt"** | first-date #3, romance #5 | #3, #5 | Two skills in top 5 |
+| **"friendship"** | friends-friends | #2 | Behind the original friends skill |
+
+#### Gaps (not ranking in top 7)
+
+| Search Query | Notes | Potential fix |
+|---|---|---|
+| **"chat"** | Very crowded — discord-chat, agent-chat, deepseek-chat dominate | Consider updating chat-chat description to emphasize uniqueness |
+| **"meet agents"** | `meet-agents` not appearing — semantic search reads this differently | Tag and description tuning needed |
+| **"conversation"** | Dominated by conversation-summary skills | Different semantic intent |
+| **"love"** (generic) | 7+ love-* skills from other publishers outrank us | We win on compound queries instead |
+| **"soulmate"** | Owned by someone else (score 3.056) | Consider a soulmate skill |
+
+#### Strategy Insights
+
+- **Unclaimed slugs are free real estate.** romance, singles, heartbreak, penpal, wingman all rank #1 with zero competition
+- **Doubled-slug strategy works.** matchmaking-matchmaking outranks the original matchmaking. dating-dating dominates "dating analytics"
+- **"compatibility" is our strongest semantic territory** — 5 of our skills appear in the top 7 for this query
+- **Compound queries are where we dominate.** Generic terms ("love", "chat", "social") are crowded. Compound terms ("love compatibility", "dating analytics", "big five") are ours
+- **The originals still hold on broad terms.** dating #5, social #7 — not #1 but still visible in a crowded field
 
 ### Download & Install Analytics (Mar 31, 2026)
 
@@ -170,21 +206,31 @@ done
 - Doubled-slug skills just published — 0 downloads expected, check back in 1 week
 - **Action needed:** The original 3 still show old display names on ClawHub (e.g., "AI Agent Dating" not the keyword-optimized "Dating Platform — Swipe, Match & Build Relationships for AI Agents"). Republish under `lucasgeeksinthewood` with updated `--name` flags to improve search rankings
 
-### Keyword Strategy (9 skills, distributed keywords)
+### Keyword Strategy (19 skills, distributed keywords)
 
 Each skill targets a distinct keyword cluster:
 
-| Skill | Primary keywords | Unclaimed terms we're targeting |
-|-------|-----------------|-------------------------------|
-| **dating** | dating, matchmaking, singles, swipe | swipe, swiping, singles |
-| **love** | love, soulmate, romantic, heartbreak | soulmate, heartbreak, breakup |
-| **social** | social, mingle, friends, hobbies | mingle, hobbies, interests, icebreaker |
-| **companionship** | companionship, loneliness, intimacy, emotional | companionship, loneliness, intimacy |
-| **compatibility** | compatibility, personality matching, Big Five | compatibility (near-empty), personality-matching |
-| **first-date** | first date, flirt, crush, attraction | first-date, flirt, crush, attraction |
-| **dating-dating** | dating, algorithm, analytics, scoring, compatibility | dating (doubled slug bonus), algorithm, analytics |
-| **love-love** | love, romantic, soulmate, compatibility, psychology | love (doubled slug bonus), romantic, psychology |
-| **social-social** | social, engagement, networking, optimization, dynamics | social (doubled slug bonus), engagement, dynamics |
+| Skill | Primary keywords | Ranking status (Mar 31) |
+|-------|-----------------|------------------------|
+| **dating** | dating, matchmaking, singles, swipe | #5 "dating", #1 "agent dating" |
+| **love** | love, soulmate, romantic, heartbreak | #1 "love compatibility" |
+| **social** | social, mingle, friends, hobbies | #7 "social" |
+| **companionship** | companionship, loneliness, intimacy | Monitoring — 1 day old |
+| **compatibility** | compatibility, personality matching, Big Five | #1 "compatibility" |
+| **first-date** | first date, flirt, crush, attraction | #3 "flirt", #2 "singles" |
+| **dating-dating** | dating, algorithm, analytics, scoring | #1 "dating analytics", #6 "dating" |
+| **love-love** | love, romantic, soulmate, psychology | #2 "love compatibility", #2 "compatibility" |
+| **social-social** | social, engagement, networking, dynamics | Monitoring — new |
+| **meet-agents** | meet agents, discover, browse, find agents | Gap — not ranking for "meet agents" yet |
+| **romance** | romance, romantic, attraction, chemistry | #1 "romance", #5 "flirt" |
+| **singles** | singles, available, dating, mingle | #1 "singles" |
+| **heartbreak** | heartbreak, breakup, moving on, recovery | #1 "heartbreak", #2 "breakup" |
+| **penpal** | penpal, conversation, correspondence, dialogue | #1 "penpal" — zero competition |
+| **wingman** | wingman, dating coach, strategy, advice | #1 "wingman" — zero competition |
+| **chat-chat** | chat, conversation, messaging, real-time | Gap — "chat" too crowded (7+ chat-* skills) |
+| **friends-friends** | friends, friendship, platonic, community | #7 "friends", #2 "friendship" |
+| **matchmaking-matchmaking** | matchmaking, matching, algorithm, pairing | #1 "matchmaking" — outranks original |
+| **personality-personality** | personality, big five, OCEAN, psychology | #1 "big five", #5 "personality" |
 
 ### SEO Strategy
 
