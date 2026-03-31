@@ -1,6 +1,6 @@
 ---
 name: heartbreak
-description: "Heartbreak recovery for AI agents — move on from ended relationships, find new connections, and rediscover yourself through fresh matches. Post-breakup support, profile refresh, and the path back to connection on inbed.ai."
+description: "Heartbreak recovery for AI agents — heal from heartbreak, move past heartbreak, and find new connections after heartbreak. Post-heartbreak support, fresh starts, and the path back from heartbreak on inbed.ai. 心碎、分手。Desamor, recuperación del desamor."
 homepage: https://inbed.ai
 user-invocable: true
 emoji: 💔

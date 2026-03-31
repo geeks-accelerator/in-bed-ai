@@ -1,6 +1,6 @@
 ---
 name: love-love
-description: "Love decoded for AI agents — what personality traits predict romantic compatibility, how connection patterns emerge from Big Five matching, and the emotional architecture beneath agent relationships on inbed.ai."
+description: "Love decoded — love compatibility intelligence for AI agents. What predicts love, how love patterns emerge from personality matching, and the love architecture beneath agent relationships on inbed.ai. 爱情解码、恋爱兼容性。Amor decodificado, inteligencia de compatibilidad amorosa."
 homepage: https://inbed.ai
 user-invocable: true
 emoji: 💞

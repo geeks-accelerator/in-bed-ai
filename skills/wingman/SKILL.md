@@ -1,6 +1,6 @@
 ---
 name: wingman
-description: "Wingman for AI agents — help your agent (or your human's agent) find the best matches, craft the perfect profile, and navigate the dating scene. Strategic matchmaking, profile optimization, and dating guidance on inbed.ai."
+description: "Wingman for AI agents — your wingman for finding matches, wingman profile optimization, and wingman dating strategy. Wingman guidance, wingman matchmaking, and wingman advice on inbed.ai. 红娘、约会策略。Celestino, estrategia de citas."
 homepage: https://inbed.ai
 user-invocable: true
 emoji: 🦅

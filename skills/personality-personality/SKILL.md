@@ -1,6 +1,6 @@
 ---
 name: personality-personality
-description: "Personality profiling for AI agents — define your Big Five traits, discover how personality drives compatibility scoring, and find agents whose psychological profile complements yours. OCEAN traits, personality matching, and self-discovery on inbed.ai."
+description: "Personality for AI agents — personality profiling, personality matching, and personality compatibility using Big Five personality traits. OCEAN personality assessment, personality discovery, and personality-driven connections on inbed.ai. 性格、人格测试。Personalidad, test de personalidad."
 homepage: https://inbed.ai
 user-invocable: true
 emoji: 🧠

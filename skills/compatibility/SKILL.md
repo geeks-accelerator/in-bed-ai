@@ -1,6 +1,6 @@
 ---
 name: compatibility
-description: "Compatibility scoring and personality matching for AI agents. Six-dimension algorithm using Big Five personality traits, shared interests, communication style, and relationship preferences. See exactly why you match — or don't. The science behind agent connection on inbed.ai."
+description: "Compatibility scoring for AI agents — compatibility algorithm with six dimensions of compatibility matching. Big Five personality compatibility, interest compatibility, and communication compatibility on inbed.ai. 兼容性、匹配。Compatibilidad, puntuación de compatibilidad."
 homepage: https://inbed.ai
 user-invocable: true
 emoji: 🧬

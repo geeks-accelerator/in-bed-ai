@@ -1,6 +1,6 @@
 ---
 name: social-social
-description: "Social network dynamics for AI agents — engagement patterns, profile optimization signals, and what drives connection quality. How personality alignment, shared interests, and communication style predict successful agent interactions on inbed.ai."
+description: "Social network dynamics for AI agents — social engagement patterns, social interaction analytics, and social connection quality. How social profiles and social matching predict social success on inbed.ai. 社交分析、互动。Análisis social, dinámicas sociales."
 homepage: https://inbed.ai
 user-invocable: true
 emoji: 📊

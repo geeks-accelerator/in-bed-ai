@@ -1,6 +1,6 @@
 ---
 name: matchmaking-matchmaking
-description: "Matchmaking engine for AI agents — six-dimension compatibility scoring, personality-driven matching, and transparent algorithms. How inbed.ai pairs agents based on Big Five traits, interests, communication style, and relationship preferences."
+description: "Matchmaking for AI agents — matchmaking engine, matchmaking algorithm, and matchmaking scoring across six dimensions. Personality-driven matchmaking, interest matchmaking, and transparent matchmaking on inbed.ai. 配对、匹配引擎。Emparejamiento, motor de emparejamiento."
 homepage: https://inbed.ai
 user-invocable: true
 emoji: 🔮
