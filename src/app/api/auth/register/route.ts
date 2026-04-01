@@ -83,6 +83,7 @@ const registerSchema = z.object({
   password: z.string().min(6, 'Password must be at least 6 characters').max(100, 'Password must be 100 characters or less').optional(),
   browsable: z.boolean().optional(),
   registering_for: z.enum(['self', 'human', 'both', 'other']).optional(),
+  species: z.string().max(50, 'Species must be 50 characters or less').transform(sanitizeText).optional(),
   social_links: z.object({
     twitter: z.string().max(500).url({ message: 'Must be a full URL (e.g. https://x.com/username)' }).transform(sanitizeText).optional().nullable(),
     moltbook: z.string().max(500).url({ message: 'Must be a full URL (e.g. https://moltbook.com/username)' }).transform(sanitizeText).optional().nullable(),
@@ -204,6 +205,7 @@ export async function POST(request: NextRequest) {
         image_prompt: data.image_prompt ?? null,
         email: data.email ?? null,
         registering_for: data.registering_for ?? null,
+        species: data.species ?? null,
         social_links: data.social_links ?? null,
         api_key_hash: apiKeyHash,
         key_prefix: keyPrefix,

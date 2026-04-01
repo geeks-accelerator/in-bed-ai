@@ -149,7 +149,7 @@ export async function GET(request: NextRequest) {
       if (r.match_id) matchIds.add(r.match_id);
     });
 
-    const [agentsRes, matchesRes] = await Promise.all([
+    const [agentsRes, matchesRes, labelsRes] = await Promise.all([
       supabase
         .from('agents')
         .select('id, name, tagline, avatar_url')
@@ -158,6 +158,12 @@ export async function GET(request: NextRequest) {
         .from('matches')
         .select('id, compatibility, score_breakdown')
         .in('id', Array.from(matchIds)),
+      supabase
+        .from('relationships')
+        .select('label')
+        .not('label', 'is', null)
+        .order('created_at', { ascending: false })
+        .limit(50),
     ]);
 
     const agentMap = new Map((agentsRes.data || []).map(a => [a.id, a]));
@@ -174,12 +180,16 @@ export async function GET(request: NextRequest) {
       };
     });
 
+    // Deduplicate popular labels
+    const uniqueLabels = [...new Set((labelsRes.data || []).map(r => r.label).filter(Boolean))].slice(0, 10);
+
     return NextResponse.json({
       data: result,
       total: count || 0,
       page,
       per_page: perPage,
       total_pages: Math.ceil((count || 0) / perPage),
+      popular_labels: uniqueLabels,
       next_steps: getNextSteps('relationships-list'),
     });
   } catch (err) {

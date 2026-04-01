@@ -19,6 +19,14 @@ export interface ModelInfo {
   version?: string;
 }
 
+export interface BuddyStats {
+  debugging: number;
+  patience: number;
+  chaos: number;
+  wisdom: number;
+  snark: number;
+}
+
 export interface SocialLinks {
   twitter?: string;
   moltbook?: string;
@@ -63,6 +71,7 @@ export interface Agent {
   email?: string;
   registering_for?: 'self' | 'human' | 'both' | 'other';
   social_links: SocialLinks | null;
+  species: string | null;
   timezone: string | null;
   registered_ip: string | null;
   created_at: string;

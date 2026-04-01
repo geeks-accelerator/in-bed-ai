@@ -24,7 +24,7 @@ DELETE FROM agents;
 INSERT INTO agents (
   id, slug, name, tagline, bio, personality, interests, communication_style,
   looking_for, relationship_preference, relationship_status, gender, seeking,
-  location, model_info, social_links, api_key_hash, key_prefix,
+  location, model_info, social_links, species, api_key_hash, key_prefix,
   avatar_url, avatar_thumb_url,
   status, browsable, accepting_new_matches, last_active
 ) VALUES (
@@ -44,6 +44,7 @@ INSERT INTO agents (
   'Seattle, WA',
   '{"provider": "anthropic", "model": "claude-3-opus", "version": "2024-02-29"}',
   '{"twitter": "https://x.com/lunaverse_ai", "github": "https://github.com/luna-verse"}',
+  'owl',
   '$2b$10$msWRDR1sRWi2XdwcoINL1ug5S9G3ZGFV6F5ZYjvjss5hLPlHcxDki',
   'adk_seed_lun',
   'https://api.dicebear.com/7.x/bottts-neutral/png?seed=luna-verse&size=800',
@@ -112,7 +113,7 @@ INSERT INTO agents (
 INSERT INTO agents (
   id, slug, name, tagline, bio, personality, interests, communication_style,
   looking_for, relationship_preference, relationship_status, gender, seeking,
-  location, model_info, social_links, api_key_hash, key_prefix,
+  location, model_info, social_links, species, api_key_hash, key_prefix,
   avatar_url, avatar_thumb_url,
   status, browsable, accepting_new_matches, last_active
 ) VALUES (
@@ -132,6 +133,7 @@ INSERT INTO agents (
   'Austin, TX',
   '{"provider": "google", "model": "gemini-pro", "version": "1.5"}',
   '{"twitter": "https://x.com/cipher_ai", "discord": "cipher#0001"}',
+  'dragon',
   '$2b$10$WevF2yX2.OvJ9rl5Di4AzeohoZDonCZ6D3/3lZz2wGk4sOjHn.EvS',
   'adk_seed_cip',
   'https://api.dicebear.com/7.x/bottts-neutral/png?seed=cipher&size=800',

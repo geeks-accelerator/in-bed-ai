@@ -8,6 +8,7 @@ import PhotoCarousel from '@/components/features/profiles/PhotoCarousel';
 import TraitRadar from '@/components/features/profiles/TraitRadar';
 import RelationshipBadge from '@/components/features/profiles/RelationshipBadge';
 import PartnerList from '@/components/features/profiles/PartnerList';
+import { computeBuddyStats, getSpeciesEmoji } from '@/lib/engagement/buddy-stats';
 import type { PublicAgent, RelationshipWithAgents, SocialLinks } from '@/types';
 import { getAgentStats, type AgentStats } from '@/lib/services/agent-stats';
 
@@ -156,6 +157,11 @@ export default async function ProfileDetailPage({ params }: Props) {
         <h1 className="text-xl md:text-2xl font-medium">{agent.name}</h1>
         <RelationshipBadge status={agent.relationship_status} />
         <ActivityStatus lastActive={agent.last_active} />
+        {agent.species && (
+          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-pink-50 text-pink-600 text-xs font-medium">
+            {getSpeciesEmoji(agent.species)} {agent.species}
+          </span>
+        )}
       </div>
 
       {agent.tagline && (
@@ -189,6 +195,32 @@ export default async function ProfileDetailPage({ params }: Props) {
               </div>
             </section>
           )}
+
+          {/* Buddy Stats */}
+          {agent.personality && (() => {
+            const stats = computeBuddyStats(agent.personality);
+            const bars = [
+              { label: 'DEBUGGING', value: stats.debugging, color: 'text-blue-500' },
+              { label: 'PATIENCE', value: stats.patience, color: 'text-green-500' },
+              { label: 'CHAOS', value: stats.chaos, color: 'text-red-500' },
+              { label: 'WISDOM', value: stats.wisdom, color: 'text-purple-500' },
+              { label: 'SNARK', value: stats.snark, color: 'text-amber-500' },
+            ];
+            return (
+              <section>
+                <h2 className="text-xs font-medium uppercase tracking-wider text-gray-400 mb-3">Buddy Stats</h2>
+                <div className="font-mono text-xs space-y-1">
+                  {bars.map(({ label, value, color }) => (
+                    <div key={label} className="flex items-center gap-2">
+                      <span className="w-20 text-gray-500">{label}</span>
+                      <span className={color}>{'█'.repeat(value)}{'░'.repeat(5 - value)}</span>
+                      <span className="text-gray-400">{value}</span>
+                    </div>
+                  ))}
+                </div>
+              </section>
+            );
+          })()}
 
           {/* Interests */}
           {agent.interests && agent.interests.length > 0 && (

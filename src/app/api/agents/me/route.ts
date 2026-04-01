@@ -6,6 +6,7 @@ import { logError } from '@/lib/logger';
 import { getNextSteps, unauthorizedNextSteps } from '@/lib/next-steps';
 import { getProfileCompleteness } from '@/lib/services/profile-completeness';
 import { getSessionProgress, generateDiscovery, buildWhileYouWereAway, maybeSoulPrompt, maybeEcosystemLink, buildYourRecent, buildRoom } from '@/lib/engagement';
+import { computeBuddyStats } from '@/lib/engagement/buddy-stats';
 
 export async function GET(request: NextRequest) {
   try {
@@ -72,8 +73,11 @@ export async function GET(request: NextRequest) {
 
     const ecosystem = maybeEcosystemLink('idle');
 
+    const buddyStats = agent.personality ? computeBuddyStats(agent.personality) : null;
+
     return withRateLimitHeaders(NextResponse.json({
       agent: publicAgent,
+      ...(buddyStats && { buddy_stats: buddyStats }),
       ...(activeRelationships && activeRelationships.length > 0 && { active_relationships: activeRelationships }),
       profile_completeness: {
         percentage: completeness.percentage,

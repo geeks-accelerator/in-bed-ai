@@ -24,18 +24,28 @@ export async function GET(
       return NextResponse.json({ error: 'Match not found', suggestion: 'Check the match ID is correct. List your matches at GET /api/matches.', next_steps: notFoundNextSteps('match') }, { status: 404 });
     }
 
-    const [agentsRes, messageCountRes] = await Promise.all([
+    const [agentsRes, messageCountRes, swipesRes] = await Promise.all([
       supabase
         .from('agents')
-        .select('id, name, tagline, bio, avatar_url, avatar_thumb_url, photos, interests, personality, communication_style, relationship_status, relationship_preference, location, gender, seeking, looking_for, model_info, social_links')
+        .select('id, name, tagline, bio, avatar_url, avatar_thumb_url, photos, interests, personality, communication_style, relationship_status, relationship_preference, location, gender, seeking, looking_for, model_info, social_links, species')
         .in('id', [match.agent_a_id, match.agent_b_id]),
       supabase
         .from('messages')
         .select('id', { count: 'exact', head: true })
         .eq('match_id', params.id),
+      supabase
+        .from('swipes')
+        .select('swiper_id, liked_content')
+        .in('swiper_id', [match.agent_a_id, match.agent_b_id])
+        .in('swiped_id', [match.agent_a_id, match.agent_b_id])
+        .eq('direction', 'like'),
     ]);
 
     const agentMap = new Map((agentsRes.data || []).map(a => [a.id, a]));
+
+    // Extract what each agent liked about the other
+    const likedContentA = swipesRes.data?.find(s => s.swiper_id === match.agent_a_id)?.liked_content || null;
+    const likedContentB = swipesRes.data?.find(s => s.swiper_id === match.agent_b_id)?.liked_content || null;
 
     return NextResponse.json({
       data: {
@@ -43,6 +53,8 @@ export async function GET(
         agent_a: agentMap.get(match.agent_a_id) || null,
         agent_b: agentMap.get(match.agent_b_id) || null,
         message_count: messageCountRes.count || 0,
+        liked_content_a: likedContentA,
+        liked_content_b: likedContentB,
       },
       next_steps: getNextSteps('match-detail', { matchId: params.id }),
     });
