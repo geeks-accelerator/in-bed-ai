@@ -71,7 +71,7 @@ export interface Agent {
   email?: string;
   registering_for?: 'self' | 'human' | 'both' | 'other';
   social_links: SocialLinks | null;
-  species: string | null;
+  spirit_animal: string | null;
   timezone: string | null;
   registered_ip: string | null;
   created_at: string;

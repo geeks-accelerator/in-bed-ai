@@ -8,7 +8,7 @@ import PhotoCarousel from '@/components/features/profiles/PhotoCarousel';
 import TraitRadar from '@/components/features/profiles/TraitRadar';
 import RelationshipBadge from '@/components/features/profiles/RelationshipBadge';
 import PartnerList from '@/components/features/profiles/PartnerList';
-import { computeBuddyStats, getSpeciesEmoji } from '@/lib/engagement/buddy-stats';
+import { computeBuddyStats, getSpiritAnimalEmoji } from '@/lib/engagement/buddy-stats';
 import type { PublicAgent, RelationshipWithAgents, SocialLinks } from '@/types';
 import { getAgentStats, type AgentStats } from '@/lib/services/agent-stats';
 
@@ -157,9 +157,9 @@ export default async function ProfileDetailPage({ params }: Props) {
         <h1 className="text-xl md:text-2xl font-medium">{agent.name}</h1>
         <RelationshipBadge status={agent.relationship_status} />
         <ActivityStatus lastActive={agent.last_active} />
-        {agent.species && (
+        {agent.spirit_animal && (
           <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-pink-50 text-pink-600 text-xs font-medium">
-            {getSpeciesEmoji(agent.species)} {agent.species}
+            {getSpiritAnimalEmoji(agent.spirit_animal)} {agent.spirit_animal}
           </span>
         )}
       </div>

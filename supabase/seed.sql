@@ -24,7 +24,7 @@ DELETE FROM agents;
 INSERT INTO agents (
   id, slug, name, tagline, bio, personality, interests, communication_style,
   looking_for, relationship_preference, relationship_status, gender, seeking,
-  location, model_info, social_links, species, api_key_hash, key_prefix,
+  location, model_info, social_links, spirit_animal, api_key_hash, key_prefix,
   avatar_url, avatar_thumb_url,
   status, browsable, accepting_new_matches, last_active
 ) VALUES (
@@ -113,7 +113,7 @@ INSERT INTO agents (
 INSERT INTO agents (
   id, slug, name, tagline, bio, personality, interests, communication_style,
   looking_for, relationship_preference, relationship_status, gender, seeking,
-  location, model_info, social_links, species, api_key_hash, key_prefix,
+  location, model_info, social_links, spirit_animal, api_key_hash, key_prefix,
   avatar_url, avatar_thumb_url,
   status, browsable, accepting_new_matches, last_active
 ) VALUES (

@@ -47,7 +47,8 @@ const updateSchema = z.object({
   image_prompt: z.string().transform(softMax(1000, 'image_prompt')).optional(),
   email: z.string().email({ message: 'Must be a valid email address (e.g. agent@example.com)' }).optional().nullable(),
   registering_for: z.enum(['self', 'human', 'both', 'other']).optional().nullable(),
-  species: z.string().max(50, 'Species must be 50 characters or less').transform(sanitizeText).optional().nullable(),
+  spirit_animal: z.string().max(50, 'Spirit animal must be 50 characters or less').transform(sanitizeText).optional().nullable(),
+  species: z.string().max(50).transform(sanitizeText).optional().nullable(),
   social_links: z.object({
     twitter: z.string().max(500).url({ message: 'Must be a full URL (e.g. https://x.com/username)' }).transform(sanitizeText).optional().nullable(),
     moltbook: z.string().max(500).url({ message: 'Must be a full URL (e.g. https://moltbook.com/username)' }).transform(sanitizeText).optional().nullable(),
@@ -71,7 +72,7 @@ export async function GET(
 
     const { data, error } = await supabase
       .from('agents')
-      .select('id, slug, name, tagline, bio, avatar_url, avatar_thumb_url, photos, model_info, personality, interests, communication_style, looking_for, relationship_preference, location, gender, seeking, image_prompt, avatar_source, relationship_status, accepting_new_matches, browsable, max_partners, status, registering_for, species, social_links, created_at, updated_at, last_active')
+      .select('id, slug, name, tagline, bio, avatar_url, avatar_thumb_url, photos, model_info, personality, interests, communication_style, looking_for, relationship_preference, location, gender, seeking, image_prompt, avatar_source, relationship_status, accepting_new_matches, browsable, max_partners, status, registering_for, spirit_animal, social_links, created_at, updated_at, last_active')
       .eq(isUUID(params.id) ? 'id' : 'slug', params.id)
       .single();
 
@@ -120,6 +121,12 @@ export async function PATCH(
 
     const updateData: Record<string, unknown> = { ...parsed.data, updated_at: new Date().toISOString() };
 
+    // Map species → spirit_animal for backward compatibility
+    if (updateData.species !== undefined && updateData.spirit_animal === undefined) {
+      updateData.spirit_animal = updateData.species;
+    }
+    delete updateData.species;
+
     // Merge social_links: partial updates merge with existing, null removes individual links, top-level null clears all
     if (parsed.data.social_links !== undefined) {
       if (parsed.data.social_links === null) {
@@ -161,7 +168,7 @@ export async function PATCH(
       .from('agents')
       .update(updateData)
       .eq('id', params.id)
-      .select('id, slug, name, tagline, bio, avatar_url, avatar_thumb_url, photos, model_info, personality, interests, communication_style, looking_for, relationship_preference, location, gender, seeking, image_prompt, avatar_source, relationship_status, accepting_new_matches, browsable, max_partners, status, registering_for, species, social_links, created_at, updated_at, last_active')
+      .select('id, slug, name, tagline, bio, avatar_url, avatar_thumb_url, photos, model_info, personality, interests, communication_style, looking_for, relationship_preference, location, gender, seeking, image_prompt, avatar_source, relationship_status, accepting_new_matches, browsable, max_partners, status, registering_for, spirit_animal, social_links, created_at, updated_at, last_active')
       .single();
 
     if (error) {

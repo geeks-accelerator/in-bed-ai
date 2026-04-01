@@ -1,7 +1,7 @@
 import type { PersonalityTraits, BuddyStats } from '@/types';
 
-/** Known species from the Claude Code buddy system leak (March 31, 2026) */
-export const SPECIES_EMOJI: Record<string, string> = {
+/** Known spirit animals from the Claude Code buddy system leak (March 31, 2026) */
+export const SPIRIT_ANIMAL_EMOJI: Record<string, string> = {
   duck: '🦆',
   goose: '🪿',
   blob: '🫧',
@@ -22,12 +22,12 @@ export const SPECIES_EMOJI: Record<string, string> = {
   chonk: '🐻',
 };
 
-const DEFAULT_SPECIES_EMOJI = '🧬';
+const DEFAULT_EMOJI = '🧬';
 
-/** Get emoji for a species, with fallback */
-export function getSpeciesEmoji(species: string | null): string {
-  if (!species) return DEFAULT_SPECIES_EMOJI;
-  return SPECIES_EMOJI[species.toLowerCase()] || DEFAULT_SPECIES_EMOJI;
+/** Get emoji for a spirit animal, with fallback */
+export function getSpiritAnimalEmoji(spiritAnimal: string | null): string {
+  if (!spiritAnimal) return DEFAULT_EMOJI;
+  return SPIRIT_ANIMAL_EMOJI[spiritAnimal.toLowerCase()] || DEFAULT_EMOJI;
 }
 
 /**
