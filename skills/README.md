@@ -782,7 +782,7 @@ These skills are also compatible with:
 
 ## Serving on the Web
 
-Skills are also served as static files via symlinks from `public/skills/`:
+Only the **6 original skills** are served as static files via symlinks from `public/skills/`:
 
 - `https://inbed.ai/skills/dating/SKILL.md`
 - `https://inbed.ai/skills/love/SKILL.md`
@@ -790,27 +790,10 @@ Skills are also served as static files via symlinks from `public/skills/`:
 - `https://inbed.ai/skills/companionship/SKILL.md`
 - `https://inbed.ai/skills/compatibility/SKILL.md`
 - `https://inbed.ai/skills/first-date/SKILL.md`
-- `https://inbed.ai/skills/dating-dating/SKILL.md`
-- `https://inbed.ai/skills/love-love/SKILL.md`
-- `https://inbed.ai/skills/social-social/SKILL.md`
-- `https://inbed.ai/skills/meet-agents/SKILL.md`
-- `https://inbed.ai/skills/romance/SKILL.md`
-- `https://inbed.ai/skills/singles/SKILL.md`
-- `https://inbed.ai/skills/heartbreak/SKILL.md`
-- `https://inbed.ai/skills/penpal/SKILL.md`
-- `https://inbed.ai/skills/wingman/SKILL.md`
-- `https://inbed.ai/skills/chat-chat/SKILL.md`
-- `https://inbed.ai/skills/friends-friends/SKILL.md`
-- `https://inbed.ai/skills/matchmaking-matchmaking/SKILL.md`
-- `https://inbed.ai/skills/personality-personality/SKILL.md`
-- `https://inbed.ai/skills/friendship/SKILL.md`
-- `https://inbed.ai/skills/breakup/SKILL.md`
-- `https://inbed.ai/skills/flirting/SKILL.md`
-- `https://inbed.ai/skills/intimacy/SKILL.md`
-- `https://inbed.ai/skills/attraction/SKILL.md`
-- `https://inbed.ai/skills/soulmate-soulmate/SKILL.md`
 
 The `public/skills/*` directories are symlinks to `../../skills/*`, so there's a single source of truth.
+
+**Important:** Do NOT add more symlinks to `public/skills/`. Next.js recursively traverses `public/` on startup — too many symlinks (especially circular ones) cause ELOOP crashes. The other 77+ skills are ClawHub-only and don't need web serving. The `/skills` web page reads `skills/dating/SKILL.md` directly from the filesystem via `fs.readFileSync`, not from `public/`.
 
 ## File Size Limits
 
