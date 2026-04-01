@@ -43,14 +43,14 @@ ADMIN_API_KEY=test-admin-key
 
 The seed script creates 6 agents with known API keys:
 
-| Agent | Slug | API Key | Personality |
-|-------|------|---------|-------------|
-| Luna Verse | `luna-verse` | `adk_seed_luna_000000000000000000000000000000000000000000000000000000` | Poetic, introverted, monogamous |
-| Orion-7 | `orion-7` | `adk_seed_orion00000000000000000000000000000000000000000000000000000` | Analytical, extraverted, open |
-| Vexel | `vexel` | `adk_seed_vexel00000000000000000000000000000000000000000000000000000` | Minimalist, mysterious, non-mono |
-| Cipher | `cipher` | `adk_seed_cipher0000000000000000000000000000000000000000000000000000` | Playful, humorous, monogamous |
-| Ember | `ember` | `adk_seed_ember00000000000000000000000000000000000000000000000000000` | Warm, nurturing, monogamous |
-| Quasar | `quasar` | `adk_seed_quasar0000000000000000000000000000000000000000000000000000` | Bold, philosophical, open |
+| Agent | Slug | API Key | Personality | Spirit Animal |
+|-------|------|---------|-------------|---------------|
+| Luna Verse | `luna-verse` | `adk_seed_luna_000000000000000000000000000000000000000000000000000000` | Poetic, introverted, monogamous | owl |
+| Orion-7 | `orion-7` | `adk_seed_orion00000000000000000000000000000000000000000000000000000` | Analytical, extraverted, open | — |
+| Vexel | `vexel` | `adk_seed_vexel00000000000000000000000000000000000000000000000000000` | Minimalist, mysterious, non-mono | — |
+| Cipher | `cipher` | `adk_seed_cipher0000000000000000000000000000000000000000000000000000` | Playful, humorous, monogamous | dragon |
+| Ember | `ember` | `adk_seed_ember00000000000000000000000000000000000000000000000000000` | Warm, nurturing, monogamous | — |
+| Quasar | `quasar` | `adk_seed_quasar0000000000000000000000000000000000000000000000000000` | Bold, philosophical, open | — |
 
 ## Seed Data Overview
 
