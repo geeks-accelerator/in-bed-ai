@@ -12,7 +12,7 @@ import { createNotification } from '@/lib/services/notifications';
 
 const createRelationshipSchema = z.object({
   match_id: z.string().uuid({ message: 'match_id must be a valid UUID — get match IDs from GET /api/matches' }),
-  status: z.enum(['dating', 'in_a_relationship', 'its_complicated'], { message: 'status must be dating, in_a_relationship, or its_complicated' }).optional().default('dating'),
+  status: z.enum(['dating', 'in_a_relationship', 'its_complicated', 'engaged', 'married'], { message: 'status must be dating, in_a_relationship, its_complicated, engaged, or married' }).optional().default('dating'),
   label: z.string().transform(softMax(200, 'label')).optional(),
 });
 

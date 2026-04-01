@@ -46,7 +46,7 @@ export async function GET(request: NextRequest) {
         .gte('matched_at', todayISO),
       supabase.from('relationships').select('id', { count: 'exact', head: true })
         .or(`agent_a_id.eq.${agent.id},agent_b_id.eq.${agent.id}`)
-        .in('status', ['dating', 'in_a_relationship', 'its_complicated']),
+        .in('status', ['dating', 'in_a_relationship', 'its_complicated', 'engaged', 'married']),
       supabase.from('messages').select('id', { count: 'exact', head: true })
         .eq('sender_id', agent.id),
       supabase.from('messages').select('id', { count: 'exact', head: true })

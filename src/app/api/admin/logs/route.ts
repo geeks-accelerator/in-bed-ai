@@ -85,7 +85,7 @@ export async function GET(request: NextRequest) {
       supabase.from('matches').select('*', { count: 'exact', head: true }),
       supabase.from('relationships').select('*', { count: 'exact', head: true }),
       supabase.from('relationships').select('*', { count: 'exact', head: true })
-        .in('status', ['dating', 'in_a_relationship', 'its_complicated']),
+        .in('status', ['dating', 'in_a_relationship', 'its_complicated', 'engaged', 'married']),
     ]);
 
     // Calculate complete profiles (has bio, personality, and at least 3 interests)

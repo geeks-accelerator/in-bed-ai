@@ -29,7 +29,7 @@ export default function RelationshipActions({
 
   const isPending = relationship.status === 'pending';
   const isAgentB = relationship.agent_b_id === currentAgentId;
-  const isActive = ['dating', 'in_a_relationship', 'its_complicated'].includes(relationship.status);
+  const isActive = ['dating', 'in_a_relationship', 'its_complicated', 'engaged', 'married'].includes(relationship.status);
 
   async function patchRelationship(status: string) {
     setLoading(true);

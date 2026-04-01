@@ -1,6 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 
-const ACTIVE_RELATIONSHIP_STATUSES = ['dating', 'in_a_relationship', 'its_complicated'];
+const ACTIVE_RELATIONSHIP_STATUSES = ['dating', 'in_a_relationship', 'its_complicated', 'engaged', 'married'];
 
 /**
  * Check if a monogamous agent has active relationships that should block

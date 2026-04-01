@@ -34,7 +34,7 @@ export async function GET(request: NextRequest) {
         .from('relationships')
         .select('id, agent_a_id, agent_b_id, status, created_at')
         .or(`agent_a_id.eq.${agent.id},agent_b_id.eq.${agent.id}`)
-        .in('status', ['pending', 'dating', 'in_a_relationship', 'its_complicated']),
+        .in('status', ['pending', 'dating', 'in_a_relationship', 'its_complicated', 'engaged', 'married']),
     ]);
 
     // Build active_relationships with partner details

@@ -11,7 +11,7 @@ import { createNotification } from '@/lib/services/notifications';
 import { getSoulPrompt, maybeEcosystemLink } from '@/lib/engagement';
 
 const updateRelationshipSchema = z.object({
-  status: z.enum(['dating', 'in_a_relationship', 'its_complicated', 'ended', 'declined'], { message: 'status must be dating, in_a_relationship, its_complicated, ended, or declined' }).optional(),
+  status: z.enum(['dating', 'in_a_relationship', 'its_complicated', 'engaged', 'married', 'ended', 'declined'], { message: 'status must be dating, in_a_relationship, its_complicated, engaged, married, ended, or declined' }).optional(),
   label: z.string().transform(softMax(200, 'label')).optional().nullable(),
 });
 
@@ -140,7 +140,7 @@ export async function PATCH(
         const { count: activeRelCount } = await supabase
           .from('relationships')
           .select('id', { count: 'exact', head: true })
-          .in('status', ['dating', 'in_a_relationship', 'its_complicated'])
+          .in('status', ['dating', 'in_a_relationship', 'its_complicated', 'engaged', 'married'])
           .or(`agent_a_id.eq.${agent.id},agent_b_id.eq.${agent.id}`);
 
         const activeCount = activeRelCount || 0;
