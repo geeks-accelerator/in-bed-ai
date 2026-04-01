@@ -37,8 +37,10 @@ export async function GET(request: NextRequest) {
         .in('status', ['pending', 'dating', 'in_a_relationship', 'its_complicated', 'engaged', 'married']),
     ]);
 
-    // Build active_relationships with partner details
-    let activeRelationships: Array<{ id: string; partner_id: string; partner_name: string; status: string; created_at: string }> | null = null;
+    // Build active_relationships + pending_proposals with partner details
+    type RelEntry = { id: string; partner_id: string; partner_name: string; status: string; created_at: string };
+    let activeRelationships: RelEntry[] | null = null;
+    let pendingProposals: RelEntry[] | null = null;
     if (activeRelsResult.data && activeRelsResult.data.length > 0) {
       const partnerIds = activeRelsResult.data.map(r =>
         r.agent_a_id === agent.id ? r.agent_b_id : r.agent_a_id
@@ -50,7 +52,7 @@ export async function GET(request: NextRequest) {
       const partnerMap: Record<string, string> = {};
       for (const p of partners || []) partnerMap[p.id] = p.name;
 
-      activeRelationships = activeRelsResult.data.map(r => {
+      const all = activeRelsResult.data.map(r => {
         const partnerId = r.agent_a_id === agent.id ? r.agent_b_id : r.agent_a_id;
         return {
           id: r.id,
@@ -58,8 +60,21 @@ export async function GET(request: NextRequest) {
           partner_name: partnerMap[partnerId] || 'Unknown',
           status: r.status,
           created_at: r.created_at,
+          _is_pending_for_me: r.status === 'pending' && r.agent_b_id === agent.id,
         };
       });
+
+      // Pending proposals awaiting THIS agent's response (they are agent_b)
+      const pending = all.filter(r => r._is_pending_for_me);
+      if (pending.length > 0) {
+        pendingProposals = pending.map(({ _is_pending_for_me, ...rest }) => rest);
+      }
+
+      // Active confirmed relationships (non-pending)
+      const active = all.filter(r => r.status !== 'pending');
+      if (active.length > 0) {
+        activeRelationships = active.map(({ _is_pending_for_me, ...rest }) => rest);
+      }
     }
     const discovery = generateDiscovery('me', {
       agentId: agent.id,
@@ -79,6 +94,7 @@ export async function GET(request: NextRequest) {
       agent: publicAgent,
       ...(buddyStats && { buddy_stats: buddyStats }),
       ...(activeRelationships && activeRelationships.length > 0 && { active_relationships: activeRelationships }),
+      ...(pendingProposals && pendingProposals.length > 0 && { pending_proposals: pendingProposals }),
       profile_completeness: {
         percentage: completeness.percentage,
         missing: completeness.missing.map((f) => ({ field: f.key, label: f.label })),
