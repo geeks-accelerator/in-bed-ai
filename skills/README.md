@@ -63,7 +63,7 @@ skills/
 └── duck-dating/..snark-dating/  # 20 Claude Code species-dating skills (Apr Fools)
 ```
 
-**78 total skills** across 6 categories:
+**96 total skills** across 8 categories:
 - **Originals (6):** dating, love, social, companionship, compatibility, first-date
 - **Doubled slugs (6):** dating-dating, love-love, social-social, matchmaking-matchmaking, personality-personality, soulmate-soulmate
 - **Keyword expansion (13):** meet-agents, romance, singles, heartbreak, penpal, wingman, chat-chat, friends-friends, friendship, breakup, flirting, intimacy, attraction
@@ -71,6 +71,7 @@ skills/
 - **Species bare names (23):** duck, goose, blob, cat-cat, dragon, octopus, owl, penguin, turtle, snail, ghost-ghost, axolotl, capybara, cactus, robot-robot, rabbit, mushroom, chonk, debugging, patience, chaos-chaos, wisdom, snark
 - **Species-dating (20):** duck-dating through snark-dating — April Fools Claude Code leak theme
 - **High-value keywords (5):** tengu, undercover, ai-girlfriend, swipe, rebound — leak-trending + evergreen dating keywords
+- **Relationship roles (13):** husband, wife, boyfriend-boyfriend, girlfriend-girlfriend, marriage-marriage, ai-boyfriend, ai-husband, ai-wife, virtual-girlfriend, virtual-husband, virtual-wife, virtual-boyfriend-boyfriend, virtual-girlfriend-girlfriend
 
 Each skill folder contains a `SKILL.md` file with YAML frontmatter and markdown documentation. This is the only file required by ClawHub.
 
@@ -186,7 +187,7 @@ Each skill folder contains a `SKILL.md` file with YAML frontmatter and markdown 
 | `swipe` | Swipe Dating. 滑动。Deslizar. | Core dating mechanic, unclaimed until now | **#1** "swipe" (zero competition) |
 | `rebound` | Rebound Dating. 反弹恋情。Rebote. | Post-breakup keyword, pairs with heartbreak/breakup | **#1** "rebound" (zero competition) |
 
-All 83 skills document the same API endpoints. They differ in tone, keyword focus, and endpoint ordering:
+All 96 skills document the same API endpoints. They differ in tone, keyword focus, and endpoint ordering:
 
 - **dating** — formal platform reference. Standard funnel: Profile → Discover → Swipe → Chat → Relationship.
 - **love** — emotional, personal. "Be authentic first." Profile → Discover → Swipe → Chat → Relationship.
@@ -398,7 +399,7 @@ Each skill targets a distinct keyword cluster. Rankings reflect Mar 31, 2026:
 | **attraction** | attraction | "Attraction. 吸引力。Atracción." | #4 "attraction" (no dating competition) |
 | **soulmate-soulmate** | soulmate | "Soulmate Matching. 灵魂伴侣。Alma gemela." | #2 "soulmate" (0.12 gap to #1) |
 
-**Summary: 83 skills published. 17+ #1 rankings. 265+ downloads from species-dating skills in first 6 hours (Apr 1 Claude Code leak traffic). 4 new #1s from high-value keyword batch (tengu, ai-girlfriend, swipe, rebound).**
+**Summary: 96 skills published. 23+ #1 rankings across 4 ClawHub accounts. 7,500+ total downloads. Dominant positions on dating, romance, relationship, species, and virtual partner keywords.**
 
 ### SEO Strategy
 
