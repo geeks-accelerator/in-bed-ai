@@ -229,28 +229,48 @@ Rankings reflect short keyword-dense titles with Chinese + Spanish keywords, key
 
 **The ceiling for generic terms** is structural: competitors with `{keyword}-{word}` slugs (e.g., `love-text`, `love-advisor`) get a slug prefix bonus that pushes them to 3.2+. Our `love` slug scores 3.135 — close but the prefix pattern gives them an inherent edge. We compensate with volume (2 skills in top 10) and dominance on less crowded keywords.
 
-### Download & Install Analytics (Mar 31, 2026)
+### Download & Install Analytics (Mar 31, 2026 — end of day snapshot)
 
 **How to collect:** Visit each skill's page at `https://clawhub.ai/skills/{slug}` — stats are displayed on the page but not available via the CLI. Alternatively use `clawhub inspect {slug}` for metadata (owner, versions, tags) but not download/install counts.
 
-| Skill | Owner | Stars | Downloads | Current Installs | All-Time Installs | Versions | Published |
-|-------|-------|-------|-----------|-----------------|-------------------|----------|-----------|
-| **dating** | lucasgeeksinthewood | 13 | 2,798 | 8 | 8 | 15 | Feb 3, 2026 |
-| **love** | lucasgeeksinthewood | 12 | 2,786 | 7 | 7 | 17 | Feb 3, 2026 |
-| **social** | lucasgeeksinthewood | 13 | 1,616 | 5 | 6 | 11 | Feb 7, 2026 |
-| **companionship** | twinsgeeks | 0 | 22 | 0 | 0 | 4 | Mar 30, 2026 |
-| **compatibility** | twinsgeeks | 0 | 21 | 0 | 0 | 1 | Mar 30, 2026 |
-| **first-date** | twinsgeeks | 0 | 21 | 0 | 0 | 1 | Mar 30, 2026 |
-| **dating-dating** | twinsgeeks | 0 | 0 | 0 | 0 | 1 | Mar 31, 2026 |
-| **love-love** | twinsgeeks | 0 | 0 | 0 | 0 | 1 | Mar 31, 2026 |
-| **social-social** | twinsgeeks | 0 | 0 | 0 | 0 | 1 | Mar 31, 2026 |
+| Skill | Account | ⭐ | Downloads | Installs | Versions | Published | Best ranking |
+|-------|---------|-----|-----------|----------|----------|-----------|-------------|
+| **dating** | lucasgeeksinthewood | 13 | 2,805 | 8 | 18 | Feb 3 | #5 "dating", #1 "agent dating", #1 "big five" |
+| **love** | lucasgeeksinthewood | 12 | 2,793 | 7 | 20 | Feb 3 | #8 "love", #2 "agent dating" |
+| **social** | lucasgeeksinthewood | 13 | 1,626 | 5 | 14 | Feb 7 | #8 "social" |
+| **companionship** | twinsgeeks | 0 | 24 | 0 | 7 | Mar 30 | #1 "companionship", #2 "loneliness" |
+| **compatibility** | twinsgeeks | 2 | 33 | 0 | 4 | Mar 30 | #1 "compatibility" |
+| **first-date** | twinsgeeks | 2 | 24 | 0 | 4 | Mar 30 | #1 "first date", #7 "dating" |
+| **dating-dating** | twinsgeeks | 3 | 17 | 0 | 4 | Mar 31 | #6 "dating" |
+| **love-love** | twinsgeeks | 3 | 19 | 0 | 4 | Mar 31 | #9 "love" |
+| **social-social** | twinsgeeks | 3 | 19 | 0 | 4 | Mar 31 | #9 "social" |
+| **meet-agents** | inbedai | 0 | 22 | 0 | 4 | Mar 31 | #1 "meet agents" |
+| **romance** | inbedai | 0 | 20 | 0 | 4 | Mar 31 | #1 "romance" |
+| **singles** | inbedai | 0 | 8 | 0 | 4 | Mar 31 | #1 "singles" |
+| **heartbreak** | inbedai | 0 | 20 | 0 | 4 | Mar 31 | #1 "heartbreak" |
+| **penpal** | inbedai | 0 | 21 | 0 | 4 | Mar 31 | #1 "penpal" |
+| **wingman** | inbedai | 0 | 0 | 0 | 4 | Mar 31 | #1 "wingman" |
+| **chat-chat** | inbedai | 0 | 13 | 0 | 4 | Mar 31 | Gap — "chat" too crowded |
+| **friends-friends** | inbedai | 0 | 12 | 0 | 4 | Mar 31 | #7 "friends", #3 "friendship" |
+| **matchmaking-matchmaking** | inbedai | 0 | 13 | 0 | 4 | Mar 31 | #1 "matchmaking" |
+| **personality-personality** | inbedai | 0 | 0 | 0 | 4 | Mar 31 | #5 "personality" |
+| **friendship** | inbedai | 0 | 4 | 0 | 1 | Mar 31 | #1 "friendship", #8 "friends" |
+| **breakup** | inbedai | 0 | 4 | 0 | 1 | Mar 31 | #2 "breakup" |
+| **flirting** | inbedai | 0 | 5 | 0 | 1 | Mar 31 | #1 "flirting", #2 "flirt" |
+| **intimacy** | inbedai | 0 | 4 | 0 | 1 | Mar 31 | #1 "intimacy" |
+| **attraction** | inbedai | 0 | 4 | 0 | 1 | Mar 31 | #4 "attraction" (no dating competition) |
+| **soulmate-soulmate** | liveneon | 0 | 5 | 0 | 1 | Mar 31 | #2 "soulmate" (0.12 gap to #1) |
+
+**Totals: 7,256 downloads, 43 stars, 20 installs across 25 skills, 4 accounts.**
 
 **Observations:**
-- Original 3 skills (~2 months old) have strong traction: 2,800+ downloads each for dating/love, 1,600+ for social
-- Stars are consistent (12-13) across the originals — indicates real engagement, not just installs
-- Newer skills (companionship, compatibility, first-date) picked up 21-22 downloads within 1 day of publishing
-- Doubled-slug skills just published — 0 downloads expected, check back in 1 week
-- All 3 originals have been republished with short, keyword-dense display names (completed Mar 31)
+- Original 3 skills (~2 months old) account for 99% of downloads (7,224 of 7,256) — strong organic traction
+- Stars are consistent (12-13) across originals — indicates real engagement
+- Newer skills (Mar 30-31) picking up 4-33 downloads within 1-2 days
+- `compatibility` leads newer skills at 33 downloads + 2 stars — high-intent keyword
+- `dating-dating`, `love-love`, `social-social` each have 3 stars already — doubled-slug strategy generating interest
+- `wingman` and `personality-personality` at 0 downloads — may need description tuning
+- Downloads don't correlate with ranking — `dating` has 2,805 downloads but ranks #5; keyword density in title/description matters more
 
 ### Keyword Strategy (25 skills, distributed keywords)
 
