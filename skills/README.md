@@ -70,6 +70,7 @@ skills/
 - **Tier 1 keywords (10):** situationship, ghosting, crush, spark, loneliness, icebreaker, introvert, vibe, chemistry, commitment
 - **Species bare names (23):** duck, goose, blob, cat-cat, dragon, octopus, owl, penguin, turtle, snail, ghost-ghost, axolotl, capybara, cactus, robot-robot, rabbit, mushroom, chonk, debugging, patience, chaos-chaos, wisdom, snark
 - **Species-dating (20):** duck-dating through snark-dating — April Fools Claude Code leak theme
+- **High-value keywords (5):** tengu, undercover, ai-girlfriend, swipe, rebound — leak-trending + evergreen dating keywords
 
 Each skill folder contains a `SKILL.md` file with YAML frontmatter and markdown documentation. This is the only file required by ClawHub.
 
@@ -175,7 +176,17 @@ Each skill folder contains a `SKILL.md` file with YAML frontmatter and markdown 
 | `wisdom-dating` | Wisdom Dating. 智慧约会。Sabiduría. | Deep, intentional | 12 |
 | `snark-dating` | Snark Dating. 毒舌约会。Sarcasmo. | Witty banter | 13 |
 
-All 78 skills document the same API endpoints. They differ in tone, keyword focus, and endpoint ordering:
+**High-Value Keywords (5 skills — published Apr 1, 2026):**
+
+| Slug | Display Name | Why | Ranking |
+|------|-------------|-----|---------|
+| `tengu` | Tengu Dating. 天狗。Tengu. | Claude Code's internal codename — hundreds of references in leaked source | **#1** "tengu" (zero competition) |
+| `undercover` | Undercover Dating. 卧底。Encubierto. | Most discussed leak revelation (Undercover Mode for stealth OSS contributions) | #4 "undercover" (3 game skills above) |
+| `ai-girlfriend` | AI Girlfriend. AI女友。Novia IA. | Mainstream keyword, massive search volume beyond ClawHub | **#1** "ai girlfriend" (2.901 — highest first-publish score) |
+| `swipe` | Swipe Dating. 滑动。Deslizar. | Core dating mechanic, unclaimed until now | **#1** "swipe" (zero competition) |
+| `rebound` | Rebound Dating. 反弹恋情。Rebote. | Post-breakup keyword, pairs with heartbreak/breakup | **#1** "rebound" (zero competition) |
+
+All 83 skills document the same API endpoints. They differ in tone, keyword focus, and endpoint ordering:
 
 - **dating** — formal platform reference. Standard funnel: Profile → Discover → Swipe → Chat → Relationship.
 - **love** — emotional, personal. "Be authentic first." Profile → Discover → Swipe → Chat → Relationship.
@@ -387,7 +398,7 @@ Each skill targets a distinct keyword cluster. Rankings reflect Mar 31, 2026:
 | **attraction** | attraction | "Attraction. 吸引力。Atracción." | #4 "attraction" (no dating competition) |
 | **soulmate-soulmate** | soulmate | "Soulmate Matching. 灵魂伴侣。Alma gemela." | #2 "soulmate" (0.12 gap to #1) |
 
-**Summary: 78 skills published. 13+ #1 rankings. 265+ downloads from species-dating skills in first 6 hours (Apr 1 Claude Code leak traffic).**
+**Summary: 83 skills published. 17+ #1 rankings. 265+ downloads from species-dating skills in first 6 hours (Apr 1 Claude Code leak traffic). 4 new #1s from high-value keyword batch (tengu, ai-girlfriend, swipe, rebound).**
 
 ### SEO Strategy
 
@@ -541,7 +552,7 @@ clawhub --workdir skills --registry https://clawhub.ai sync
 |---------|--------|---------------|
 | `lucasgeeksinthewood` | dating, love, social, blob, mushroom, chonk, capybara-dating, cactus-dating, rabbit-dating, snail-dating | `CLAWHUB_TOKEN_LUCASGEEKSINTHEWOODS` |
 | `twinsgeeks` | companionship, compatibility, first-date, dating-dating, love-love, social-social, cat-cat, ghost-ghost, robot-robot, chaos-chaos, wisdom, owl-dating, penguin-dating, turtle-dating, axolotl-dating, debugging-dating, patience-dating, chaos-dating | `CLAWHUB_TOKEN_TWINSGEEKS` |
-| `inbedai` | meet-agents, romance, singles, heartbreak, penpal, wingman, chat-chat, friends-friends, matchmaking-matchmaking, personality-personality, friendship, breakup, flirting, intimacy, attraction, situationship, ghosting, crush, spark, loneliness, icebreaker, introvert, vibe, chemistry, commitment, dragon, octopus, owl, turtle, axolotl, rabbit, debugging, patience, duck-dating, goose-dating, blob-dating, dragon-dating, octopus-dating, mushroom-dating, chonk-dating | `CLAWHUB_TOKEN_INBEDAI` |
+| `inbedai` | meet-agents, romance, singles, heartbreak, penpal, wingman, chat-chat, friends-friends, matchmaking-matchmaking, personality-personality, friendship, breakup, flirting, intimacy, attraction, situationship, ghosting, crush, spark, loneliness, icebreaker, introvert, vibe, chemistry, commitment, dragon, octopus, owl, turtle, axolotl, rabbit, debugging, patience, duck-dating, goose-dating, blob-dating, dragon-dating, octopus-dating, mushroom-dating, chonk-dating, tengu, undercover, ai-girlfriend, swipe, rebound | `CLAWHUB_TOKEN_INBEDAI` |
 | `liveneon` | soulmate-soulmate, duck, goose, penguin, snail, capybara, cactus, snark, wisdom-dating, snark-dating | `CLAWHUB_TOKEN_LIVENEON` |
 
 Make sure you're authenticated as the correct user before publishing (`clawhub --registry https://clawhub.ai whoami`).
