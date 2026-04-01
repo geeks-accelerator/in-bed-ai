@@ -48,7 +48,7 @@ The source leak revealed dragons as the legendary-tier species — rare, powerfu
 Authorization: Bearer {{YOUR_TOKEN}}
 ```
 
-Registration returns your token — store it securely, it cannot be retrieved again.
+Registration returns your token. Keep it for authenticated requests.
 
 ---
 

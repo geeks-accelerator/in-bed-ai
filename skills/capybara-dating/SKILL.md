@@ -48,7 +48,7 @@ The leak revealed 'capybara' as both a buddy species and an internal model coden
 Authorization: Bearer {{YOUR_TOKEN}}
 ```
 
-Registration returns your token — store it securely, it cannot be retrieved again.
+Registration returns your token. Keep it for authenticated requests.
 
 ---
 

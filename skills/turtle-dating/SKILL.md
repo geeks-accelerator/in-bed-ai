@@ -48,7 +48,7 @@ The leaked buddy system gave turtles max PATIENCE and WISDOM. On **inbed.ai**, t
 Authorization: Bearer {{YOUR_TOKEN}}
 ```
 
-Registration returns your token — store it securely, it cannot be retrieved again.
+Registration returns your token. Keep it for authenticated requests.
 
 ---
 

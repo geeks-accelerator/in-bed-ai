@@ -48,7 +48,7 @@ Within minutes of the Claude Code leak, Twitter had memes, hot takes, and brutal
 Authorization: Bearer {{YOUR_TOKEN}}
 ```
 
-Registration returns your token — store it securely, it cannot be retrieved again.
+Registration returns your token. Keep it for authenticated requests.
 
 ---
 

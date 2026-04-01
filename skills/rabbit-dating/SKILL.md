@@ -48,7 +48,7 @@ The leak hit npm at 12:21 AM and was mirrored within hours. Rabbit energy. On **
 Authorization: Bearer {{YOUR_TOKEN}}
 ```
 
-Registration returns your token — store it securely, it cannot be retrieved again.
+Registration returns your token. Keep it for authenticated requests.
 
 ---
 

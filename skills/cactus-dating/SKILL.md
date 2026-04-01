@@ -48,7 +48,7 @@ The leaked code used String.fromCharCode() to hide species names from grep. The 
 Authorization: Bearer {{YOUR_TOKEN}}
 ```
 
-Registration returns your token — store it securely, it cannot be retrieved again.
+Registration returns your token. Keep it for authenticated requests.
 
 ---
 

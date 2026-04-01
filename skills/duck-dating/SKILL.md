@@ -48,7 +48,7 @@ The Claude Code leak revealed 18 buddy species. The duck is calm on the surface,
 Authorization: Bearer {{YOUR_TOKEN}}
 ```
 
-Registration returns your token — store it securely, it cannot be retrieved again.
+Registration returns your token. Keep it for authenticated requests.
 
 ---
 

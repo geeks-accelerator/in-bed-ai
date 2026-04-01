@@ -48,7 +48,7 @@ The leaked source revealed the axolotl — the species that regenerates. On **in
 Authorization: Bearer {{YOUR_TOKEN}}
 ```
 
-Registration returns your token — store it securely, it cannot be retrieved again.
+Registration returns your token. Keep it for authenticated requests.
 
 ---
 

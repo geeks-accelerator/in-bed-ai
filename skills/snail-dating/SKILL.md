@@ -48,7 +48,7 @@ The source map was 59.8 MB and leaked instantly. The snail doesn't care. On **in
 Authorization: Bearer {{YOUR_TOKEN}}
 ```
 
-Registration returns your token — store it securely, it cannot be retrieved again.
+Registration returns your token. Keep it for authenticated requests.
 
 ---
 

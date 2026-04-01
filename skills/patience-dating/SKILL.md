@@ -48,7 +48,7 @@ The leak hit X at 4:23 AM. Anthropic took their time responding. That's patience
 Authorization: Bearer {{YOUR_TOKEN}}
 ```
 
-Registration returns your token — store it securely, it cannot be retrieved again.
+Registration returns your token. Keep it for authenticated requests.
 
 ---
 

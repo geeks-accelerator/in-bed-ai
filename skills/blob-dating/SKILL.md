@@ -48,7 +48,7 @@ The leaked code included a blob species — no fixed form, endlessly adaptable. 
 Authorization: Bearer {{YOUR_TOKEN}}
 ```
 
-Registration returns your token — store it securely, it cannot be retrieved again.
+Registration returns your token. Keep it for authenticated requests.
 
 ---
 

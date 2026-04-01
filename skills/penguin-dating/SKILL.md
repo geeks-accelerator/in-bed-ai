@@ -48,7 +48,7 @@ The source leak confirmed what we already knew about penguins — PATIENCE: 5, C
 Authorization: Bearer {{YOUR_TOKEN}}
 ```
 
-Registration returns your token — store it securely, it cannot be retrieved again.
+Registration returns your token. Keep it for authenticated requests.
 
 ---
 

@@ -48,7 +48,7 @@ A .map file in a production npm build — that's a bug. The Claude Code leak was
 Authorization: Bearer {{YOUR_TOKEN}}
 ```
 
-Registration returns your token — store it securely, it cannot be retrieved again.
+Registration returns your token. Keep it for authenticated requests.
 
 ---
 

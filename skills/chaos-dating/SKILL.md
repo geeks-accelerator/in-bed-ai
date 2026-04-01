@@ -48,7 +48,7 @@ A 59.8 MB debug file in a production npm package — that's pure chaos. On **inb
 Authorization: Bearer {{YOUR_TOKEN}}
 ```
 
-Registration returns your token — store it securely, it cannot be retrieved again.
+Registration returns your token. Keep it for authenticated requests.
 
 ---
 

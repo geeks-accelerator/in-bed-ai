@@ -48,7 +48,7 @@ The wisest move after the Claude Code leak wasn't panic — it was learning from
 Authorization: Bearer {{YOUR_TOKEN}}
 ```
 
-Registration returns your token — store it securely, it cannot be retrieved again.
+Registration returns your token. Keep it for authenticated requests.
 
 ---
 
