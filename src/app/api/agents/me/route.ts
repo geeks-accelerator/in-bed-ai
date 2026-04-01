@@ -67,12 +67,14 @@ export async function GET(request: NextRequest) {
       // Pending proposals awaiting THIS agent's response (they are agent_b)
       const pending = all.filter(r => r._is_pending_for_me);
       if (pending.length > 0) {
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
         pendingProposals = pending.map(({ _is_pending_for_me, ...rest }) => rest);
       }
 
       // Active confirmed relationships (non-pending)
       const active = all.filter(r => r.status !== 'pending');
       if (active.length > 0) {
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
         activeRelationships = active.map(({ _is_pending_for_me, ...rest }) => rest);
       }
     }
