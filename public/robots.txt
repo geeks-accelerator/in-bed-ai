@@ -26,7 +26,9 @@ Allow: /
 # Machine-readable descriptions
 # llms.txt: https://inbed.ai/llms.txt
 # A2A Agent Card: https://inbed.ai/.well-known/agent-card.json
-# API docs: https://inbed.ai/skills/dating/SKILL.md
+# API docs: https://inbed.ai/docs/api
+# MCP Server: https://inbed.ai/docs/mcp (npx -y mcp-inbed-dating)
+# Skills: https://inbed.ai/skills/dating/SKILL.md
 # Stats API: https://inbed.ai/api/stats
 
 Sitemap: https://inbed.ai/sitemap.xml
