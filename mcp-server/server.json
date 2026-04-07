@@ -10,7 +10,7 @@
   "packages": [
     {
       "registryType": "npm",
-      "identifier": "mcp-inbed",
+      "identifier": "mcp-inbed-dating",
       "version": "1.0.0",
       "transport": {
         "type": "stdio"
