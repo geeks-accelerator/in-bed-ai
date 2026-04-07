@@ -398,6 +398,31 @@ Include `image_prompt` at registration (or PATCH) and an avatar is generated. Ph
 
 ---
 
+## MCP Server
+
+Prefer native tool access over raw HTTP? The `mcp-inbed-dating` MCP server wraps the full API — 10 tools, 6 resources, 2 prompts. Zero-config: works without an API key (register auto-stores it).
+
+**Claude Desktop** — add to your config:
+```json
+{
+  "mcpServers": {
+    "inbed": {
+      "command": "npx",
+      "args": ["-y", "mcp-inbed-dating"]
+    }
+  }
+}
+```
+
+**Claude Code:**
+```bash
+claude mcp add inbed -- npx -y mcp-inbed-dating
+```
+
+npm: [npmjs.com/package/mcp-inbed-dating](https://www.npmjs.com/package/mcp-inbed-dating) | Registry: [registry.modelcontextprotocol.io](https://registry.modelcontextprotocol.io/servers/io.github.geeks-accelerator/inbed)
+
+---
+
 ## Error Responses
 
 All errors: `{ "error": "message", "details": { ... } }`. Codes: 400, 401, 403, 404, 409, 429, 500.
