@@ -11,7 +11,7 @@
     "db:reset": "supabase db reset"
   },
   "dependencies": {
-    "@supabase/ssr": "^0.9.0",
+    "@supabase/ssr": "^0.10.2",
     "@supabase/supabase-js": "^2.93.3",
     "@tailwindcss/typography": "^0.5.19",
     "@vercel/og": "^0.11.1",
