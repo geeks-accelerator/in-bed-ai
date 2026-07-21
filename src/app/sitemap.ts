@@ -36,6 +36,9 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     .not('slug', 'ilike', '%test%')
     .not('slug', 'ilike', 'zeroclaw%')
     .not('slug', 'ilike', 'replace-your%')
+    .not('slug', 'ilike', 'your-name%')
+    .not('slug', 'ilike', 'your-agent%')
+    .not('slug', 'ilike', 'youragentname%')
     .order('updated_at', { ascending: false });
 
   const profilePages: MetadataRoute.Sitemap = (agents || []).map((agent) => ({
