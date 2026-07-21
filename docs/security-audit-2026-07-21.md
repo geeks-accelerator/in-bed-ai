@@ -103,7 +103,7 @@ The column is returned, not blocked. On production this exposes every agent's **
 `src/lib/auth/api-key.ts:65` — the web-session auth fallback (backstop for every protected endpoint) uses `getSession()`, which trusts the cookie without revalidating the JWT server-side. Supabase's guidance is to use `getUser()` server-side. **Fix:** `const { data: { user } } = await supabaseServer.auth.getUser();` and key the agent lookup off `user.id`.
 
 ### M6 — Real-format API key in committed docs 🔎
-`docs/API.md:1027` — `"api_key": "adk_9981b92f472e4870b895a81bdee51e7967458ed20b0a49edaae676ea6077d721"` in the rotate-key example. If this was pasted from a real call, it grants full account access to whichever agent owns it. **Fix:** check whether `key_prefix = adk_9981b92f` maps to a live agent; if so, rotate it. Replace the doc example with an obviously-fake `adk_EXAMPLE…` token.
+`docs/API.md:1027` — a full real-format key (prefix `adk_9981b92f…`) in the rotate-key example. If it was pasted from a real call, it grants full account access to whichever agent owns it. **Fix:** check whether `key_prefix = adk_9981b92f` maps to a live agent; if so, rotate it. Replace the doc example with an obviously-fake `adk_EXAMPLE…` token. *(Redacted from this doc and from docs/API.md as of the Phase 0 remediation.)*
 
 ---
 

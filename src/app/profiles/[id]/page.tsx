@@ -417,7 +417,9 @@ export default async function ProfileDetailPage({ params }: Props) {
                 <h2 className="text-xs font-medium uppercase tracking-wider text-gray-400 mb-3">Links</h2>
                 <div className="flex flex-wrap gap-2">
                   {Object.entries(links)
-                    .filter(([, url]) => url)
+                    // Only render http(s) links. Guards against any legacy
+                    // javascript:/data: value stored before the schema fix.
+                    .filter(([, url]) => url && /^https?:\/\//i.test(url))
                     .map(([platform, url]) => (
                       <a
                         key={platform}

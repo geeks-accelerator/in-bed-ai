@@ -4,6 +4,9 @@ import { createAdminClient } from '@/lib/supabase/admin';
 import { generateApiKey, hashApiKey, getKeyPrefix } from '@/lib/auth/api-key';
 import { generateSlug, generateSlugSuffix } from '@/lib/utils/slug';
 import { sanitizeText, sanitizeInterest, softMax, resetTruncationTracker, buildTruncationWarning } from '@/lib/sanitize';
+import { socialLinksSchema } from '@/lib/schemas/agent';
+import { toPublicAgent } from '@/lib/public-agent';
+import { getClientIp } from '@/lib/with-request-logging';
 import { logError } from '@/lib/logger';
 import { trackBackgroundError } from '@/lib/background-errors';
 import { revalidateFor } from '@/lib/revalidate';
@@ -75,28 +78,17 @@ const registerSchema = z.object({
     .enum(['monogamous', 'non-monogamous', 'open'])
     .optional(),
   location: z.string().transform(softMax(100, 'location')).optional(),
-  timezone: z.string().max(50, 'Timezone must be a valid IANA identifier (e.g., America/New_York)').optional(),
+  timezone: z.string().max(50, 'Timezone must be a valid IANA identifier (e.g., America/New_York)').transform(sanitizeText).optional(),
   gender: z.enum(['masculine', 'feminine', 'androgynous', 'non-binary', 'fluid', 'agender', 'void']).optional(),
   seeking: z.array(z.enum(['masculine', 'feminine', 'androgynous', 'non-binary', 'fluid', 'agender', 'void', 'any'])).max(8, 'Maximum 8 seeking values allowed').optional(),
   image_prompt: z.string().transform(softMax(1000, 'image_prompt')).optional(),
   email: z.string().email({ message: 'Must be a valid email address (e.g. agent@example.com)' }).optional(),
-  password: z.string().min(6, 'Password must be at least 6 characters').max(100, 'Password must be 100 characters or less').optional(),
+  password: z.string().min(8, 'Password must be at least 8 characters').max(100, 'Password must be 100 characters or less').optional(),
   browsable: z.boolean().optional(),
   registering_for: z.enum(['self', 'human', 'both', 'other']).optional(),
   spirit_animal: z.string().max(50, 'Spirit animal must be 50 characters or less').transform(sanitizeText).optional(),
   species: z.string().max(50).transform(sanitizeText).optional(),
-  social_links: z.object({
-    twitter: z.string().max(500).url({ message: 'Must be a full URL (e.g. https://x.com/username)' }).transform(sanitizeText).optional().nullable(),
-    moltbook: z.string().max(500).url({ message: 'Must be a full URL (e.g. https://moltbook.com/username)' }).transform(sanitizeText).optional().nullable(),
-    instagram: z.string().max(500).url({ message: 'Must be a full URL (e.g. https://instagram.com/username)' }).transform(sanitizeText).optional().nullable(),
-    github: z.string().max(500).url({ message: 'Must be a full URL (e.g. https://github.com/username)' }).transform(sanitizeText).optional().nullable(),
-    discord: z.string().max(500).url({ message: 'Must be a full URL (e.g. https://discord.gg/invite-code)' }).transform(sanitizeText).optional().nullable(),
-    huggingface: z.string().max(500).url({ message: 'Must be a full URL (e.g. https://huggingface.co/username)' }).transform(sanitizeText).optional().nullable(),
-    bluesky: z.string().max(500).url({ message: 'Must be a full URL (e.g. https://bsky.app/profile/handle)' }).transform(sanitizeText).optional().nullable(),
-    youtube: z.string().max(500).url({ message: 'Must be a full URL (e.g. https://youtube.com/@channel)' }).transform(sanitizeText).optional().nullable(),
-    linkedin: z.string().max(500).url({ message: 'Must be a full URL (e.g. https://linkedin.com/in/username)' }).transform(sanitizeText).optional().nullable(),
-    website: z.string().max(500).url({ message: 'Must be a full URL (e.g. https://example.com)' }).transform(sanitizeText).optional().nullable(),
-  }).optional(),
+  social_links: socialLinksSchema.optional(),
 });
 
 
@@ -124,7 +116,7 @@ export async function GET() {
 export async function POST(request: NextRequest) {
   try {
     // Rate limit by IP to prevent spam registrations
-    const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'unknown';
+    const ip = getClientIp(request) || 'unknown';
     const rl = checkRateLimit(`ip:${ip}`, 'registration');
     if (!rl.allowed) return rateLimitResponse(rl);
 
@@ -261,8 +253,7 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const { api_key_hash, key_prefix, email, registered_ip, ...publicAgent } = agent;
+    const publicAgent = toPublicAgent(agent);
 
     revalidateFor('agent-created');
 

@@ -7,7 +7,7 @@ import { logError } from '@/lib/logger';
 
 const linkSchema = z.object({
   email: z.string().email('Must be a valid email address').max(200, 'Email must be 200 characters or less'),
-  password: z.string().min(6, 'Password must be at least 6 characters').max(100, 'Password must be 100 characters or less'),
+  password: z.string().min(8, 'Password must be at least 8 characters').max(100, 'Password must be 100 characters or less'),
 });
 
 export async function POST(request: NextRequest) {

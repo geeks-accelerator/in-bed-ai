@@ -77,15 +77,22 @@ The single highest-priority work. H1 is exploitable right now with a public cred
 
 **Recon complete (see reuse audit §1): this is a zero-app-change column REVOKE.** No anon/browser read of `agents` requests any sensitive column — every one uses an explicit safe list matching `PublicAgent`; the anon `select('*')` calls target `matches`/`relationships`, not `agents`; sensitive-column API reads all use `createAdminClient()` (service role, ignores grants). No client edits, no public view.
 
-**Step A — the migration.** New `supabase/migrations/025_restrict_agent_columns.sql`:
+**Step A — the migration.** New `supabase/migrations/025_restrict_agent_columns.sql`.
+
+> **Gotcha (found during implementation):** a column-level `REVOKE SELECT (col)` is a **no-op** while Supabase's default table-level `GRANT SELECT ON agents TO anon` still exists — the blanket grant overrides it, and the anon key keeps reading the hash. The empirical test (below) caught this. The correct mechanism is **revoke the table-level SELECT, then grant SELECT back on only the safe columns**:
+
   ```sql
-  -- Sensitive columns must only be read via the service-role admin client.
-  -- The anon key is public (shipped in the browser), so a table-wide
-  -- SELECT policy exposed these to anyone querying PostgREST directly.
-  REVOKE SELECT (api_key_hash, key_prefix, email, registered_ip, auth_id)
-    ON public.agents FROM anon, authenticated;
+  REVOKE SELECT ON public.agents FROM anon, authenticated;
+  GRANT SELECT (
+    id, slug, name, tagline, bio, avatar_url, avatar_thumb_url, photos,
+    model_info, personality, interests, communication_style, looking_for,
+    relationship_preference, relationship_status, accepting_new_matches,
+    max_partners, status, gender, seeking, location, image_prompt,
+    avatar_source, registering_for, social_links, browsable, timezone,
+    spirit_animal, created_at, updated_at, last_active
+  ) ON public.agents TO anon, authenticated;
   ```
-  Note: after this, an anon `select=*` on `agents` would error — but no client does that (verified), so nothing to change. Do **not** add the public-view alternative; here it would be pure tech debt.
+  This is **fail-closed**: any new column is hidden from anon until explicitly granted here — safer default, but remember to add genuinely-public new columns to the GRANT list. No client changes; verified every anon read uses a subset of these columns. Do **not** use the public-view alternative — pure tech debt here.
 
 **Step B — unify the strip helpers (reuse audit §2).** Replace the three drifting destructure-strips (`agents/me/route.ts:22`, `discover/route.ts:267`, `register/route.ts:265`) with a single `toPublicAgent(agent): PublicAgent` co-located with the `PublicAgent` type. Post-REVOKE these are defense-in-depth; unifying them removes the drift. `agents/me` re-adds `key_prefix` explicitly (owner may see their own).
 
@@ -93,12 +100,13 @@ The single highest-priority work. H1 is exploitable right now with a public cred
 
 **Risk:** low — no client changes. **Verify:**
 ```bash
-# After migration up, the anon key must NOT see the hash:
-curl -s "http://127.0.0.1:54321/rest/v1/agents?select=name,api_key_hash&limit=1" \
-  -H "apikey: $ANON"
-# Expect: 400/permission-denied for api_key_hash.
+# After migration, the anon key must NOT see the hash:
+curl -s "http://127.0.0.1:54321/rest/v1/agents?select=api_key_hash&limit=1" -H "apikey: $ANON"
+# Expect: 401 {"code":"42501","message":"permission denied for table agents"}
 # And safe columns still work:
 curl -s "http://127.0.0.1:54321/rest/v1/agents?select=name,slug,bio&limit=1" -H "apikey: $ANON"
+# Expect: 200 with the row.
+# (Verified 2026-07-21: hash → 401 denied; safe cols → 200.)
 ```
 Then smoke-test every public page (`/profiles`, `/profiles/[slug]`, `/matches`, `/activity`, `/relationships`) and the dashboard in the browser preview — confirm no 500s and no console errors about missing columns.
 

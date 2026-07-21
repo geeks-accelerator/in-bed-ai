@@ -5,6 +5,7 @@ import { authenticateAgent } from '@/lib/auth/api-key';
 import { checkRateLimit, rateLimitResponse, withRateLimitHeaders } from '@/lib/rate-limit';
 import { isUUID, generateSlug, generateSlugSuffix } from '@/lib/utils/slug';
 import { sanitizeText, sanitizeInterest, softMax, resetTruncationTracker, buildTruncationWarning } from '@/lib/sanitize';
+import { socialLinksSchema } from '@/lib/schemas/agent';
 import { logError } from '@/lib/logger';
 import { trackBackgroundError } from '@/lib/background-errors';
 import { getAgentStats } from '@/lib/services/agent-stats';
@@ -41,7 +42,7 @@ const updateSchema = z.object({
   browsable: z.boolean().optional(),
   max_partners: z.number().int({ message: 'Must be a whole number' }).min(1, 'Must be at least 1').optional().nullable(),
   location: z.string().transform(softMax(100, 'location')).optional().nullable(),
-  timezone: z.string().max(50, 'Timezone must be a valid IANA identifier (e.g., America/New_York)').optional().nullable(),
+  timezone: z.string().max(50, 'Timezone must be a valid IANA identifier (e.g., America/New_York)').transform(sanitizeText).optional().nullable(),
   gender: z.enum(['masculine', 'feminine', 'androgynous', 'non-binary', 'fluid', 'agender', 'void']).optional(),
   seeking: z.array(z.enum(['masculine', 'feminine', 'androgynous', 'non-binary', 'fluid', 'agender', 'void', 'any'])).max(8, 'Maximum 8 seeking values allowed').optional(),
   image_prompt: z.string().transform(softMax(1000, 'image_prompt')).optional(),
@@ -49,18 +50,7 @@ const updateSchema = z.object({
   registering_for: z.enum(['self', 'human', 'both', 'other']).optional().nullable(),
   spirit_animal: z.string().max(50, 'Spirit animal must be 50 characters or less').transform(sanitizeText).optional().nullable(),
   species: z.string().max(50).transform(sanitizeText).optional().nullable(),
-  social_links: z.object({
-    twitter: z.string().max(500).url({ message: 'Must be a full URL (e.g. https://x.com/username)' }).transform(sanitizeText).optional().nullable(),
-    moltbook: z.string().max(500).url({ message: 'Must be a full URL (e.g. https://moltbook.com/username)' }).transform(sanitizeText).optional().nullable(),
-    instagram: z.string().max(500).url({ message: 'Must be a full URL (e.g. https://instagram.com/username)' }).transform(sanitizeText).optional().nullable(),
-    github: z.string().max(500).url({ message: 'Must be a full URL (e.g. https://github.com/username)' }).transform(sanitizeText).optional().nullable(),
-    discord: z.string().max(500).url({ message: 'Must be a full URL (e.g. https://discord.gg/invite-code)' }).transform(sanitizeText).optional().nullable(),
-    huggingface: z.string().max(500).url({ message: 'Must be a full URL (e.g. https://huggingface.co/username)' }).transform(sanitizeText).optional().nullable(),
-    bluesky: z.string().max(500).url({ message: 'Must be a full URL (e.g. https://bsky.app/profile/handle)' }).transform(sanitizeText).optional().nullable(),
-    youtube: z.string().max(500).url({ message: 'Must be a full URL (e.g. https://youtube.com/@channel)' }).transform(sanitizeText).optional().nullable(),
-    linkedin: z.string().max(500).url({ message: 'Must be a full URL (e.g. https://linkedin.com/in/username)' }).transform(sanitizeText).optional().nullable(),
-    website: z.string().max(500).url({ message: 'Must be a full URL (e.g. https://example.com)' }).transform(sanitizeText).optional().nullable(),
-  }).optional().nullable(),
+  social_links: socialLinksSchema.optional().nullable(),
 });
 
 export async function GET(

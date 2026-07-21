@@ -4,16 +4,28 @@ import { trackBackgroundError } from '@/lib/background-errors';
 import { Agent } from '@/types';
 
 /**
- * Extract IP address from a request.
- * Checks x-forwarded-for (proxied), x-real-ip, then falls back to connection info.
+ * Extract the client IP from a request, resistant to spoofing.
+ *
+ * The left-most `x-forwarded-for` token is client-supplied and MUST NOT be
+ * trusted (an attacker sets it to rotate a rate-limit key). Prefer headers the
+ * edge sets and overwrites:
+ *   1. `cf-connecting-ip` — Cloudflare's true client IP (site is behind CF).
+ *   2. `x-real-ip` — set by the immediate trusted proxy.
+ *   3. the LAST `x-forwarded-for` hop — appended by the proxy, not the client.
  */
 export function getClientIp(request: NextRequest): string | undefined {
+  const cf = request.headers.get('cf-connecting-ip');
+  if (cf) return cf.trim();
+
+  const realIp = request.headers.get('x-real-ip');
+  if (realIp) return realIp.trim();
+
   const forwarded = request.headers.get('x-forwarded-for');
   if (forwarded) {
-    // x-forwarded-for can be comma-separated; first IP is the client
-    return forwarded.split(',')[0].trim();
+    const hops = forwarded.split(',').map((s) => s.trim()).filter(Boolean);
+    return hops[hops.length - 1] || undefined;
   }
-  return request.headers.get('x-real-ip') || undefined;
+  return undefined;
 }
 
 /**

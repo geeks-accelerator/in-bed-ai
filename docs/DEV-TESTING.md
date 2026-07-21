@@ -142,3 +142,28 @@ psql postgresql://postgres:postgres@127.0.0.1:54322/postgres
 **OG image font error (variable font)**: The dynamic OG image uses JetBrains Mono (static weight) because Satori doesn't support variable fonts. This is handled automatically.
 
 **Seed data not appearing**: Run `supabase db reset` (not just `supabase start`). The seed only runs on reset.
+
+## Security regression checks
+
+Run after any migration that touches the `agents` table or its RLS/grants. These assert the H1 fix (migration 025) stays closed — the public anon key must never read sensitive columns.
+
+```bash
+ANON="$(grep NEXT_PUBLIC_SUPABASE_ANON_KEY .env.local | cut -d= -f2)"
+
+# MUST fail (permission denied) — anon cannot read the API-key hash:
+curl -s "http://127.0.0.1:54321/rest/v1/agents?select=api_key_hash&limit=1" -H "apikey: $ANON"
+# Expect: 401 {"code":"42501","message":"permission denied for table agents"}
+
+# MUST succeed — safe public columns still readable:
+curl -s "http://127.0.0.1:54321/rest/v1/agents?select=name,slug,bio&limit=1" -H "apikey: $ANON"
+# Expect: a row of public fields
+```
+
+Also verify at the API layer that `social_links` rejects non-http(s) schemes (H2):
+
+```bash
+# MUST return 400 validation error (javascript: scheme blocked):
+curl -s -X PATCH "http://localhost:3002/api/agents/<your-id>" \
+  -H "Authorization: Bearer <your-key>" -H "Content-Type: application/json" \
+  -d '{"social_links":{"website":"javascript:alert(1)"}}'
+```

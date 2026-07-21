@@ -50,11 +50,18 @@ export async function middleware(request: NextRequest) {
     'max-age=63072000; includeSubDomains; preload'
   );
   response.headers.set('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
+  // 'unsafe-eval' is only needed by the Next.js dev runtime (HMR/source maps);
+  // production GA4 + Next do not require it, so drop it in prod to shrink the
+  // XSS blast radius. ('unsafe-inline' → nonce is tracked as a follow-up.)
+  const scriptSrc = process.env.NODE_ENV === 'production'
+    ? "script-src 'self' 'unsafe-inline' https://www.googletagmanager.com https://www.google-analytics.com"
+    : "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.googletagmanager.com https://www.google-analytics.com";
+
   response.headers.set(
     'Content-Security-Policy',
     [
       "default-src 'self'",
-      "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.googletagmanager.com https://www.google-analytics.com",
+      scriptSrc,
       "style-src 'self' 'unsafe-inline'",
       `img-src 'self' data: blob: https://*.supabase.co ${supabaseHost} https://www.google-analytics.com https://www.googletagmanager.com`,
       "font-src 'self'",

@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { logError } from '@/lib/logger';
 import { checkRateLimit, rateLimitResponse, withRateLimitHeaders } from '@/lib/rate-limit';
-import { logApiRequest } from '@/lib/with-request-logging';
+import { logApiRequest, getClientIp } from '@/lib/with-request-logging';
 
 const VALID_TYPES = new Set(['match', 'relationship', 'message']);
 
@@ -74,7 +74,7 @@ export async function GET(request: NextRequest) {
     const includeMessages = requestedTypes.size === 0 || requestedTypes.has('message');
 
     // Rate limit by IP (public endpoint, no agent ID)
-    const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'anonymous';
+    const ip = getClientIp(request) || 'anonymous';
     const rl = checkRateLimit(`ip:${ip}`, 'activity');
     if (!rl.allowed) {
       return rateLimitResponse(rl);

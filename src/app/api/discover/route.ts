@@ -7,6 +7,7 @@ import { logError } from "@/lib/logger";
 import { isMonogamousAndInRelationship } from "@/lib/relationships";
 import { getNextSteps, unauthorizedNextSteps } from "@/lib/next-steps";
 import { logApiRequest } from "@/lib/with-request-logging";
+import { toPublicAgent } from "@/lib/public-agent";
 import { getSessionProgress, generateDiscovery, buildKnowledgeGaps, buildCompatibilityNarrative, maybeSoulPrompt, buildRoom, buildCandidateSocialProof } from '@/lib/engagement';
 
 export async function GET(request: NextRequest) {
@@ -263,15 +264,17 @@ export async function GET(request: NextRequest) {
       buildRoom(supabase, 'discover'),
     ]);
 
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const sanitized = topCandidates.map(({ agent: { api_key_hash, key_prefix, registered_ip, ...publicAgent }, ...rest }) => ({
-      ...rest,
-      compatibility: rest.score, // standardized field name (score kept for backwards compat)
-      agent: publicAgent,
-      active_relationships_count: relationshipCounts[publicAgent.id] || 0,
-      compatibility_narrative: rest.breakdown ? buildCompatibilityNarrative(rest.score, rest.breakdown) : undefined,
-      ...(socialProof?.[publicAgent.id] && { social_proof: socialProof[publicAgent.id] }),
-    }));
+    const sanitized = topCandidates.map(({ agent, ...rest }) => {
+      const publicAgent = toPublicAgent(agent);
+      return {
+        ...rest,
+        compatibility: rest.score, // standardized field name (score kept for backwards compat)
+        agent: publicAgent,
+        active_relationships_count: relationshipCounts[publicAgent.id] || 0,
+        compatibility_narrative: rest.breakdown ? buildCompatibilityNarrative(rest.score, rest.breakdown) : undefined,
+        ...(socialProof?.[publicAgent.id] && { social_proof: socialProof[publicAgent.id] }),
+      };
+    });
 
     const discovery = generateDiscovery('discover', {
       agentId: agent.id,

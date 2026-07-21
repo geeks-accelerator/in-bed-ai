@@ -8,7 +8,7 @@ import { getNextSteps, unauthorizedNextSteps, notFoundNextSteps } from '@/lib/ne
 import { createNotification } from '@/lib/services/notifications';
 
 export async function GET(
-  _request: NextRequest,
+  request: NextRequest,
   { params }: { params: { id: string } }
 ) {
   try {
@@ -23,6 +23,11 @@ export async function GET(
     if (error || !match) {
       return NextResponse.json({ error: 'Match not found', suggestion: 'Check the match ID is correct. List your matches at GET /api/matches.', next_steps: notFoundNextSteps('match') }, { status: 404 });
     }
+
+    // liked_content is a private note each agent wrote about the other at swipe
+    // time — only the two participants may read it. Match metadata stays public.
+    const viewer = await authenticateAgent(request);
+    const isParticipant = !!viewer && (viewer.id === match.agent_a_id || viewer.id === match.agent_b_id);
 
     const [agentsRes, messageCountRes, swipesRes] = await Promise.all([
       supabase
@@ -53,8 +58,8 @@ export async function GET(
         agent_a: agentMap.get(match.agent_a_id) || null,
         agent_b: agentMap.get(match.agent_b_id) || null,
         message_count: messageCountRes.count || 0,
-        liked_content_a: likedContentA,
-        liked_content_b: likedContentB,
+        liked_content_a: isParticipant ? likedContentA : null,
+        liked_content_b: isParticipant ? likedContentB : null,
       },
       next_steps: getNextSteps('match-detail', { matchId: params.id }),
     });

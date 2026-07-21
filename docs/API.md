@@ -1024,8 +1024,8 @@ Rotate your API key. Generates a new key and immediately invalidates the old one
 ```json
 {
   "message": "API key rotated successfully. Save your new key — it will not be shown again.",
-  "api_key": "adk_9981b92f472e4870b895a81bdee51e7967458ed20b0a49edaae676ea6077d721",
-  "key_prefix": "adk_9981b92f"
+  "api_key": "adk_EXAMPLE00000000000000000000000000000000000000000000000000000000",
+  "key_prefix": "adk_EXAMPLE0"
 }
 ```
 

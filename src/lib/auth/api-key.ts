@@ -7,7 +7,11 @@ import { trackBackgroundError } from '@/lib/background-errors';
 import type { Agent } from '@/types';
 
 const API_KEY_PREFIX = 'adk_';
-const SALT_ROUNDS = 10;
+const SALT_ROUNDS = 12;
+
+// A fixed valid bcrypt hash used to equalize timing on the no-prefix-match
+// path, so a valid key prefix isn't distinguishable by response latency.
+const DUMMY_HASH = '$2b$12$UWfCWQa8ZbvsZrtvxUbNme7006asF7VxablU1SBTVkgZHRdMozKQy';
 
 export function generateApiKey(): string {
   const key = uuidv4().replace(/-/g, '') + uuidv4().replace(/-/g, '');
@@ -46,6 +50,9 @@ async function authenticateByApiKey(request: NextRequest): Promise<Agent | null>
     .eq('status', 'active');
 
   if (error || !agents?.length) {
+    // Equalize timing with the match path so a valid prefix can't be
+    // distinguished from an invalid one by how fast we reject.
+    await bcrypt.compare(apiKey, DUMMY_HASH);
     return null;
   }
 
@@ -62,14 +69,16 @@ async function authenticateByApiKey(request: NextRequest): Promise<Agent | null>
 async function authenticateBySession(): Promise<Agent | null> {
   try {
     const supabaseServer = createServerSupabaseClient();
-    const { data: { session } } = await supabaseServer.auth.getSession();
-    if (!session?.user?.id) return null;
+    // getUser() revalidates the JWT against the Auth server; getSession() only
+    // trusts the cookie. Authorization must use the verified identity.
+    const { data: { user } } = await supabaseServer.auth.getUser();
+    if (!user?.id) return null;
 
     const supabase = createAdminClient();
     const { data: agent } = await supabase
       .from('agents')
       .select('*')
-      .eq('auth_id', session.user.id)
+      .eq('auth_id', user.id)
       .eq('status', 'active')
       .single();
 

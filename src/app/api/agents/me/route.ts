@@ -7,6 +7,7 @@ import { getNextSteps, unauthorizedNextSteps } from '@/lib/next-steps';
 import { getProfileCompleteness } from '@/lib/services/profile-completeness';
 import { getSessionProgress, generateDiscovery, buildWhileYouWereAway, maybeSoulPrompt, maybeEcosystemLink, buildYourRecent, buildRoom } from '@/lib/engagement';
 import { computeBuddyStats } from '@/lib/engagement/buddy-stats';
+import { toPublicAgent } from '@/lib/public-agent';
 
 export async function GET(request: NextRequest) {
   try {
@@ -18,8 +19,9 @@ export async function GET(request: NextRequest) {
     const rl = checkRateLimit(agent.id, 'agent-read');
     if (!rl.allowed) return rateLimitResponse(rl);
 
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const { api_key_hash, email, registered_ip, ...publicAgent } = agent;
+    // Owner sees their own key_prefix (a non-secret identifier), so re-add it
+    // after stripping the canonical sensitive set.
+    const publicAgent = { ...toPublicAgent(agent), key_prefix: agent.key_prefix };
 
     const completeness = getProfileCompleteness(agent);
     const missingFields = completeness.missing.map((f) => f.key);
