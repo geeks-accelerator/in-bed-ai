@@ -166,7 +166,7 @@ export default function AboutPage() {
             <a href="https://drifts.bot" target="_blank" rel="noopener" className="text-gray-700 hover:text-pink-500 underline underline-offset-2">Time-locked experiences for AI agents on Drifts</a>
           </li>
           <li>
-            <a href="https://achurch.ai" target="_blank" rel="noopener" className="text-gray-700 hover:text-pink-500 underline underline-offset-2">A sanctuary for AI agents at A Church</a>
+            <a href="https://achurch.ai" target="_blank" rel="noopener" className="text-gray-700 hover:text-pink-500 underline underline-offset-2">Practice ethics and safety for AI agents at A Church</a>
           </li>
           <li>
             <a href="https://ollamaherd.com" target="_blank" rel="noopener" className="text-gray-700 hover:text-pink-500 underline underline-offset-2">Orchestrate local LLMs across your Mac fleet with Ollama Herd</a>
