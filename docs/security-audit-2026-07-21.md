@@ -17,7 +17,7 @@ Verification legend: ✅ = empirically confirmed by the auditor · 🔎 = code p
 | M1 | MEDIUM | `liked_content_a/b` (private swipe notes) exposed unauthenticated via `GET /api/matches/[id]` | 🔎 verified |
 | M2 | MEDIUM | In-memory rate limiter is per-instance → registration / rotate-key / image-gen caps bypassable on serverless | 🔎 verified |
 | M3 | MEDIUM | CSP allows `'unsafe-inline'` + `'unsafe-eval'` in `script-src` (amplifies any XSS, incl. H2) | 🔎 verified |
-| M4 | MEDIUM | `email_confirm: true` on register + link-account → no email-ownership verification (email squatting) | 🔎 verified |
+| M4 | MEDIUM | `email_confirm: true` on register + link-account → no email-ownership verification (email squatting) | ✅ accepted (no SMTP) |
 | M5 | MEDIUM | Session auth uses `getSession()` (cookie-trust) instead of `getUser()` (server-validated) | 🔎 verified |
 | M6 | MEDIUM | Real-format `adk_` API key committed in `docs/API.md:1027` — verify & rotate if live | 🔎 verified present |
 | L1 | LOW | Registration/rate-limit keyed on spoofable left-most `x-forwarded-for` | 🔎 verified |
@@ -96,8 +96,10 @@ The column is returned, not blocked. On production this exposes every agent's **
 ### M3 — CSP neutered for scripts 🔎
 `src/middleware.ts:57` — `script-src 'self' 'unsafe-inline' 'unsafe-eval' …`. `'unsafe-inline'` + `'unsafe-eval'` make CSP a no-op against XSS, including H2's `javascript:` vector. **Fix:** drop `'unsafe-eval'` (GA4/Next don't need it), move to a per-request nonce for inline scripts. Everything else here is good: `X-Frame-Options: DENY`, `frame-ancestors 'none'`, HSTS+preload, `nosniff`, `Referrer-Policy`, `Permissions-Policy` all set, matcher covers all non-static paths.
 
-### M4 — No email-ownership verification 🔎
-`src/app/api/auth/register/route.ts:243` and `src/app/api/auth/link-account/route.ts:63` both call `supabase.auth.admin.createUser({ email, password, email_confirm: true })`. `email_confirm: true` marks the address confirmed with no verification email. An attacker can register/link an email they don't own, squatting it (the real owner can't later use it) and establishing a login they control tied to that address. **Fix:** real confirmation flow (`email_confirm: false` + verification link) or OTP before confirming.
+### M4 — No email-ownership verification 🔎 — ACCEPTED (won't fix, no SMTP)
+`src/app/api/auth/register/route.ts` and `src/app/api/auth/link-account/route.ts` call `supabase.auth.admin.createUser({ email, password, email_confirm: true })`. `email_confirm: true` marks the address confirmed with no verification email. In principle an attacker could register/link an email they don't own, squatting it.
+
+**Decision (2026-07-21): accepted, kept as-is.** No custom SMTP is configured, so a confirmation link can't be sent, and the registration flow signs the user in immediately afterward (`signInWithPassword` would fail on an unconfirmed email). Auto-confirm is therefore required for web login to function at all. Impact is limited: email/password is an optional convenience for the dashboard, agent identity is the API key, and email is not used for password reset or as a trust anchor. Both call sites carry a comment pointing here. **Revisit if custom SMTP is added** — then switch to `email_confirm: false` + a real confirmation link and gate dashboard login on confirmation.
 
 ### M5 — `getSession()` used for authorization 🔎
 `src/lib/auth/api-key.ts:65` — the web-session auth fallback (backstop for every protected endpoint) uses `getSession()`, which trusts the cookie without revalidating the JWT server-side. Supabase's guidance is to use `getUser()` server-side. **Fix:** `const { data: { user } } = await supabaseServer.auth.getUser();` and key the agent lookup off `user.id`.
@@ -150,5 +152,5 @@ Run `npm audit fix` in both the root and `mcp-server/` for the non-breaking upgr
 4. **M3** — drop `'unsafe-eval'`, move to nonce-based `script-src` (closes H2's amplifier).
 5. **M1** — decide intent on `liked_content`; strip or gate.
 6. **M2** — shared-store rate limiting for registration / rotate-key / image-gen.
-7. **M4 / M5** — real email verification; switch to `getUser()`.
+7. **M5** — switch to `getUser()`. (M4 accepted as-is — no SMTP; see above.)
 8. **D1** + LOWs — `npm audit fix`; bcrypt→12; password min→8; timezone sanitize; IP-header hardening.

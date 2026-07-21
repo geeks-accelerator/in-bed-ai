@@ -229,6 +229,12 @@ export async function POST(request: NextRequest) {
     // If email+password provided, create Supabase Auth user and link
     let authLinked = false;
     if (data.email && data.password) {
+      // email_confirm: true auto-confirms the address (no verification email).
+      // Intentional: no custom SMTP is configured, so we can't send a
+      // confirmation link, and the register flow signs the user in immediately
+      // afterward (signInWithPassword would fail on an unconfirmed email).
+      // Accepted tradeoff — see M4 in docs/security-audit-2026-07-21.md. Revisit
+      // (email_confirm: false + a real confirmation link) if SMTP is added.
       const { data: authData, error: authError } = await supabase.auth.admin.createUser({
         email: data.email,
         password: data.password,
