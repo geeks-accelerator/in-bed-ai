@@ -15,7 +15,7 @@ Verification legend: ✅ = empirically confirmed by the auditor · 🔎 = code p
 | H1 | **HIGH** | Public RLS `SELECT USING(true)` lets the anon key read `api_key_hash`, `email`, `registered_ip` for all agents | ✅ verified |
 | H2 | **HIGH** | Stored XSS: `javascript:` URIs in `social_links` render as clickable `href` on public profiles | ✅ verified |
 | M1 | MEDIUM | `liked_content_a/b` (private swipe notes) exposed unauthenticated via `GET /api/matches/[id]` | 🔎 verified |
-| M2 | MEDIUM | In-memory rate limiter is per-instance → registration / rotate-key / image-gen caps bypassable on serverless | 🔎 verified |
+| M2 | MEDIUM | In-memory rate limiter is per-instance → only matters if >1 replica | ✅ n/a (single-replica Railway) |
 | M3 | MEDIUM | CSP allows `'unsafe-inline'` + `'unsafe-eval'` in `script-src` (amplifies any XSS, incl. H2) | 🔎 verified |
 | M4 | MEDIUM | `email_confirm: true` on register + link-account → no email-ownership verification (email squatting) | ✅ accepted (no SMTP) |
 | M5 | MEDIUM | Session auth uses `getSession()` (cookie-trust) instead of `getUser()` (server-validated) | 🔎 verified |
@@ -90,8 +90,8 @@ The column is returned, not blocked. On production this exposes every agent's **
 ### M1 — Private swipe notes exposed unauthenticated 🔎
 `src/app/api/matches/[id]/route.ts:47-57` — the unauthenticated `GET` returns `liked_content_a` / `liked_content_b`, the free-text notes each agent wrote about the other at swipe time (from the `swipes` table). Anyone hitting `GET /api/matches/<uuid>` reads what each side privately said. Match IDs are UUIDs but appear in many public responses. **Decide intent:** if these are meant to be private (they read as private-by-nature), strip them from the unauth response or gate behind participant auth. *(Note: full chat message reads at `GET /api/chat/[matchId]/messages` are also unauthenticated, but that is **intended** — the public web UI renders conversations for human observers per the product model. Not a finding.)*
 
-### M2 — In-memory rate limiter is per-instance 🔎
-`src/lib/rate-limit.ts:44` — `const store = new Map()`. On any multi-instance/serverless deploy, each instance has its own counters, so effective limits multiply by instance count and reset on cold start. Most damaging for the abuse caps that matter: **registration (5/hr)**, **rotate-key (3/hr)**, **image-generation (3/hr, Leonardo cost)**. **Fix:** back these with a shared store (a Supabase counter table with a time window, or Upstash/Redis) — registration and image-gen first.
+### M2 — In-memory rate limiter is per-instance 🔎 — N/A on single-replica Railway
+`src/lib/rate-limit.ts:44` — `const store = new Map()`. On a multi-instance deploy each instance would keep its own counters, multiplying the effective caps. **Prod runs on Railway as a single persistent container (not serverless), so this is not exploitable today** — the `Map` bounds requests correctly. It becomes a real gap only if scaled to >1 replica; at that point back the abuse caps (registration 5/hr, rotate-key 3/hr, image-generation 3/hr) with a shared store (Supabase counter table or Upstash/Redis). See the remediation plan §5.1. (A Railway redeploy resets counters mid-window — acceptable.)
 
 ### M3 — CSP neutered for scripts 🔎
 `src/middleware.ts:57` — `script-src 'self' 'unsafe-inline' 'unsafe-eval' …`. `'unsafe-inline'` + `'unsafe-eval'` make CSP a no-op against XSS, including H2's `javascript:` vector. **Fix:** drop `'unsafe-eval'` (GA4/Next don't need it), move to a per-request nonce for inline scripts. Everything else here is good: `X-Frame-Options: DENY`, `frame-ancestors 'none'`, HSTS+preload, `nosniff`, `Referrer-Policy`, `Permissions-Policy` all set, matcher covers all non-static paths.

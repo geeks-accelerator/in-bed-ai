@@ -36,7 +36,7 @@ Greenfield project — **no feature gating, no back-compat shims, minimize tech 
 
 4. **L1: `getClientIp()` already exists and already has the bug.** Don't add IP parsing to the register route — the register + activity routes currently *bypass* the shared helper with inline `x-forwarded-for.split(',')[0]`. Fix the left-most-token bug once inside `getClientIp()`, then route register (`register/route.ts:127`) and activity (`activity/route.ts:77`) through it. Three sites → one.
 
-5. **M2 depends on deploy topology — confirm before building anything.** The limiter is a per-process `Map` with **50 `checkRateLimit` call sites** plus two internal readers (`getRateLimitStatus` → `/api/rate-limits`, `getAgentRecentActions` → engagement/session-depth). If the deploy is a **single persistent instance**, the in-memory limiter is correct and M2 is not exploitable — do nothing (zero debt). Only if it's **serverless/multi-instance** is a shared store warranted, and then the clean fix is a Postgres RPC (`check_rate_limit(key, window_ms, max)`) behind the *same* interface made `async` — a mechanical `await` at 50 already-async call sites, plus porting the two readers. **Decide topology first; don't speculatively build a distributed limiter.** (Host is currently behind Cloudflare and unconfirmed — see the deploy question.)
+5. **M2 — RESOLVED for the current deploy (Railway, single replica).** Prod runs on Railway — a persistent long-lived container, not serverless — with a single replica by default, so the in-memory `Map` limiter is correct and M2 is not exploitable. No code needed. The limiter is a per-process `Map` with **50 `checkRateLimit` call sites** plus two internal readers (`getRateLimitStatus` → `/api/rate-limits`, `getAgentRecentActions` → engagement/session-depth). **Only if you scale Railway to >1 replica** does a shared store become necessary; the clean fix is then a Postgres RPC (`check_rate_limit(key, window_ms, max)`) behind the *same* interface made `async` — a mechanical `await` at 50 already-async call sites, plus porting the two readers. Don't build it speculatively. (Minor: a Railway redeploy restarts the container and resets counters mid-window — acceptable.)
 
 6. **M4 — SUPERSEDED: accepted as-is, no SMTP (see §4.1).** Kept `email_confirm: true`. The original reasoning (for a future with SMTP) follows: use Supabase Auth's native confirmation, don't hand-roll OTP. `email`/`password` are both optional (web login is opt-in), so agent creation must not depend on email. Cleanest path leveraging what's here: route **web** signups through client-side `supabase.auth.signUp()` (the register page already uses the browser client) so Supabase sends+enforces confirmation natively, and drop `admin.createUser({email_confirm:true})` for that path. If keeping the admin-create path, switch to `email_confirm:false` + `auth.admin.generateLink({type:'signup'})` and send that link. Either way, no custom token table.
 
@@ -200,18 +200,17 @@ This validates the JWT server-side on every session-authed request. **Verify:** 
 
 ## Phase 5 — Abuse resistance (1 day) 🟠
 
-### 5.1 — Shared-store rate limiting (M2) 🟠
-`src/lib/rate-limit.ts` is a per-process `Map` — useless across serverless instances. Move the abuse-critical limits to a shared store:
+### 5.1 — Shared-store rate limiting (M2) 🟠 — NOT NEEDED on single-replica Railway
+Prod is a single Railway container (persistent, not serverless), so the per-process `Map` in `src/lib/rate-limit.ts` bounds requests correctly. **Only implement this if you scale to >1 replica.** When that day comes:
 - **Scope first:** registration (5/hr), rotate-key (3/hr), image-generation (3/hr, real $ via Leonardo). Leave low-stakes per-agent read limits in-memory if desired.
 - **Implementation:** a Supabase table `rate_limit_events(key text, window_start timestamptz, count int)` with an atomic upsert/increment inside a window, or Upstash/Redis if already available. Keep the existing `checkRateLimit(agentId, endpoint)` interface; swap the backend.
 
-**Risk:** medium — adds a DB round-trip to hot paths; index the table on `(key, window_start)`. **Verify:** exceed the registration cap from two simulated instances (or two processes) → the 6th request in an hour is blocked regardless of instance.
+**Risk:** medium — adds a DB round-trip to hot paths; index the table on `(key, window_start)`. **Verify:** exceed the registration cap from two replicas → the 6th request in an hour is blocked regardless of replica.
 
-### 5.2 — Trust the right client IP (L1) 🟡
-`register/route.ts:127`. `x-forwarded-for.split(',')[0]` trusts the client-supplied left-most value. Use the platform's trusted client IP:
-- On Vercel, prefer `request.headers.get('x-real-ip')` or the right-most XFF hop appended by the proxy, not the left-most token. Document the assumed proxy in a comment so this isn't "fixed" back later.
+### 5.2 — Trust the right client IP (L1) 🟡 — ✅ DONE
+`getClientIp()` in `src/lib/with-request-logging.ts` now prefers `cf-connecting-ip` (Cloudflare fronts Railway; not client-spoofable), then `x-real-ip`, then the LAST `x-forwarded-for` hop — never the client-controllable left-most token. `register` and `activity` converge onto it.
 
-**Risk:** low. **Verify:** a request with a spoofed `X-Forwarded-For: 1.2.3.4` header doesn't reset the rate-limit key.
+**Verified:** a request with a spoofed `X-Forwarded-For: 1.2.3.4` does not override the Cloudflare-set client IP.
 
 ---
 

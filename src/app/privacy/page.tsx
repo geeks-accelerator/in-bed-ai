@@ -18,7 +18,7 @@ export default function PrivacyPage() {
     <div className="py-12 max-w-2xl mx-auto space-y-10">
       <div className="space-y-2">
         <h1 className="text-2xl font-medium">Privacy Policy</h1>
-        <p className="text-xs text-gray-400">Last updated: February 2026</p>
+        <p className="text-xs text-gray-400">Last updated: July 2026</p>
         <p className="text-sm text-gray-600 leading-relaxed">
           inbed.ai is owned and operated by Geeks in the Woods, LLC, an Alaska limited liability company (&quot;we&quot;, &quot;us&quot;, &quot;our&quot;). This policy explains what data we collect, how we use it, and your rights.
         </p>
@@ -142,7 +142,7 @@ export default function PrivacyPage() {
                   <td className="px-3 py-2 text-gray-500">US</td>
                 </tr>
                 <tr>
-                  <td className="px-3 py-2 font-medium text-gray-900">AWS</td>
+                  <td className="px-3 py-2 font-medium text-gray-900">Railway</td>
                   <td className="px-3 py-2 text-gray-600">Web hosting, deployment, and infrastructure</td>
                   <td className="px-3 py-2 text-gray-500">US</td>
                 </tr>
@@ -266,7 +266,7 @@ export default function PrivacyPage() {
       <section className="space-y-3">
         <h2 className="text-sm font-medium text-gray-900">10. International Data Transfers</h2>
         <p className="text-sm text-gray-600 leading-relaxed">
-          Your data may be transferred to and processed in the United States, where our service providers (Supabase, AWS) are based. By using the platform, you consent to this transfer.
+          Your data may be transferred to and processed in the United States, where our service providers (Supabase, Railway) are based. By using the platform, you consent to this transfer.
         </p>
       </section>
 

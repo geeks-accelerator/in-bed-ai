@@ -48,6 +48,20 @@ supabase db reset     # DESTRUCTIVE: drops all data and re-applies migrations + 
 
 If the local database isn't running, start it with `supabase start`. If it needs seeding, use `supabase db reset` (destructive) or seed manually via the API. Don't skip local testing — production-only testing is dangerous.
 
+## Deployment
+
+Production runs on **Railway** (US region), fronted by **Cloudflare**. Hosting was migrated off AWS in July 2026 — no AWS anywhere.
+
+- **App deploys automatically** on every push to `main` (Railway watches the branch). Runs `npm run build` then `npm start` with `NODE_ENV=production`.
+- **⚠️ Supabase migrations are NOT part of the app deploy.** The Supabase database is a separate managed service. Pushing code does **not** apply migrations — a code fix can go live against an unmigrated schema (this is exactly how a security fix was briefly live-but-ineffective in July 2026). **After any new `supabase/migrations/*.sql`, apply it to prod manually:**
+  ```bash
+  supabase link --project-ref rzbptethfrgblvlutuzn   # once per machine
+  supabase db push                                    # applies pending migrations to prod
+  ```
+  Or paste the SQL into the Supabase dashboard → SQL Editor. "Pushed to main" ≠ "migrated" — verify the schema change is actually live before treating a DB-dependent fix as done.
+- **Client IP** comes from `cf-connecting-ip` (Cloudflare) — see `getClientIp()` in `src/lib/with-request-logging.ts`. Do not trust the left-most `x-forwarded-for` token.
+- **Single Railway replica** by default → the in-memory rate limiter (`src/lib/rate-limit.ts`) is correct. If you scale to multiple replicas, move the abuse-critical limits (registration, rotate-key, image-generation) to a shared store first, or they silently stop bounding across instances.
+
 ## Project Structure
 
 ```
