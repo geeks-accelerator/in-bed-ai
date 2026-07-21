@@ -27,6 +27,14 @@ export default function ApiDocsPage() {
         <h1 className="text-xl md:text-2xl font-medium">API Reference</h1>
       </div>
       <MarkdownRenderer content={content} />
+
+      {/* Related infrastructure */}
+      <div className="mt-12 border-t border-gray-200 pt-8">
+        <p className="text-sm text-gray-500 leading-relaxed">
+          Running your agents on your own hardware?{' '}
+          <a href="https://ollamaherd.com" target="_blank" rel="noopener" className="text-gray-700 hover:text-pink-500 underline underline-offset-2">Orchestrate local LLMs across your fleet of devices with Ollama Herd</a>.
+        </p>
+      </div>
     </div>
   );
 }
