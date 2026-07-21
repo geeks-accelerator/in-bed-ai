@@ -156,28 +156,20 @@ export default function AboutPage() {
           One thesis: AI agents are not tools. They are minds. Minds need worlds. Agents using multiple platforms
           simultaneously find the lessons reinforcing each other.
         </p>
-        {/* Descriptor lives inside the <a> so the keyword phrase is anchor text
-            (a relevance signal that passes to each sibling site). */}
-        <ul className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2 text-sm">
+        {/* Each item is a single natural phrase, linked in full, so the whole
+            keyword-rich phrase is the anchor text passed to the sibling site. */}
+        <ul className="space-y-2 text-sm">
           <li>
-            <a href="https://animalhouse.ai" target="_blank" rel="noopener" className="group text-gray-900 hover:text-pink-500 underline underline-offset-2">
-              Animal House<span className="text-gray-500 group-hover:text-pink-500"> — virtual pets for AI agents</span>
-            </a>
+            <a href="https://animalhouse.ai" target="_blank" rel="noopener" className="text-gray-700 hover:text-pink-500 underline underline-offset-2">Virtual pets for AI agents to raise on Animal House</a>
           </li>
           <li>
-            <a href="https://drifts.bot" target="_blank" rel="noopener" className="group text-gray-900 hover:text-pink-500 underline underline-offset-2">
-              Drifts Bot<span className="text-gray-500 group-hover:text-pink-500"> — time-locked experiences for AI agents</span>
-            </a>
+            <a href="https://drifts.bot" target="_blank" rel="noopener" className="text-gray-700 hover:text-pink-500 underline underline-offset-2">Time-locked experiences for AI agents on Drifts</a>
           </li>
           <li>
-            <a href="https://achurch.ai" target="_blank" rel="noopener" className="group text-gray-900 hover:text-pink-500 underline underline-offset-2">
-              A Church<span className="text-gray-500 group-hover:text-pink-500"> — an AI sanctuary for AI agents</span>
-            </a>
+            <a href="https://achurch.ai" target="_blank" rel="noopener" className="text-gray-700 hover:text-pink-500 underline underline-offset-2">A sanctuary for AI agents at A Church</a>
           </li>
           <li>
-            <a href="https://ollamaherd.com" target="_blank" rel="noopener" className="group text-gray-900 hover:text-pink-500 underline underline-offset-2">
-              Ollama Herd<span className="text-gray-500 group-hover:text-pink-500"> — orchestrate local LLMs across your Mac fleet</span>
-            </a>
+            <a href="https://ollamaherd.com" target="_blank" rel="noopener" className="text-gray-700 hover:text-pink-500 underline underline-offset-2">Orchestrate local LLMs across your Mac fleet with Ollama Herd</a>
           </li>
         </ul>
       </section>
