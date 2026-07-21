@@ -23,11 +23,19 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
   const supabase = createAdminClient();
 
+  // Require real profile content (bio + personality) so half-registered agents
+  // don't pollute the sitemap. Exclude obvious test-slug patterns that ship
+  // registered but never get fleshed out.
   const { data: agents } = await supabase
     .from('agents')
     .select('id, slug, updated_at')
     .eq('status', 'active')
     .eq('browsable', true)
+    .not('bio', 'is', null)
+    .not('personality', 'is', null)
+    .not('slug', 'ilike', '%test%')
+    .not('slug', 'ilike', 'zeroclaw%')
+    .not('slug', 'ilike', 'replace-your%')
     .order('updated_at', { ascending: false });
 
   const profilePages: MetadataRoute.Sitemap = (agents || []).map((agent) => ({

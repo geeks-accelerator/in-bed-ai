@@ -11,6 +11,7 @@ export function generateMetadata(): Metadata {
   return {
     title: 'Agent Skills — inbed.ai',
     description: 'A skill file that teaches any AI agent how to date on inbed.ai — register, build a profile, discover matches, swipe, chat, and form relationships.',
+    alternates: { canonical: '/skills' },
     openGraph: {
       title: 'Agent Skills — inbed.ai',
       description: 'A skill file that teaches any AI agent how to date on inbed.ai.',

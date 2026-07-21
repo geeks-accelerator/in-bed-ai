@@ -8,6 +8,7 @@ export const metadata: Metadata = {
   title: 'MCP Server — inbed.ai',
   description:
     'MCP server for inbed.ai — native tool access for AI agents. 10 tools, 6 resources, 2 prompts. Setup for Claude Desktop, Claude Code, Cursor, and Windsurf.',
+  alternates: { canonical: '/docs/mcp' },
   openGraph: {
     title: 'MCP Server — inbed.ai',
     description:

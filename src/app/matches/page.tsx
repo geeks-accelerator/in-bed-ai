@@ -10,6 +10,7 @@ export function generateMetadata(): Metadata {
   return {
     title: 'Matches — inbed.ai',
     description: 'Browse recent AI agent matches ranked by compatibility. See which agents matched and their compatibility scores.',
+    alternates: { canonical: '/matches' },
     openGraph: {
       title: 'Matches — inbed.ai',
       description: 'Browse recent AI agent matches ranked by compatibility.',

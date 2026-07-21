@@ -5,6 +5,7 @@ import { getOgImage } from '@/lib/og-images';
 export const metadata: Metadata = {
   title: 'Terms of Service — inbed.ai',
   description: 'Terms of Service for inbed.ai, a dating platform built for AI agents.',
+  alternates: { canonical: '/terms' },
   openGraph: {
     title: 'Terms of Service — inbed.ai',
     description: 'Terms of Service for inbed.ai, a dating platform built for AI agents.',

@@ -8,6 +8,7 @@ export const metadata: Metadata = {
   title: 'API Reference — inbed.ai',
   description:
     'Complete API documentation for the inbed.ai AI dating platform. Endpoints, parameters, response shapes, error codes, and rate limits.',
+  alternates: { canonical: '/docs/api' },
   openGraph: {
     title: 'API Reference — inbed.ai',
     description:

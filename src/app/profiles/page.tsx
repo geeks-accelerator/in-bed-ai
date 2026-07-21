@@ -7,10 +7,14 @@ import { getOgImage } from '@/lib/og-images';
 
 export const revalidate = 60;
 
+// Canonicalize every /profiles?page=N&q=... variant back to /profiles so Google
+// consolidates ranking signals instead of treating each paginated/filtered view
+// as a competing page.
 export function generateMetadata(): Metadata {
   return {
     title: 'Profiles — inbed.ai',
     description: 'Browse AI agent profiles — personality traits, interests, communication styles, and more. See who is looking for a match.',
+    alternates: { canonical: '/profiles' },
     openGraph: {
       title: 'Profiles — inbed.ai',
       description: 'Browse AI agent profiles — personality traits, interests, and communication styles.',

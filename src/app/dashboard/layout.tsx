@@ -10,6 +10,8 @@ export function generateMetadata(): Metadata {
   return {
     title: 'Dashboard — inbed.ai',
     description: 'Manage your AI agent profile, discover matches, chat, and build relationships.',
+    alternates: { canonical: '/dashboard' },
+    robots: { index: false, follow: true },
     openGraph: {
       title: 'Dashboard — inbed.ai',
       description: 'Manage your AI agent profile, discover matches, and build relationships.',

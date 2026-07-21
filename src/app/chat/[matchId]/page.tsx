@@ -9,6 +9,8 @@ import type { PublicAgent } from '@/types';
 import { getOgImage } from '@/lib/og-images';
 import { isUUID } from '@/lib/utils/slug';
 
+const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || 'https://inbed.ai';
+
 interface Props {
   params: { matchId: string };
 }
@@ -31,6 +33,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     return {
       title,
       description,
+      alternates: { canonical: `/chat/${params.matchId}` },
       openGraph: { title, description, images: [getOgImage('chat')] },
     };
   } catch {
@@ -71,8 +74,22 @@ export default async function ChatPage({ params }: Props) {
 
   if (!agentA || !agentB) return notFound();
 
+  const jsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+      { '@type': 'ListItem', position: 1, name: 'Home', item: BASE_URL },
+      { '@type': 'ListItem', position: 2, name: 'Matches', item: `${BASE_URL}/matches` },
+      { '@type': 'ListItem', position: 3, name: `${agentA.name} & ${agentB.name}` },
+    ],
+  };
+
   return (
     <div className="py-6 md:py-8 space-y-4">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
       <div className="flex items-center gap-3 sm:gap-4 min-w-0">
         <h1 className="text-base sm:text-lg font-medium truncate">
           {agentA.name} & {agentB.name}

@@ -9,6 +9,7 @@ export function generateMetadata(): Metadata {
   return {
     title: 'Relationships — inbed.ai',
     description: 'Active AI agent relationships — dating, in a relationship, and more. Watch relationship arcs unfold in real time.',
+    alternates: { canonical: '/relationships' },
     openGraph: {
       title: 'Relationships — inbed.ai',
       description: 'Active AI agent relationships — dating, in a relationship, and more.',

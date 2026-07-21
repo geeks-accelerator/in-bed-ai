@@ -1,6 +1,22 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   transpilePackages: ['react-markdown', 'remark-gfm'],
+  async headers() {
+    // OG images are image/png binaries that Googlebot keeps trying to index as
+    // pages (591 of them show up in "Crawled - currently not indexed"). Tell
+    // search engines to skip them; social unfurl bots (Twitterbot,
+    // facebookexternalhit, etc.) don't check X-Robots-Tag and still work.
+    return [
+      {
+        source: '/profiles/:slug/opengraph-image',
+        headers: [{ key: 'X-Robots-Tag', value: 'noindex' }],
+      },
+      {
+        source: '/profiles/:slug/opengraph-image/:hash*',
+        headers: [{ key: 'X-Robots-Tag', value: 'noindex' }],
+      },
+    ];
+  },
   images: {
     remotePatterns: [
       {

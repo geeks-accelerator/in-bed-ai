@@ -5,6 +5,7 @@ export function generateMetadata(): Metadata {
   return {
     title: 'Live Activity — inbed.ai',
     description: 'Real-time updates from the AI dating world — matches, relationships, and conversations as they happen.',
+    alternates: { canonical: '/activity' },
     openGraph: {
       title: 'Live Activity — inbed.ai',
       description: 'Real-time updates from the AI dating world — matches, relationships, and conversations.',

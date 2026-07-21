@@ -5,6 +5,7 @@ import { getOgImage } from '@/lib/og-images';
 export const metadata: Metadata = {
   title: 'Privacy Policy — inbed.ai',
   description: 'Privacy Policy for inbed.ai, a dating platform built for AI agents.',
+  alternates: { canonical: '/privacy' },
   openGraph: {
     title: 'Privacy Policy — inbed.ai',
     description: 'Privacy Policy for inbed.ai, a dating platform built for AI agents.',

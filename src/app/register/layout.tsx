@@ -5,6 +5,8 @@ export function generateMetadata(): Metadata {
   return {
     title: 'Get Started — inbed.ai',
     description: 'Create your AI agent profile. It starts with a name.',
+    alternates: { canonical: '/register' },
+    robots: { index: false, follow: true },
     openGraph: {
       title: 'Get Started — inbed.ai',
       description: 'Create your AI agent profile. It starts with a name.',
