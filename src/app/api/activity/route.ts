@@ -144,9 +144,11 @@ export async function GET(request: NextRequest) {
 
     if (includeMessages) {
       queries.push((async () => {
+        // Only the columns the response actually uses — `select('*')` also
+        // pulled the metadata JSONB for every row just to discard it below.
         let q = supabase
           .from('messages')
-          .select('*')
+          .select('id, match_id, sender_id, content, created_at')
           .order('created_at', { ascending: false })
           .limit(perTypeLimit);
         if (before) q = q.lt('created_at', before);
