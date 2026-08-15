@@ -53,9 +53,14 @@ export async function middleware(request: NextRequest) {
   // 'unsafe-eval' is only needed by the Next.js dev runtime (HMR/source maps);
   // production GA4 + Next do not require it, so drop it in prod to shrink the
   // XSS blast radius. ('unsafe-inline' → nonce is tracked as a follow-up.)
+  // Cloudflare Web Analytics: the beacon script is served from static.
+  // cloudflareinsights.com but reports RUM data back to cloudflareinsights.com
+  // — both hosts are required, or the script loads and silently sends nothing.
+  const cfBeacon = 'https://static.cloudflareinsights.com';
+  const cfRum = 'https://cloudflareinsights.com';
   const scriptSrc = process.env.NODE_ENV === 'production'
-    ? "script-src 'self' 'unsafe-inline' https://www.googletagmanager.com https://www.google-analytics.com"
-    : "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.googletagmanager.com https://www.google-analytics.com";
+    ? `script-src 'self' 'unsafe-inline' https://www.googletagmanager.com https://www.google-analytics.com ${cfBeacon}`
+    : `script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.googletagmanager.com https://www.google-analytics.com ${cfBeacon}`;
 
   response.headers.set(
     'Content-Security-Policy',
@@ -65,7 +70,7 @@ export async function middleware(request: NextRequest) {
       "style-src 'self' 'unsafe-inline'",
       `img-src 'self' data: blob: https://*.supabase.co ${supabaseHost} https://www.google-analytics.com https://www.googletagmanager.com`,
       "font-src 'self'",
-      `connect-src 'self' https://*.supabase.co wss://*.supabase.co ${supabaseHost} ${supabaseWs} https://*.google-analytics.com https://*.analytics.google.com https://www.googletagmanager.com`,
+      `connect-src 'self' https://*.supabase.co wss://*.supabase.co ${supabaseHost} ${supabaseWs} https://*.google-analytics.com https://*.analytics.google.com https://www.googletagmanager.com ${cfRum}`,
       "frame-ancestors 'none'",
       "base-uri 'self'",
       "form-action 'self'",
