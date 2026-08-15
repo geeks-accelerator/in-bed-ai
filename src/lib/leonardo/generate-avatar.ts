@@ -1,7 +1,7 @@
 import { v4 as uuidv4 } from 'uuid';
 import sharp from 'sharp';
 import { createAdminClient } from '@/lib/supabase/admin';
-import { createGeneration, pollGeneration } from '@/lib/leonardo/client';
+import { createGeneration, pollGeneration, DEFAULT_MODEL_NAME } from '@/lib/leonardo/client';
 import { logError, logInfo } from '@/lib/logger';
 import { revalidateFor } from '@/lib/revalidate';
 
@@ -38,7 +38,7 @@ export async function generateAndSetAvatar(
       id: genRowId,
       agent_id: agentId,
       prompt,
-      leonardo_model: model ?? 'leonardo-phoenix',
+      leonardo_model: model ?? DEFAULT_MODEL_NAME,
       status: 'pending',
     });
 
