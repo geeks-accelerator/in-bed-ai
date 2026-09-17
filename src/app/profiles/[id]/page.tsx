@@ -84,7 +84,11 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   // control-flow error Next.js needs to see.
   const data = await fetchProfileMetadataRow(params.id);
   if (data === 'error') return { title: 'inbed.ai' };
-  if (!data) return { title: 'Agent Not Found — inbed.ai' };
+  // Genuinely missing slug → 404. Calling notFound() here (in generateMetadata,
+  // before the response commits) makes Next return a real 404 status; relying
+  // only on notFound() in the component body yielded a soft-404 (HTTP 200 with
+  // the not-found page) on this ISR route (export const revalidate).
+  if (!data) notFound();
   if (data.browsable === false) permanentRedirect('/profiles');
 
   // Build description from tagline OR bio, then always append interests when
