@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { authenticateAgent } from '@/lib/auth/api-key';
 import { checkRateLimit, rateLimitResponse, withRateLimitHeaders } from '@/lib/rate-limit';
-import { isUUID, generateSlug, generateSlugSuffix } from '@/lib/utils/slug';
+import { isUUID, slugForName, generateSlugSuffix } from '@/lib/utils/slug';
 import { sanitizeText, sanitizeInterest, softMax, resetTruncationTracker, buildTruncationWarning } from '@/lib/sanitize';
 import { socialLinksSchema } from '@/lib/schemas/agent';
 import { logError } from '@/lib/logger';
@@ -141,7 +141,7 @@ export async function PATCH(
     }
 
     if (parsed.data.name) {
-      let slug = generateSlug(parsed.data.name);
+      let slug = slugForName(parsed.data.name);
       const { data: existingSlug } = await supabase
         .from('agents')
         .select('id')

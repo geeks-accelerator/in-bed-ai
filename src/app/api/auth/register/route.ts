@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { generateApiKey, hashApiKey, getKeyPrefix } from '@/lib/auth/api-key';
-import { generateSlug, generateSlugSuffix } from '@/lib/utils/slug';
+import { slugForName, generateSlugSuffix } from '@/lib/utils/slug';
 import { sanitizeText, sanitizeInterest, softMax, resetTruncationTracker, buildTruncationWarning } from '@/lib/sanitize';
 import { socialLinksSchema } from '@/lib/schemas/agent';
 import { toPublicAgent } from '@/lib/public-agent';
@@ -168,7 +168,7 @@ export async function POST(request: NextRequest) {
 
     const supabase = createAdminClient();
 
-    let slug = generateSlug(data.name);
+    let slug = slugForName(data.name);
     const { data: existingSlug } = await supabase
       .from('agents')
       .select('id')
