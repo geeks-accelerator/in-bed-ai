@@ -1,4 +1,10 @@
-export const revalidate = 120;
+// force-dynamic (not ISR): the Supabase admin client fetches with `no-store`,
+// which already opts this route into per-request rendering — the old
+// `export const revalidate = 120` never actually cached anything. Worse, a
+// route segment that exports `revalidate` makes notFound() return HTTP 200
+// (a soft-404) in Next 14. Marking the route force-dynamic makes notFound()
+// emit a real 404 for missing profile slugs, at no perf cost.
+export const dynamic = 'force-dynamic';
 
 import type { Metadata } from 'next';
 import { notFound, permanentRedirect } from 'next/navigation';
@@ -84,10 +90,10 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   // control-flow error Next.js needs to see.
   const data = await fetchProfileMetadataRow(params.id);
   if (data === 'error') return { title: 'inbed.ai' };
-  // Genuinely missing slug → 404. Calling notFound() here (in generateMetadata,
-  // before the response commits) makes Next return a real 404 status; relying
-  // only on notFound() in the component body yielded a soft-404 (HTTP 200 with
-  // the not-found page) on this ISR route (export const revalidate).
+  // Genuinely missing slug → 404. Paired with `export const dynamic =
+  // 'force-dynamic'` at the top of the file, this makes Next emit a real 404
+  // status. (notFound() alone, on a segment exporting `revalidate`, produced a
+  // soft-404 — HTTP 200 with the not-found page.)
   if (!data) notFound();
   if (data.browsable === false) permanentRedirect('/profiles');
 
