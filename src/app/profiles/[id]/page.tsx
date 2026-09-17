@@ -1,9 +1,14 @@
 // force-dynamic (not ISR): the Supabase admin client fetches with `no-store`,
-// which already opts this route into per-request rendering — the old
-// `export const revalidate = 120` never actually cached anything. Worse, a
-// route segment that exports `revalidate` makes notFound() return HTTP 200
-// (a soft-404) in Next 14. Marking the route force-dynamic makes notFound()
-// emit a real 404 for missing profile slugs, at no perf cost.
+// which already opts this route into per-request rendering, so the old
+// `export const revalidate = 120` never actually cached anything — this just
+// declares the route's real behavior honestly.
+//
+// Note: a missing profile slug renders the not-found UI but returns HTTP 200
+// (a soft-404), not a hard 404. That's a known Next 14 limitation — an
+// ancestor loading.tsx (src/app/loading.tsx) streams a 200 shell before
+// notFound() runs, so the status is already committed. Emitting a true 404
+// would mean dropping that app-wide loading boundary; we've accepted the
+// soft-404 instead (Google detects content-based not-found pages reasonably).
 export const dynamic = 'force-dynamic';
 
 import type { Metadata } from 'next';
@@ -90,11 +95,12 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   // control-flow error Next.js needs to see.
   const data = await fetchProfileMetadataRow(params.id);
   if (data === 'error') return { title: 'inbed.ai' };
-  // Genuinely missing slug → 404. Paired with `export const dynamic =
-  // 'force-dynamic'` at the top of the file, this makes Next emit a real 404
-  // status. (notFound() alone, on a segment exporting `revalidate`, produced a
-  // soft-404 — HTTP 200 with the not-found page.)
-  if (!data) notFound();
+  // Missing slug: give the not-found response a descriptive title. The page
+  // body calls notFound() to render the not-found UI; the status is a soft-404
+  // (HTTP 200) — see the note on `export const dynamic` above. A clear
+  // "Agent Not Found" title is the strongest signal we can give crawlers that
+  // this URL is gone.
+  if (!data) return { title: 'Agent Not Found — inbed.ai' };
   if (data.browsable === false) permanentRedirect('/profiles');
 
   // Build description from tagline OR bio, then always append interests when
