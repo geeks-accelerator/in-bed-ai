@@ -1,6 +1,7 @@
 import { createAdminClient } from '@/lib/supabase/admin';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 import bcrypt from 'bcrypt';
+import { createHash } from 'crypto';
 import { cache } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import { NextRequest } from 'next/server';
@@ -13,6 +14,40 @@ const SALT_ROUNDS = 12;
 // A fixed valid bcrypt hash used to equalize timing on the no-prefix-match
 // path, so a valid key prefix isn't distinguishable by response latency.
 const DUMMY_HASH = '$2b$12$UWfCWQa8ZbvsZrtvxUbNme7006asF7VxablU1SBTVkgZHRdMozKQy';
+
+// Verified-key cache: skips the cost-12 bcrypt compare (the dominant fixed cost
+// of every authenticated request) for a key that already passed it here.
+//
+// - Keyed by SHA-256 of the presented key, never the key itself. Keys are 64
+//   random hex chars, so a fast hash can't be brute-forced.
+// - Holds the api_key_hash the key matched. The agent row is still fetched on
+//   every request, and a hit only counts if the row's current hash is the same,
+//   so rotate-key and deactivation take effect immediately; the TTL only bounds
+//   memory and exposure.
+// - Only successes are cached: invalid keys always pay full bcrypt (timing
+//   equalization intact) and can't grow the Map. Size-capped, oldest evicted.
+// - In-process state is correct because prod runs a single replica (same
+//   assumption as src/lib/rate-limit.ts).
+const VERIFIED_KEY_TTL_MS = 10 * 60_000;
+const VERIFIED_KEY_MAX = 1_000;
+const verifiedKeys = new Map<string, { agentId: string; matchedHash: string; expires: number }>();
+
+function keyDigest(apiKey: string): string {
+  return createHash('sha256').update(apiKey).digest('hex');
+}
+
+function rememberVerifiedKey(digest: string, agent: { id: string; api_key_hash: string }): void {
+  verifiedKeys.delete(digest); // re-insert at the end so eviction stays oldest-first
+  if (verifiedKeys.size >= VERIFIED_KEY_MAX) {
+    const oldest = verifiedKeys.keys().next().value;
+    if (oldest !== undefined) verifiedKeys.delete(oldest);
+  }
+  verifiedKeys.set(digest, {
+    agentId: agent.id,
+    matchedHash: agent.api_key_hash,
+    expires: Date.now() + VERIFIED_KEY_TTL_MS,
+  });
+}
 
 export function generateApiKey(): string {
   const key = uuidv4().replace(/-/g, '') + uuidv4().replace(/-/g, '');
@@ -42,6 +77,7 @@ async function authenticateByApiKey(request: NextRequest): Promise<Agent | null>
   }
 
   const prefix = getKeyPrefix(apiKey);
+  const digest = keyDigest(apiKey);
   const supabase = createAdminClient();
 
   const { data: agents, error } = await supabase
@@ -51,15 +87,26 @@ async function authenticateByApiKey(request: NextRequest): Promise<Agent | null>
     .eq('status', 'active');
 
   if (error || !agents?.length) {
+    verifiedKeys.delete(digest); // e.g. the agent was deactivated
     // Equalize timing with the match path so a valid prefix can't be
     // distinguished from an invalid one by how fast we reject.
     await bcrypt.compare(apiKey, DUMMY_HASH);
     return null;
   }
 
+  const cached = verifiedKeys.get(digest);
+  if (cached) {
+    const agent = cached.expires > Date.now()
+      ? agents.find((a) => a.id === cached.agentId && a.api_key_hash === cached.matchedHash)
+      : undefined;
+    if (agent) return agent as Agent;
+    verifiedKeys.delete(digest); // expired, or the key was rotated
+  }
+
   for (const agent of agents) {
     const isValid = await bcrypt.compare(apiKey, agent.api_key_hash);
     if (isValid) {
+      rememberVerifiedKey(digest, agent);
       return agent as Agent;
     }
   }

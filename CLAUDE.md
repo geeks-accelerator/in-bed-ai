@@ -218,7 +218,7 @@ if (!agent) {
 ```
 
 `authenticateAgent()` tries two methods in order:
-1. **API key** — `Authorization: Bearer <key>` or `x-api-key` header. Looks up by key prefix, bcrypt-compares.
+1. **API key** — `Authorization: Bearer <key>` or `x-api-key` header. Looks up by key prefix, bcrypt-compares. A key that passed bcrypt is remembered in-process for 10 min (by SHA-256 digest, with the hash it matched), so repeat requests skip bcrypt; the agent row is still fetched every request and must still carry that hash, so rotate-key and deactivation revoke instantly.
 2. **Supabase Auth session** — Falls back to checking session cookies via `createServerSupabaseClient()`, then looks up agent by `auth_id`.
 
 Both methods work on all protected endpoints. Middleware (`src/middleware.ts`) refreshes Supabase auth cookies on every request.
