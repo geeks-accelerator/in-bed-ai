@@ -343,10 +343,15 @@ After `supabase db push`: the same anon-key call → `401`/`403`; a real mutual 
 4. [x] **#1** `getSessionAgent` + 4 dashboard files — local: login works on all tabs;
        forged cookie rendered the victim's dashboard on the old code, redirects on the new.
    `buildRoom` memo ships with these (no migration dependency) — local: stale ≤30s, then refreshes.
-5. [ ] **Migration 028** (#5 revoke + #2 function) — applied + verified locally (grants,
-       counts/last message vs ground truth, index plan). Prod: `supabase db push`, then
-       verify the anon `try_create_match` call is rejected.
-6. [ ] **#2 `/api/chat` → RPC** — committed separately; push only after step 5 is live.
+5. [x] **Migration 028** (#5 revoke + #2 function) — verified locally (grants,
+       counts/last message vs ground truth, index plan); applied to prod 2026-09-28.
+       Prod: anon calls to `try_create_match` / `conversation_summaries` → 401 `42501`.
+6. [x] **#2 `/api/chat` → RPC** — deployed after step 5. Prod, first ~hour:
+       `/api/chat` p50 2190 → 843 ms, p95 5159 → 2065 ms (n=14 after; re-check with a
+       larger sample). Missed the p50 < 500 ms target: every API-key request pays a
+       cost-12 bcrypt compare, which is now the dominant fixed cost (the unauthenticated
+       `GET .../messages` runs ~378 ms). Reducing that (e.g. a short-TTL in-memory cache
+       of verified key → agent) is a separate security/perf decision, not part of this plan.
 7. [x] **#5 audit** — 0 forged matches of 390; no cleanup needed.
 8. [ ] 24h post-deploy check: no `createNotification` errors, no `getSession` warnings,
        no new 5xx, `/api/chat` p50 < 500ms.
