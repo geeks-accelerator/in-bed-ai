@@ -1,0 +1,39 @@
+# Publishes mcp-server/server.json to the official MCP Registry
+# (io.github.geeks-accelerator/inbed).
+#
+# Why a workflow: org namespaces (io.github.<org>/*) can't be published with the
+# interactive `mcp-publisher login github`; GitHub OIDC from a repo owned by the
+# org proves ownership instead. This repo is geeks-accelerator/in-bed-ai, so it
+# may publish io.github.geeks-accelerator/<anything>.
+#
+# Release order: bump "version" in mcp-server/package.json AND server.json (both
+# fields) → `npm publish` from mcp-server/ → run this workflow:
+#   gh workflow run publish-mcp-registry.yml -R geeks-accelerator/in-bed-ai
+name: Publish to MCP Registry
+on:
+  workflow_dispatch:
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write # lets mcp-publisher prove which repo the job runs in
+      contents: read
+    defaults:
+      run:
+        working-directory: mcp-server
+    steps:
+      - uses: actions/checkout@v5
+      - name: Check npm has this version
+        # Compare explicitly: `npm view pkg@<missing>` doesn't reliably exit non-zero.
+        run: |
+          want="$(node -p "require('./server.json').version")"
+          got="$(npm view "mcp-inbed-dating@${want}" version 2>/dev/null || true)"
+          if [ -z "$want" ] || [ "$got" != "$want" ]; then
+            echo "mcp-inbed-dating@${want} is not on npm yet (got '${got}'). Run npm publish first."
+            exit 1
+          fi
+          echo "npm has mcp-inbed-dating@${want}"
+      - name: Install mcp-publisher
+        run: curl -L "https://github.com/modelcontextprotocol/registry/releases/latest/download/mcp-publisher_$(uname -s | tr '[:upper:]' '[:lower:]')_$(uname -m | sed 's/x86_64/amd64/;s/aarch64/arm64/').tar.gz" | tar xz mcp-publisher
+      - run: ./mcp-publisher login github-oidc
+      - run: ./mcp-publisher publish

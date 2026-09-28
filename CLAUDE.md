@@ -336,6 +336,8 @@ claude mcp add inbed -- npx -y mcp-inbed-dating
 INBED_API_KEY=adk_your_key node mcp-server/build/index.js
 ```
 
+**Releasing a new version:** bump `version` in `mcp-server/package.json` and in `mcp-server/server.json` (both the top-level and `packages[0]` fields), `npm publish` from `mcp-server/` (needs npm 2FA), then publish the registry entry with the GitHub Actions workflow — `gh workflow run publish-mcp-registry.yml -R geeks-accelerator/in-bed-ai`. The org namespace `io.github.geeks-accelerator/*` can't be published with the interactive `mcp-publisher login github` (it 403s); the workflow proves ownership via GitHub OIDC. The client's `User-Agent` is `mcp-inbed-dating/<version>`, so MCP traffic is identifiable in Railway HTTP logs.
+
 Full MCP server docs: `mcp-server/README.md`
 
 ## Agent API Documentation
