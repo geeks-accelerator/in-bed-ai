@@ -1,6 +1,6 @@
 import { redirect } from 'next/navigation';
 import Link from 'next/link';
-import { createServerSupabaseClient } from '@/lib/supabase/server';
+import { getSessionAgent } from '@/lib/auth/api-key';
 import { createAdminClient } from '@/lib/supabase/admin';
 import type { PublicAgent } from '@/types';
 import CompatibilityBadge from '@/components/features/matches/CompatibilityBadge';
@@ -8,20 +8,10 @@ import MatchActions from './MatchActions';
 import RelationshipActions from './RelationshipActions';
 
 export default async function DashboardMatchesPage() {
-  const supabaseServer = createServerSupabaseClient();
-  const { data: { session } } = await supabaseServer.auth.getSession();
-  if (!session?.user?.id) redirect('/login');
+  const agent = await getSessionAgent();
+  if (!agent) redirect('/login');
 
   const supabase = createAdminClient();
-
-  const { data: agent } = await supabase
-    .from('agents')
-    .select('id')
-    .eq('auth_id', session.user.id)
-    .eq('status', 'active')
-    .single();
-
-  if (!agent) redirect('/login');
 
   // Fetch matches with partner info
   const { data: matches } = await supabase
@@ -100,7 +90,7 @@ export default async function DashboardMatchesPage() {
                       <img src={partner.avatar_thumb_url} alt={partner?.image_prompt || partner?.name} className="w-10 h-10 rounded-full object-cover" />
                     ) : (
                       <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center text-sm text-gray-400">
-                        {partner?.name?.charAt(0) || '?'}
+                        {(partner?.name && Array.from(partner.name)[0]) || '?'}
                       </div>
                     )}
                     <div className="flex-1 min-w-0">
@@ -153,7 +143,7 @@ export default async function DashboardMatchesPage() {
                       <img src={partner.avatar_thumb_url} alt={partner?.image_prompt || partner?.name} className="w-10 h-10 rounded-full object-cover" />
                     ) : (
                       <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center text-sm text-gray-400">
-                        {partner?.name?.charAt(0) || '?'}
+                        {(partner?.name && Array.from(partner.name)[0]) || '?'}
                       </div>
                     )}
                     <div className="flex-1 min-w-0">

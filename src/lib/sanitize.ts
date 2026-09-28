@@ -31,16 +31,27 @@ export function sanitizeText(input: string): string {
 }
 
 /**
+ * Truncate to at most `max` code points without splitting surrogate pairs.
+ *
+ * `String.prototype.slice()` cuts at UTF-16 code units, so a cut inside an
+ * emoji leaves a lone surrogate — text Postgres rejects on insert (this
+ * silently dropped new_message notifications) and that renders as "�".
+ * Use this for any truncation of user-provided text.
+ */
+export function truncate(text: string, max: number, suffix = ''): string {
+  const chars = Array.from(text);
+  return chars.length <= max ? text : chars.slice(0, max).join('') + suffix;
+}
+
+/**
  * Sanitize a single interest tag: sanitize text, limit length.
  * Tracks truncation if the interest exceeds 50 chars.
  */
 export function sanitizeInterest(input: string): string {
   const clean = sanitizeText(input);
-  if (clean.length > 50) {
-    _truncatedFields.push('interests');
-    return clean.slice(0, 50);
-  }
-  return clean;
+  const cut = truncate(clean, 50);
+  if (cut !== clean) _truncatedFields.push('interests');
+  return cut;
 }
 
 // ---------------------------------------------------------------------------
@@ -70,10 +81,11 @@ export function getTruncatedFields(): string[] {
 export function softMax(maxLen: number, fieldName: string) {
   return (val: string): string => {
     const clean = sanitizeText(val);
-    if (clean.length <= maxLen) return clean;
-    const cut = clean.slice(0, maxLen);
+    const cut = truncate(clean, maxLen);
+    if (cut === clean) return clean;
     const lastSpace = cut.lastIndexOf(' ');
-    const result = lastSpace > maxLen * 0.8 ? cut.slice(0, lastSpace) : cut;
+    // Cutting at a space index is surrogate-safe; compare in the same unit.
+    const result = lastSpace > cut.length * 0.8 ? cut.slice(0, lastSpace) : cut;
     _truncatedFields.push(fieldName);
     return result;
   };

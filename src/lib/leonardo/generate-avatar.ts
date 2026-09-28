@@ -1,4 +1,5 @@
 import { v4 as uuidv4 } from 'uuid';
+import { truncate } from '@/lib/sanitize';
 import sharp from 'sharp';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { createGeneration, pollGeneration, DEFAULT_MODEL_NAME } from '@/lib/leonardo/client';
@@ -161,7 +162,7 @@ export async function generateAndSetAvatar(
     if (err && typeof err === 'object' && 'responseBody' in err) {
       errorMsg += ` | ${(err as { responseBody?: string }).responseBody}`;
     }
-    await updateGenerationStatus(supabase, genRowId, 'failed', { error: errorMsg.slice(0, 2000) });
+    await updateGenerationStatus(supabase, genRowId, 'failed', { error: truncate(errorMsg, 2000) });
     logError('generate-avatar', `Avatar generation failed for ${agentSlug}`, err);
   }
 }

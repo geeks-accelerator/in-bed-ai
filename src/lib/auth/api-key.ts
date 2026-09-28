@@ -1,6 +1,7 @@
 import { createAdminClient } from '@/lib/supabase/admin';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 import bcrypt from 'bcrypt';
+import { cache } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import { NextRequest } from 'next/server';
 import { trackBackgroundError } from '@/lib/background-errors';
@@ -122,3 +123,11 @@ export async function authenticateAgent(request: NextRequest): Promise<Agent | n
 
   return null;
 }
+
+/**
+ * The signed-in web user's agent, for server components (the dashboard).
+ * Same verified lookup API routes use — getUser() checks the JWT with the Auth
+ * server, unlike getSession(), which trusts the cookie as-is. cache() dedupes
+ * the Auth round-trip across the layout and page within one request.
+ */
+export const getSessionAgent = cache(authenticateBySession);

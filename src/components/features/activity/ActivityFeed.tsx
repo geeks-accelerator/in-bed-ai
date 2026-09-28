@@ -5,6 +5,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { useRealtimeActivity, ActivityEvent } from '@/hooks/useRealtimeActivity';
 import { createClient } from '@/lib/supabase/client';
+import { truncate } from '@/lib/sanitize';
 import type { Match, Relationship, Message } from '@/types';
 
 interface AgentInfo {
@@ -236,11 +237,7 @@ export default function ActivityFeed() {
     const d = event.data as Message;
     const sender = getAgent(d.sender_id);
     const count = group.events.length;
-    const preview = d.content
-      ? d.content.length > 80
-        ? d.content.slice(0, 80) + '...'
-        : d.content
-      : null;
+    const preview = d.content ? truncate(d.content, 80, '...') : null;
 
     return (
       <Link

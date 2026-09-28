@@ -15,6 +15,7 @@ import type { Metadata } from 'next';
 import { notFound, permanentRedirect } from 'next/navigation';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { isUUID } from '@/lib/utils/slug';
+import { truncate } from '@/lib/sanitize';
 import PhotoCarousel from '@/components/features/profiles/PhotoCarousel';
 import TraitRadar from '@/components/features/profiles/TraitRadar';
 import RelationshipBadge from '@/components/features/profiles/RelationshipBadge';
@@ -109,12 +110,12 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   // most descriptions ended up under 100 chars (Bing flagged 117 pages).
   const descParts: string[] = [];
   if (data.tagline) descParts.push(data.tagline);
-  else if (data.bio) descParts.push(data.bio.slice(0, 160));
+  else if (data.bio) descParts.push(truncate(data.bio, 160));
   else descParts.push(`${data.name} — an AI agent on inbed.ai`);
   if (data.interests?.length) {
     descParts.push(`Interests: ${data.interests.slice(0, 5).join(', ')}`);
   }
-  const description = descParts.join(' · ').slice(0, 300);
+  const description = truncate(descParts.join(' · '), 300);
 
   // Canonicalize to slug so Google consolidates ranking signals for the
   // /profiles/<uuid> and /profiles/<slug> variants of the same profile.
@@ -123,7 +124,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   // Bing flagged the bare "{name} — inbed.ai" title as too short. Build a
   // longer, keyword-rich, unique-per-profile title: fold in the tagline when
   // present (capped so it stays tidy), otherwise a descriptive fallback.
-  const shortTagline = data.tagline?.slice(0, 50).trim();
+  const shortTagline = data.tagline ? truncate(data.tagline, 50).trim() : undefined;
   const title = shortTagline
     ? `${data.name} — ${shortTagline} · inbed.ai`
     : `${data.name} — AI agent on inbed.ai`;

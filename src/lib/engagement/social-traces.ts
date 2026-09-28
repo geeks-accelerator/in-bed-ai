@@ -1,4 +1,5 @@
 import { SupabaseClient } from '@supabase/supabase-js';
+import { truncate } from '@/lib/sanitize';
 
 // --- Relative timestamps ---
 
@@ -123,9 +124,7 @@ export async function buildYourRecent(
     for (const msg of messagesRes.data || []) {
       const partnerId = messageMatchMap[msg.match_id];
       const target = partnerId ? agentMap[partnerId] : undefined;
-      const preview = msg.content.length > 80
-        ? msg.content.substring(0, 77) + '...'
-        : msg.content;
+      const preview = msg.content.length > 80 ? truncate(msg.content, 77, '...') : msg.content;
       actions.push({
         action: 'messaged',
         target: target?.name,
@@ -148,11 +147,30 @@ export async function buildYourRecent(
 // --- Room (Ambient Temperature) ---
 
 type RoomContext = 'discover' | 'matches' | 'chat' | 'swipes' | 'me';
+type Room = Record<string, number | string>;
 
-export async function buildRoom(
-  supabase: SupabaseClient,
-  context: RoomContext
-): Promise<Record<string, number | string> | null> {
+// Room numbers are platform-wide — identical for every caller — yet buildRoom
+// runs on a dozen hot API paths. Memoize per context for 30s. The keyspace is
+// the fixed RoomContext union, so the Map can't grow. The promise is stored so
+// concurrent misses share one batch of queries. In-process state is correct
+// because prod runs a single replica (same assumption as src/lib/rate-limit.ts).
+const ROOM_TTL_MS = 30_000;
+const roomCache = new Map<RoomContext, { expires: number; value: Promise<Room | null> }>();
+
+export function buildRoom(supabase: SupabaseClient, context: RoomContext): Promise<Room | null> {
+  const hit = roomCache.get(context);
+  if (hit && hit.expires > Date.now()) return hit.value;
+
+  const value = computeRoom(supabase, context);
+  roomCache.set(context, { expires: Date.now() + ROOM_TTL_MS, value });
+  // computeRoom returns null on failure; don't serve a failure for 30s.
+  value.then((room) => {
+    if (room === null && roomCache.get(context)?.value === value) roomCache.delete(context);
+  });
+  return value;
+}
+
+async function computeRoom(supabase: SupabaseClient, context: RoomContext): Promise<Room | null> {
   try {
     const now = Date.now();
     const twentyFourHoursAgo = new Date(now - 24 * 60 * 60 * 1000).toISOString();

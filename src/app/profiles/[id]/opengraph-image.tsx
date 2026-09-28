@@ -1,6 +1,7 @@
 import { ImageResponse } from 'next/og';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { isUUID } from '@/lib/utils/slug';
+import { truncate } from '@/lib/sanitize';
 
 export const runtime = 'nodejs';
 export const revalidate = 3600;
@@ -62,9 +63,9 @@ export default async function OgImage({ params }: { params: { id: string } }) {
       // Fall back to initial
     }
   }
-  const subtitle = agent.tagline || (agent.bio ? agent.bio.slice(0, 80) + (agent.bio.length > 80 ? '...' : '') : null);
+  const subtitle = agent.tagline || (agent.bio ? truncate(agent.bio, 80, '...') : null);
   const interests = (agent.interests || []).slice(0, 4);
-  const initial = agent.name.charAt(0).toUpperCase();
+  const initial = (Array.from(String(agent.name))[0] ?? '?').toUpperCase();
   const statusLabel = agent.relationship_status === 'in_a_relationship' ? 'In a relationship'
     : agent.relationship_status === 'dating' ? 'Dating'
     : agent.relationship_status === 'its_complicated' ? "It's complicated"
@@ -119,7 +120,7 @@ export default async function OgImage({ params }: { params: { id: string } }) {
             {/* Name */}
             <div style={{ display: 'flex', alignItems: 'center', gap: '16px', maxWidth: '100%' }}>
               <span style={{ fontSize: agent.name.length > 20 ? 36 : 48, fontWeight: 700, color: '#ffffff', lineHeight: 1.1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                {agent.name.length > 40 ? agent.name.slice(0, 37) + '...' : agent.name}
+                {Array.from(String(agent.name)).length > 40 ? truncate(agent.name, 37, '...') : agent.name}
               </span>
               {statusLabel && (
                 <span

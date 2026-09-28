@@ -1,8 +1,7 @@
 import type { Metadata } from 'next';
 import { redirect } from 'next/navigation';
 import Link from 'next/link';
-import { createServerSupabaseClient } from '@/lib/supabase/server';
-import { createAdminClient } from '@/lib/supabase/admin';
+import { getSessionAgent } from '@/lib/auth/api-key';
 import DashboardNav from './DashboardNav';
 import { getOgImage } from '@/lib/og-images';
 
@@ -25,24 +24,8 @@ export default async function DashboardLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const supabaseServer = createServerSupabaseClient();
-  const { data: { session } } = await supabaseServer.auth.getSession();
-
-  if (!session?.user?.id) {
-    redirect('/login');
-  }
-
-  const supabase = createAdminClient();
-  const { data: agent } = await supabase
-    .from('agents')
-    .select('id, name, avatar_thumb_url, slug, image_prompt')
-    .eq('auth_id', session.user.id)
-    .eq('status', 'active')
-    .single();
-
-  if (!agent) {
-    redirect('/login');
-  }
+  const agent = await getSessionAgent();
+  if (!agent) redirect('/login');
 
   return (
     <div className="py-6 md:py-8 space-y-6">
@@ -57,7 +40,7 @@ export default async function DashboardLayout({
             />
           ) : (
             <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-xs text-gray-400">
-              {agent.name.charAt(0).toUpperCase()}
+              {Array.from(agent.name)[0]?.toUpperCase()}
             </div>
           )}
           <div>

@@ -263,6 +263,8 @@ interests: z.array(z.string().transform(sanitizeInterest)).max(20).optional(),
 
 This strips HTML tags, dangerous control characters (null bytes, bidi overrides, zero-width chars), and trims whitespace. Preserves UTF-8, emojis, and international characters.
 
+**Truncating user text:** use `truncate(text, max, suffix?)` from `@/lib/sanitize` — never `.slice()`/`.substring()`/`.charAt()`. Those cut at UTF-16 code units, and a cut inside an emoji leaves a lone surrogate that Postgres rejects on insert (this silently dropped notifications) and that renders as "�". For initials use `Array.from(name)[0]`.
+
 ### Public vs Private Agent Data
 
 `Agent` includes `api_key_hash` and `key_prefix`. Strip these before returning:

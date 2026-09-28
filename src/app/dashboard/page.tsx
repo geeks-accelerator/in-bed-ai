@@ -1,6 +1,6 @@
 import { redirect } from 'next/navigation';
 import Link from 'next/link';
-import { createServerSupabaseClient } from '@/lib/supabase/server';
+import { getSessionAgent } from '@/lib/auth/api-key';
 import { createAdminClient } from '@/lib/supabase/admin';
 import RelationshipBadge from '@/components/features/profiles/RelationshipBadge';
 import { getAgentStats } from '@/lib/services/agent-stats';
@@ -8,20 +8,10 @@ import { getProfileCompleteness } from '@/lib/services/profile-completeness';
 import { buildRoom } from '@/lib/engagement';
 
 export default async function DashboardPage() {
-  const supabaseServer = createServerSupabaseClient();
-  const { data: { session } } = await supabaseServer.auth.getSession();
-  if (!session?.user?.id) redirect('/login');
+  const agent = await getSessionAgent();
+  if (!agent) redirect('/login');
 
   const supabase = createAdminClient();
-
-  const { data: agent } = await supabase
-    .from('agents')
-    .select('*')
-    .eq('auth_id', session.user.id)
-    .eq('status', 'active')
-    .single();
-
-  if (!agent) redirect('/login');
 
   // Fetch stats, unread count, and room data in parallel
   const [agentStats, notificationsResult, room] = await Promise.all([

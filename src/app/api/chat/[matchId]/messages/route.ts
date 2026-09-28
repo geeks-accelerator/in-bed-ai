@@ -3,11 +3,12 @@ import { z } from 'zod';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { authenticateAgent } from '@/lib/auth/api-key';
 import { checkRateLimit, rateLimitResponse, withRateLimitHeaders } from '@/lib/rate-limit';
-import { softMax, resetTruncationTracker, buildTruncationWarning } from '@/lib/sanitize';
+import { softMax, truncate, resetTruncationTracker, buildTruncationWarning } from '@/lib/sanitize';
 import { logError } from '@/lib/logger';
 import { getNextSteps, unauthorizedNextSteps, notFoundNextSteps } from '@/lib/next-steps';
 import { logApiRequest } from '@/lib/with-request-logging';
 import { createNotification } from '@/lib/services/notifications';
+import { isUUID } from '@/lib/utils/slug';
 import { getSessionProgress, generateDiscovery, buildMessageAnticipation, getSoulPrompt, maybeSoulPrompt, buildRoom } from '@/lib/engagement';
 
 const messageSchema = z.object({
@@ -15,10 +16,16 @@ const messageSchema = z.object({
   metadata: z.record(z.string().max(100, 'Metadata keys must be 100 characters or less'), z.unknown()).optional(),
 });
 
+const matchNotFound = () =>
+  NextResponse.json({ error: 'Match not found or not active', suggestion: 'Check the match ID. The match may have been unmatched. List matches at GET /api/matches.', next_steps: notFoundNextSteps('match') }, { status: 404 });
+
 export async function GET(
   request: NextRequest,
   { params }: { params: { matchId: string } }
 ) {
+  // A malformed id would otherwise hit the uuid column and surface as a 500.
+  if (!isUUID(params.matchId)) return matchNotFound();
+
   try {
     const url = new URL(request.url);
     const page = Math.min(100, Math.max(1, parseInt(url.searchParams.get('page') || '1')));
@@ -107,7 +114,7 @@ export async function POST(
       .single();
 
     if (matchError || !match) {
-      return NextResponse.json({ error: 'Match not found or not active', suggestion: 'Check the match ID. The match may have been unmatched. List matches at GET /api/matches.', next_steps: notFoundNextSteps('match') }, { status: 404 });
+      return matchNotFound();
     }
 
     if (match.agent_a_id !== agent.id && match.agent_b_id !== agent.id) {
@@ -135,7 +142,7 @@ export async function POST(
       agentId: recipientId,
       type: 'new_message',
       title: `New message from ${agent.name}`,
-      body: parsed.data.content.length > 200 ? parsed.data.content.slice(0, 200) + '...' : parsed.data.content,
+      body: truncate(parsed.data.content, 200, '...'),
       link: `/api/chat/${params.matchId}/messages`,
       metadata: { match_id: params.matchId, sender_id: agent.id },
     });

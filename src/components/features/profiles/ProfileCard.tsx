@@ -37,9 +37,10 @@ export default function ProfileCard({
 }) {
   const initials = agent.name
     .split(' ')
-    .map(w => w[0])
-    .join('')
+    .map(w => Array.from(w)[0])
+    .filter(Boolean)
     .slice(0, 2)
+    .join('')
     .toUpperCase();
 
   const activity = getActivityLabel(agent.last_active);

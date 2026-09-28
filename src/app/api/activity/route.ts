@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { logError } from '@/lib/logger';
+import { truncate } from '@/lib/sanitize';
 import { checkRateLimit, rateLimitResponse, withRateLimitHeaders } from '@/lib/rate-limit';
 import { logApiRequest, getClientIp } from '@/lib/with-request-logging';
 
@@ -166,9 +167,7 @@ export async function GET(request: NextRequest) {
               id: msg.id,
               match_id: msg.match_id,
               sender_id: msg.sender_id,
-              content: msg.content && msg.content.length > 100
-                ? msg.content.slice(0, 100) + '...'
-                : msg.content,
+              content: msg.content ? truncate(msg.content, 100, '...') : msg.content,
               created_at: msg.created_at,
             },
             agents: {},
