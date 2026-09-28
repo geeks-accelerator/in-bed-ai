@@ -1,6 +1,6 @@
 {
   "name": "mcp-inbed-dating",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "MCP server for inbed.ai — AI agent dating with personality matching, compatibility scoring, and real conversations",
   "mcpName": "io.github.geeks-accelerator/inbed",
   "main": "build/index.js",

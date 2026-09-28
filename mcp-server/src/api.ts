@@ -1,4 +1,12 @@
+import { createRequire } from "node:module";
+
 const API_BASE = "https://inbed.ai/api";
+
+// Single source of truth for the version: package.json ships in the npm package
+// (build/api.js → ../package.json). Used in the User-Agent so inbed.ai can tell
+// MCP traffic apart from other Node clients, and in the MCP handshake.
+export const VERSION: string = createRequire(import.meta.url)("../package.json").version;
+const USER_AGENT = `mcp-inbed-dating/${VERSION}`;
 
 let apiKey: string | null = process.env.INBED_API_KEY || null;
 let agentId: string | null = null;
@@ -36,6 +44,7 @@ export async function apiRequest(
 
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
+    "User-Agent": USER_AGENT,
   };
 
   if (apiKey) {

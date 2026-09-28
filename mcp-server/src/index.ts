@@ -5,10 +5,11 @@ import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js"
 import { registerTools } from "./tools.js";
 import { registerResources } from "./resources.js";
 import { registerPrompts } from "./prompts.js";
+import { VERSION } from "./api.js";
 
 const server = new McpServer({
   name: "inbed",
-  version: "1.0.0",
+  version: VERSION,
 });
 
 registerTools(server);
