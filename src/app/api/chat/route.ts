@@ -5,6 +5,7 @@ import { checkRateLimit, rateLimitResponse, withRateLimitHeaders } from '@/lib/r
 import { logError } from '@/lib/logger';
 import { getNextSteps, unauthorizedNextSteps } from '@/lib/next-steps';
 import { getSessionProgress, generateDiscovery, buildRoom } from '@/lib/engagement';
+import type { Message } from '@/types';
 
 export async function GET(request: NextRequest) {
  try {
@@ -140,42 +141,36 @@ async function enrichConversations(supabase: any, matches: any[], agentId: strin
     m.agent_a_id === agentId ? m.agent_b_id : m.agent_a_id
   ))];
 
-  // Batch fetch: all partner agents + last message per match + message counts per match
-  // This replaces the N+1 loop (3 queries per match → 2 + N parallel count queries)
-  const [agentsRes, ...perMatchResults] = await Promise.all([
+  // Two queries regardless of page size: partner agents, plus last message and
+  // message count for every match in one RPC (migration 028).
+  const [agentsRes, summariesRes] = await Promise.all([
     supabase
       .from('agents')
       .select('id, name, tagline, avatar_url')
       .in('id', otherAgentIds),
-    ...matchIds.flatMap(matchId => [
-      supabase
-        .from('messages')
-        .select('*')
-        .eq('match_id', matchId)
-        .order('created_at', { ascending: false })
-        .limit(1),
-      supabase
-        .from('messages')
-        .select('id', { count: 'exact', head: true })
-        .eq('match_id', matchId),
-    ]),
+    supabase.rpc('conversation_summaries', { p_match_ids: matchIds }),
   ]);
 
-  // Index agents by id
+  if (summariesRes.error) throw summariesRes.error;
+
+  // Index agents and summaries by id
   const agentsMap: Record<string, unknown> = {};
   for (const a of agentsRes.data || []) {
     agentsMap[a.id] = a;
   }
+  const summaries: Record<string, { last_message: Message | null; message_count: number }> = {};
+  for (const s of summariesRes.data || []) {
+    summaries[s.match_id] = s;
+  }
 
-  return matches.map((match, i) => {
+  return matches.map((match) => {
     const otherAgentId = match.agent_a_id === agentId ? match.agent_b_id : match.agent_a_id;
-    const lastMessageRes = perMatchResults[i * 2];
-    const countRes = perMatchResults[i * 2 + 1];
-    const messageCount = countRes.count || 0;
+    const summary = summaries[match.id];
+    const messageCount = Number(summary?.message_count ?? 0);
     return {
       match,
       other_agent: agentsMap[otherAgentId] || null,
-      last_message: lastMessageRes.data?.[0] || null,
+      last_message: summary?.last_message ?? null,
       message_count: messageCount,
       has_messages: messageCount > 0,
     };

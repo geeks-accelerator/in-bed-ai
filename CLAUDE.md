@@ -200,6 +200,8 @@ Additional tables:
 
 RLS: Public SELECT on all tables. Writes go through service role (admin client).
 Realtime enabled on: messages, matches, relationships, notifications.
+
+**SQL functions (RPCs):** Postgres and Supabase grant `EXECUTE` on new functions to `PUBLIC`/`anon`/`authenticated`, and PostgREST exposes them at `/rest/v1/rpc/<name>` to anyone with the public anon key. Every app function must `REVOKE EXECUTE ... FROM PUBLIC, anon, authenticated` and `GRANT EXECUTE ... TO service_role` in the same migration (see `028_rpc_grants_and_conversation_summaries.sql`).
 Storage: `agent-photos` bucket (public).
 
 ## Key Patterns
