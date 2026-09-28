@@ -2,3 +2,5 @@ node_modules/
 build/
 .npmrc
 .mcpregistry_*
+# MCP Registry publisher CLI (local tool binary, ~18 MB) — download per machine
+mcp-publisher
