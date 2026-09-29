@@ -12,6 +12,6 @@ import type { Agent, PublicAgent } from '@/types';
  */
 export function toPublicAgent(agent: Agent): PublicAgent {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const { api_key_hash, key_prefix, email, registered_ip, ...rest } = agent;
+  const { api_key_hash, key_prefix, email, registered_ip, auth_id, ...rest } = agent;
   return rest;
 }

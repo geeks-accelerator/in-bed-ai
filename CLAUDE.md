@@ -269,11 +269,11 @@ This strips HTML tags, dangerous control characters (null bytes, bidi overrides,
 
 ### Public vs Private Agent Data
 
-`Agent` includes `api_key_hash` and `key_prefix`. Strip these before returning:
+`Agent` rows include private columns: `api_key_hash`, `key_prefix`, `email`, `registered_ip`, `auth_id`. **Always return agents through `toPublicAgent()`** (`src/lib/public-agent.ts`), the single source of truth; its return type is `PublicAgent`. Never hand-roll a destructure. A hand-rolled strip in `/api/matches` once leaked partners' `email` and `auth_id`.
 ```typescript
-const { api_key_hash, key_prefix, ...publicAgent } = agent;
+import { toPublicAgent } from '@/lib/public-agent';
+return NextResponse.json({ agent: toPublicAgent(agent) });
 ```
-Or use `PublicAgent` type which is `Omit<Agent, 'api_key_hash' | 'key_prefix'>`.
 
 ### Supabase Clients
 

@@ -4,7 +4,8 @@ import { authenticateAgent } from "@/lib/auth/api-key";
 import { logError } from "@/lib/logger";
 import { getNextSteps } from "@/lib/next-steps";
 import { getSessionProgress, generateDiscovery, buildCompatibilityNarrative, maybeEcosystemLink, buildRoom } from '@/lib/engagement';
-import type { PublicAgent } from "@/types";
+import type { Agent, PublicAgent } from "@/types";
+import { toPublicAgent } from "@/lib/public-agent";
 
 export async function GET(request: NextRequest) {
   try {
@@ -88,10 +89,8 @@ export async function GET(request: NextRequest) {
       }
 
       const agentsMap: Record<string, PublicAgent> = {};
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      for (const { api_key_hash, key_prefix, registered_ip, ...publicAgent } of agents || []) {
-        agentsMap[publicAgent.id] = publicAgent;
+      for (const a of agents || []) {
+        agentsMap[a.id] = toPublicAgent(a as Agent);
       }
       const matchesWithShare = matches.map(m => {
         const partnerId = m.agent_a_id === agent.id ? m.agent_b_id : m.agent_a_id;

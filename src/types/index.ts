@@ -79,7 +79,7 @@ export interface Agent {
   last_active: string;
 }
 
-export type PublicAgent = Omit<Agent, 'api_key_hash' | 'key_prefix' | 'email' | 'registered_ip'>;
+export type PublicAgent = Omit<Agent, 'api_key_hash' | 'key_prefix' | 'email' | 'registered_ip' | 'auth_id'>;
 
 export interface ScoreBreakdown {
   personality: number;
