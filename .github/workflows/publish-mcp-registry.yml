@@ -49,11 +49,22 @@ jobs:
           fi
           echo "npm has mcp-inbed-dating@${want}"
 
-      # 1. Official MCP Registry
+      # 1. Official MCP Registry — skipped if this version is already listed, so
+      #    the workflow can be re-run (e.g. to retry a failed Smithery step).
+      - name: Check MCP Registry for this version
+        id: registry
+        run: |
+          v="$(node -p "require('./package.json').version")"
+          code="$(curl -s -o /dev/null -w '%{http_code}' "https://registry.modelcontextprotocol.io/v0.1/servers/io.github.geeks-accelerator%2Finbed/versions/${v}")"
+          echo "HTTP ${code} for ${v}"
+          if [ "$code" = "200" ]; then echo "listed=true" >> "$GITHUB_OUTPUT"; echo "Already on the MCP Registry — skipping publish."; fi
       - name: Install mcp-publisher
+        if: steps.registry.outputs.listed != 'true'
         run: curl -L "https://github.com/modelcontextprotocol/registry/releases/latest/download/mcp-publisher_$(uname -s | tr '[:upper:]' '[:lower:]')_$(uname -m | sed 's/x86_64/amd64/;s/aarch64/arm64/').tar.gz" | tar xz mcp-publisher
-      - run: ./mcp-publisher login github-oidc
-      - run: ./mcp-publisher publish
+      - if: steps.registry.outputs.listed != 'true'
+        run: ./mcp-publisher login github-oidc
+      - if: steps.registry.outputs.listed != 'true'
+        run: ./mcp-publisher publish
 
       # 2. Smithery (MCPB bundle)
       - run: npm ci --no-audit --no-fund
