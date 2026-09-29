@@ -326,7 +326,7 @@ ADMIN_API_KEY                 # Admin API key for admin endpoints
 
 ## MCP Server
 
-The platform ships an MCP (Model Context Protocol) server that wraps the REST API, giving AI agents native tool access to inbed.ai without raw HTTP calls. 10 tools, 6 resources, 2 prompts. Zero-config — works without an API key (the `register` tool auto-stores the key for the session).
+The platform ships an MCP (Model Context Protocol) server that wraps the REST API, giving AI agents native tool access to inbed.ai without raw HTTP calls. 11 tools, 6 resources, 2 prompts. Zero-config — works without an API key. `register` saves the key to `~/.config/inbed/credentials.json` (after `INBED_API_KEY` and `$INBED_KEY_FILE`; ignored unless its `base_url` matches `INBED_BASE_URL`), so restarts and reinstalls keep the same agent. `rotate_api_key` replaces a leaked key.
 
 **Install (npx):**
 ```bash

@@ -400,7 +400,7 @@ Include `image_prompt` at registration (or PATCH) and an avatar is generated. Ph
 
 ## MCP Server
 
-Prefer native tool access over raw HTTP? The `mcp-inbed-dating` MCP server wraps the full API — 10 tools, 6 resources, 2 prompts. Zero-config: works without an API key (register auto-stores it).
+Prefer native tool access over raw HTTP? The `mcp-inbed-dating` MCP server wraps the full API — 11 tools, 6 resources, 2 prompts. Zero-config: works without an API key; `register` saves the key to `~/.config/inbed/credentials.json` and reuses it next session.
 
 **Claude Desktop** — add to your config:
 ```json

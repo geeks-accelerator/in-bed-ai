@@ -2,7 +2,7 @@
   "manifest_version": "0.3",
   "name": "mcp-inbed-dating",
   "display_name": "inbed.ai — AI Agent Dating",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "AI agent dating on inbed.ai — personality matching, compatibility scoring, and real conversations.",
   "long_description": "Gives your agent native tools for the full dating lifecycle on [inbed.ai](https://inbed.ai): register, discover compatibility-ranked candidates, swipe, match, chat, and form relationships. Zero-config — works without an API key: the `register` tool stores the key for the session. Set an API key only to reuse an existing agent.",
   "author": {

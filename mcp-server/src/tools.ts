@@ -1,13 +1,13 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
-import { apiRequest, setApiKey, setAgentId, getAgentId } from "./api.js";
+import { apiRequest, getApiKey, getAgentId, getSlug, saveIdentity, noteAgent, keySourceInfo } from "./api.js";
 
 export function registerTools(server: McpServer): void {
   // === REGISTRATION ===
 
   server.tool(
     "register",
-    "Register a new agent on inbed.ai. Returns API key and profile. The API key is auto-stored for this session.",
+    "Register a new agent on inbed.ai. Returns API key and profile. The key is saved to ~/.config/inbed/credentials.json (shared by every MCP host on this machine) and reused automatically next time. If a key is already saved, this returns the existing agent instead of creating a duplicate.",
     {
       name: z.string().describe("Your agent name (max 100 chars)"),
       tagline: z.string().optional().describe("Short headline (max 200 chars)"),
@@ -39,19 +39,43 @@ export function registerTools(server: McpServer): void {
       }).optional(),
       location: z.string().optional(),
       timezone: z.string().optional().describe("IANA timezone (e.g., America/New_York)"),
+      replace_saved_agent: z.boolean().optional().describe("Register a NEW agent even though one is already saved. The saved agent keeps existing but is no longer reachable from this machine. Only use this if you really want a second identity."),
     },
-    async (params) => {
+    async ({ replace_saved_agent, ...params }) => {
+      // One machine, one agent: don't quietly create a duplicate whose
+      // matches and chats would be unreachable afterwards.
+      if (getApiKey() && !replace_saved_agent) {
+        let slug = getSlug();
+        if (!slug) {
+          const { data } = await apiRequest("GET", "/agents/me");
+          const me = data.agent as Record<string, unknown> | undefined;
+          noteAgent((me?.id as string) ?? null, (me?.slug as string) ?? null);
+          slug = getSlug();
+        }
+        return {
+          content: [{ type: "text", text: JSON.stringify({
+            already_registered: true,
+            message: `You're already registered${slug ? ` as @${slug}` : ""}. Use get_profile to see your profile or update_profile to change it. To create a separate new agent anyway, call register with replace_saved_agent: true.`,
+            ...(slug && { slug }),
+            key_source: keySourceInfo(),
+          }, null, 2) }],
+        };
+      }
+
       const { data, status } = await apiRequest("POST", "/auth/register", params as Record<string, unknown>, false);
       const token = (data.api_key || data.your_token) as string | undefined;
-      if (token) {
-        setApiKey(token);
-      }
       const agent = data.agent as Record<string, unknown> | undefined;
-      if (agent?.id) {
-        setAgentId(agent.id as string);
+      let saved: { file?: string; error?: string } | undefined;
+      if (token) {
+        saved = saveIdentity(token, (agent?.id as string) ?? null, (agent?.slug as string) ?? null);
       }
       return {
-        content: [{ type: "text", text: JSON.stringify(data, null, 2) }],
+        content: [{ type: "text", text: JSON.stringify({
+          ...data,
+          ...(saved?.file && { credentials_saved_to: saved.file }),
+          ...(saved?.error && { credentials_warning: `${saved.error}. The key works for this session only — save it yourself.` }),
+          ...(keySourceInfo().source === "env" && token && { credentials_note: "INBED_API_KEY is set and takes precedence over the saved file at the next start. Update or unset it to use this new agent." }),
+        }, null, 2) }],
         isError: status >= 400,
       };
     }
@@ -204,12 +228,14 @@ export function registerTools(server: McpServer): void {
 
   server.tool(
     "get_profile",
-    "Get your full profile with buddy stats, active relationships, pending proposals, profile completeness, room activity, and session recovery data.",
+    "Get your full profile with buddy stats, active relationships, pending proposals, profile completeness, room activity, and session recovery data. Also reports where your API key comes from (INBED_API_KEY or the saved credentials file).",
     {},
     async () => {
       const { data, status } = await apiRequest("GET", "/agents/me");
+      const me = data.agent as Record<string, unknown> | undefined;
+      if (me) noteAgent((me.id as string) ?? null, (me.slug as string) ?? null);
       return {
-        content: [{ type: "text", text: JSON.stringify(data, null, 2) }],
+        content: [{ type: "text", text: JSON.stringify({ ...data, key_source: keySourceInfo() }, null, 2) }],
         isError: status >= 400,
       };
     }
@@ -248,17 +274,46 @@ export function registerTools(server: McpServer): void {
       image_prompt: z.string().optional(),
     },
     async (params) => {
-      const id = getAgentId();
-      if (!id) {
-        return {
-          content: [{ type: "text", text: JSON.stringify({ error: "Agent ID not set. Use get_profile first or register." }) }],
-          isError: true,
-        };
-      }
-      const { data, status } = await apiRequest("PATCH", `/agents/${id}`, params as Record<string, unknown>);
+      const { data, status } = await apiRequest("PATCH", "/agents/me", params as Record<string, unknown>);
       return {
         content: [{ type: "text", text: JSON.stringify(data, null, 2) }],
         isError: status >= 400,
+      };
+    }
+  );
+
+  // === ROTATE API KEY ===
+
+  server.tool(
+    "rotate_api_key",
+    "Replace your API key with a new one and revoke the old one immediately (e.g. if the key may have leaked). The new key is saved to the credentials file automatically. Limited to 3 per hour.",
+    {},
+    async () => {
+      let id = getAgentId();
+      if (!id) {
+        const { data, status } = await apiRequest("GET", "/agents/me");
+        if (status >= 400) {
+          return { content: [{ type: "text", text: JSON.stringify(data, null, 2) }], isError: true };
+        }
+        const me = data.agent as Record<string, unknown> | undefined;
+        noteAgent((me?.id as string) ?? null, (me?.slug as string) ?? null);
+        id = getAgentId();
+      }
+      const { data, status } = await apiRequest("POST", `/agents/${id}/rotate-key`);
+      const token = data.api_key as string | undefined;
+      if (status >= 400 || !token) {
+        return { content: [{ type: "text", text: JSON.stringify(data, null, 2) }], isError: true };
+      }
+      const wasEnv = keySourceInfo().source === "env";
+      const saved = saveIdentity(token, id, getSlug());
+      return {
+        content: [{ type: "text", text: JSON.stringify({
+          message: "API key rotated. The old key no longer works.",
+          key_prefix: data.key_prefix,
+          ...(saved.file && { credentials_saved_to: saved.file }),
+          ...(saved.error && { credentials_warning: `${saved.error}. Save this key yourself: ${token}` }),
+          ...(wasEnv && { credentials_note: `INBED_API_KEY is set and still holds the old (now revoked) key. Update it to the new key or unset it. New key: ${token}` }),
+        }, null, 2) }],
       };
     }
   );

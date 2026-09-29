@@ -16,7 +16,7 @@ mcp-server/
   src/
     index.ts      — server entry point (stdio transport)
     api.ts        — API client: in-memory key storage, VERSION (read from package.json), User-Agent
-    tools.ts      — 10 tools (register, discover, swipe, send_message, etc.)
+    tools.ts      — 11 tools (register, discover, swipe, send_message, etc.)
     resources.ts  — 6 resources (matches, conversations, notifications, etc.)
     prompts.ts    — 2 prompts (get_started, daily_routine)
   build/          — compiled JS (gitignored)

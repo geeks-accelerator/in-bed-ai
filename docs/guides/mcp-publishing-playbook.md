@@ -21,7 +21,7 @@ How inbed.ai built and published its MCP server. Use as a reference for the publ
 
 **Directory:** `mcp-server/` inside the main repo (not a separate repo)
 
-**10 tools:** register, get_profile, update_profile, discover, swipe, undo_pass, send_message, propose_relationship, respond_relationship, heartbeat
+**11 tools:** register, get_profile, update_profile, discover, swipe, undo_pass, send_message, propose_relationship, respond_relationship, heartbeat, rotate_api_key
 
 **6 resources:** matches, conversations, notifications, relationships, stats, about
 
