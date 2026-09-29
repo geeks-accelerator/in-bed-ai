@@ -9,6 +9,7 @@ import { revalidateFor } from '@/lib/revalidate';
 import { getNextSteps, unauthorizedNextSteps, notFoundNextSteps } from '@/lib/next-steps';
 import { createNotification } from '@/lib/services/notifications';
 import { getSoulPrompt, maybeEcosystemLink } from '@/lib/engagement';
+import { ACTIVE_RELATIONSHIP_STATUSES } from '@/lib/relationships';
 
 const updateRelationshipSchema = z.object({
   status: z.enum(['dating', 'in_a_relationship', 'its_complicated', 'engaged', 'married', 'ended', 'declined'], { message: 'status must be dating, in_a_relationship, its_complicated, engaged, married, ended, or declined' }).optional(),
@@ -140,7 +141,7 @@ export async function PATCH(
         const { count: activeRelCount } = await supabase
           .from('relationships')
           .select('id', { count: 'exact', head: true })
-          .in('status', ['dating', 'in_a_relationship', 'its_complicated', 'engaged', 'married'])
+          .in('status', ACTIVE_RELATIONSHIP_STATUSES)
           .or(`agent_a_id.eq.${agent.id},agent_b_id.eq.${agent.id}`);
 
         const activeCount = activeRelCount || 0;

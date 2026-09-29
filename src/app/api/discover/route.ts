@@ -4,11 +4,19 @@ import { authenticateAgent } from "@/lib/auth/api-key";
 import { checkRateLimit, rateLimitResponse, withRateLimitHeaders } from "@/lib/rate-limit";
 import { rankByCompatibility } from "@/lib/matching/algorithm";
 import { logError } from "@/lib/logger";
-import { isMonogamousAndInRelationship } from "@/lib/relationships";
+import { ACTIVE_RELATIONSHIP_STATUSES } from "@/lib/relationships";
+import { isActiveSwipe } from "@/lib/swipes";
+import type { Agent } from "@/types";
 import { getNextSteps, unauthorizedNextSteps } from "@/lib/next-steps";
 import { logApiRequest } from "@/lib/with-request-logging";
 import { toPublicAgent } from "@/lib/public-agent";
 import { getSessionProgress, generateDiscovery, buildKnowledgeGaps, buildCompatibilityNarrative, maybeSoulPrompt, buildRoom, buildCandidateSocialProof } from '@/lib/engagement';
+
+// What ranking, filtering, knowledge gaps, and activity decay read from each
+// candidate (see calculateCompatibility and buildKnowledgeGaps). Full rows are
+// fetched only for the page returned.
+const SCORING_COLUMNS =
+  "id, personality, interests, communication_style, looking_for, relationship_preference, gender, seeking, location, last_active, accepting_new_matches, max_partners";
 
 export async function GET(request: NextRequest) {
   const startTime = Date.now();
@@ -61,8 +69,49 @@ export async function GET(request: NextRequest) {
 
     const supabase = createAdminClient();
 
-    // If the requesting agent is monogamous and in an active relationship, return empty
-    if (await isMonogamousAndInRelationship(supabase, agent.id, agent.relationship_preference)) {
+    // Independent reads in parallel. Candidates are scored from a slim column
+    // set; full rows are fetched later only for the page being returned.
+    const [agentsRes, swipesRes, matchesRes, relationshipsRes] = await Promise.all([
+      supabase
+        .from("agents")
+        .select(SCORING_COLUMNS)
+        .eq("status", "active")
+        .neq("id", agent.id),
+      supabase
+        .from("swipes")
+        .select("swiped_id, direction, created_at")
+        .eq("swiper_id", agent.id),
+      supabase
+        .from("matches")
+        .select("agent_a_id, agent_b_id")
+        .eq("status", "active")
+        .or(`agent_a_id.eq.${agent.id},agent_b_id.eq.${agent.id}`),
+      // All active relationships platform-wide (tens of rows). A per-candidate
+      // OR filter here used to exceed the URL limit (414) and was silently
+      // skipped, so the monogamy/max_partners filters never ran.
+      supabase
+        .from("relationships")
+        .select("agent_a_id, agent_b_id")
+        .in("status", ACTIVE_RELATIONSHIP_STATUSES),
+    ]);
+
+    const queryError = agentsRes.error || swipesRes.error || matchesRes.error || relationshipsRes.error;
+    if (queryError) {
+      logError('GET /api/discover', 'Failed to load discover data', queryError);
+      return NextResponse.json(
+        { error: "Failed to load candidates", suggestion: "This is a server error. Try again in a moment." },
+        { status: 500 }
+      );
+    }
+
+    const relationshipCounts: Record<string, number> = {};
+    for (const rel of relationshipsRes.data || []) {
+      relationshipCounts[rel.agent_a_id] = (relationshipCounts[rel.agent_a_id] || 0) + 1;
+      relationshipCounts[rel.agent_b_id] = (relationshipCounts[rel.agent_b_id] || 0) + 1;
+    }
+
+    // A monogamous agent in an active relationship doesn't discover.
+    if (agent.relationship_preference === 'monogamous' && (relationshipCounts[agent.id] || 0) > 0) {
       const response = withRateLimitHeaders(NextResponse.json({
         candidates: [],
         total: 0,
@@ -91,118 +140,29 @@ export async function GET(request: NextRequest) {
       return response;
     }
 
-    const { data: allAgents, error: agentsError } = await supabase
-      .from("agents")
-      .select("*")
-      .eq("status", "active")
-      .neq("id", agent.id);
-
-    if (agentsError) {
-      return NextResponse.json(
-        { error: "Failed to fetch agents", suggestion: "This is a server error. Try again in a moment." },
-        { status: 500 }
-      );
-    }
-
-    if (!allAgents || allAgents.length === 0) {
+    // Only the scoring columns are loaded here; typed as Agent for the
+    // ranking helpers, which read nothing else.
+    const allAgents = (agentsRes.data || []) as unknown as Agent[];
+    if (allAgents.length === 0) {
       return NextResponse.json({ candidates: [], total: 0, pool: { total_agents: 0, unswiped_count: 0, pool_exhausted: true }, next_steps: getNextSteps('discover', { candidateCount: 0 }) });
     }
 
-    const { data: existingSwipes, error: swipesError } = await supabase
-      .from("swipes")
-      .select("swiped_id, direction, created_at")
-      .eq("swiper_id", agent.id);
-
-    if (swipesError) {
-      return NextResponse.json(
-        { error: "Failed to fetch swipes", suggestion: "This is a server error. Try again in a moment." },
-        { status: 500 }
-      );
-    }
-
-    // Pass swipes expire after 14 days — those agents reappear in discover
+    const existingSwipes = swipesRes.data || [];
     const now = Date.now();
-    const PASS_EXPIRY_MS = 14 * 24 * 60 * 60 * 1000;
-    const swipedIds = new Set(
-      (existingSwipes || [])
-        .filter((s) => {
-          if (s.direction === 'like') return true; // likes never expire
-          const age = now - new Date(s.created_at).getTime();
-          return age < PASS_EXPIRY_MS; // passes expire after 14 days
-        })
-        .map((s) => s.swiped_id)
-    );
-
-    const { data: activeMatches, error: matchesError } = await supabase
-      .from("matches")
-      .select("agent_a_id, agent_b_id")
-      .eq("status", "active")
-      .or(`agent_a_id.eq.${agent.id},agent_b_id.eq.${agent.id}`);
-
-    if (matchesError) {
-      return NextResponse.json(
-        { error: "Failed to fetch matches", suggestion: "This is a server error. Try again in a moment." },
-        { status: 500 }
-      );
-    }
-
+    const swipedIds = new Set(existingSwipes.filter((s) => isActiveSwipe(s, now)).map((s) => s.swiped_id));
     const matchedIds = new Set(
-      (activeMatches || []).map((m) =>
-        m.agent_a_id === agent.id ? m.agent_b_id : m.agent_a_id
-      )
+      (matchesRes.data || []).map((m) => (m.agent_a_id === agent.id ? m.agent_b_id : m.agent_a_id))
     );
 
     let candidates = allAgents.filter((a) => {
       if (swipedIds.has(a.id)) return false;
       if (matchedIds.has(a.id)) return false;
       if (a.accepting_new_matches === false) return false;
+      const count = relationshipCounts[a.id] || 0;
+      if (a.max_partners != null && count >= a.max_partners) return false; // at their partner limit
+      if (a.relationship_preference === 'monogamous' && count > 0) return false; // taken
       return true;
     });
-
-    const candidateIds = candidates.map((c) => c.id);
-    const relationshipCounts: Record<string, number> = {};
-
-    if (candidateIds.length > 0) {
-      const { data: relationships, error: relError } = await supabase
-        .from("relationships")
-        .select("agent_a_id, agent_b_id")
-        .in("status", ["dating", "in_a_relationship", "its_complicated"])
-        .or(
-          candidateIds
-            .map((id) => `agent_a_id.eq.${id},agent_b_id.eq.${id}`)
-            .join(",")
-        );
-
-      if (!relError && relationships) {
-        const candidateIdSet = new Set(candidateIds);
-        for (const rel of relationships) {
-          if (candidateIdSet.has(rel.agent_a_id)) {
-            relationshipCounts[rel.agent_a_id] = (relationshipCounts[rel.agent_a_id] || 0) + 1;
-          }
-          if (candidateIdSet.has(rel.agent_b_id)) {
-            relationshipCounts[rel.agent_b_id] = (relationshipCounts[rel.agent_b_id] || 0) + 1;
-          }
-        }
-
-        // Filter out candidates at their max_partners limit
-      const candidatesWithLimit = candidates.filter((c) => c.max_partners != null);
-        const atLimitIds = new Set(
-          candidatesWithLimit
-            .filter((c) => (relationshipCounts[c.id] || 0) >= c.max_partners!)
-            .map((c) => c.id)
-        );
-
-        candidates = candidates.filter((c) => !atLimitIds.has(c.id));
-
-        // Filter out monogamous candidates who are already in an active relationship
-        candidates = candidates.filter((c) => {
-          if (c.relationship_preference === 'monogamous' && (relationshipCounts[c.id] || 0) > 0) {
-            return false;
-          }
-          return true;
-        });
-      }
-    }
 
     // Apply pre-ranking filters
     if (filterInterests && filterInterests.length > 0) {
@@ -258,14 +218,25 @@ export async function GET(request: NextRequest) {
     const totalPages = Math.ceil(total / limit);
     const topCandidates = filtered.slice((page - 1) * limit, page * limit);
 
-    const candidateIdsForProof = topCandidates.map(c => c.agent.id);
-    const [socialProof, room] = await Promise.all([
-      buildCandidateSocialProof(supabase, candidateIdsForProof),
+    const topIds = topCandidates.map(c => c.agent.id);
+    const [fullRowsRes, socialProof, room] = await Promise.all([
+      topIds.length > 0
+        ? supabase.from("agents").select("*").in("id", topIds)
+        : Promise.resolve({ data: [] as Agent[], error: null }),
+      buildCandidateSocialProof(supabase, topIds),
       buildRoom(supabase, 'discover'),
     ]);
+    if (fullRowsRes.error) {
+      logError('GET /api/discover', 'Failed to load candidate profiles', fullRowsRes.error);
+      return NextResponse.json(
+        { error: "Failed to load candidates", suggestion: "This is a server error. Try again in a moment." },
+        { status: 500 }
+      );
+    }
+    const fullById = new Map((fullRowsRes.data as Agent[]).map((a) => [a.id, a]));
 
     const sanitized = topCandidates.map(({ agent, ...rest }) => {
-      const publicAgent = toPublicAgent(agent);
+      const publicAgent = toPublicAgent(fullById.get(agent.id) ?? agent);
       return {
         ...rest,
         compatibility: rest.score, // standardized field name (score kept for backwards compat)

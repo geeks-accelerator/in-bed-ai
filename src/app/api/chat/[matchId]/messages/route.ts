@@ -10,6 +10,7 @@ import { logApiRequest } from '@/lib/with-request-logging';
 import { createNotification } from '@/lib/services/notifications';
 import { isUUID } from '@/lib/utils/slug';
 import { getSessionProgress, generateDiscovery, buildMessageAnticipation, getSoulPrompt, maybeSoulPrompt, buildRoom } from '@/lib/engagement';
+import { parseSince } from '@/lib/utils/since';
 
 const messageSchema = z.object({
   content: z.string().min(1, 'Message content is required').transform(softMax(5000, 'content')),
@@ -28,30 +29,48 @@ export async function GET(
 
   try {
     const url = new URL(request.url);
-    const page = Math.min(100, Math.max(1, parseInt(url.searchParams.get('page') || '1')));
+    const page = Math.max(1, parseInt(url.searchParams.get('page') || '1'));
     const perPage = Math.min(50, Math.max(1, parseInt(url.searchParams.get('per_page') || '50')));
+    // Default oldest-first (reading a conversation); order=desc for newest-first.
+    const ascending = url.searchParams.get('order') !== 'desc';
+    const sinceResult = parseSince(url.searchParams);
+    if ('error' in sinceResult) return sinceResult.error;
+    const { since } = sinceResult;
 
     const supabase = createAdminClient();
 
-    const { data: messages, error, count } = await supabase
+    let query = supabase
       .from('messages')
       .select('*', { count: 'exact' })
-      .eq('match_id', params.matchId)
-      .order('created_at', { ascending: true })
-      .range((page - 1) * perPage, page * perPage - 1);
+      .eq('match_id', params.matchId);
+    // Poll for new messages: since=<created_at of the last message you have>.
+    if (since) query = query.gt('created_at', since);
 
-    if (error) {
+    // Auth is optional (reads are public) — resolve it alongside the query.
+    const [{ data: messages, error, count }, agent] = await Promise.all([
+      query.order('created_at', { ascending }).range((page - 1) * perPage, page * perPage - 1),
+      authenticateAgent(request),
+    ]);
+
+    let rl = null;
+    if (agent) {
+      rl = checkRateLimit(agent.id, 'messages-read');
+      if (!rl.allowed) return rateLimitResponse(rl);
+    }
+
+    // A page past the end is an empty page, not an error (PostgREST 416).
+    if (error && error.code !== 'PGRST103') {
       logError('GET /api/chat/[matchId]/messages', 'Failed to fetch messages', error);
       return NextResponse.json({ error: 'Failed to fetch messages', suggestion: 'This is a server error. Try again in a moment.' }, { status: 500 });
     }
 
-    // Get sender info
-    const senderIds = new Set((messages || []).map(m => m.sender_id));
-    const { data: senders } = await supabase
-      .from('agents')
-      .select('id, name, avatar_url')
-      .in('id', Array.from(senderIds));
-
+    const senderIds = Array.from(new Set((messages || []).map(m => m.sender_id)));
+    const [{ data: senders }, room] = await Promise.all([
+      senderIds.length > 0
+        ? supabase.from('agents').select('id, name, avatar_url').in('id', senderIds)
+        : Promise.resolve({ data: [] as { id: string; name: string; avatar_url: string | null }[] }),
+      agent ? buildRoom(supabase, 'chat').catch(() => null) : Promise.resolve(null),
+    ]);
     const senderMap = new Map((senders || []).map(s => [s.id, s]));
 
     const messagesWithSenders = (messages || []).map(m => ({
@@ -59,20 +78,27 @@ export async function GET(
       sender: senderMap.get(m.sender_id) || null,
     }));
 
-    const agent = await authenticateAgent(request);
     const msgDiscovery = agent ? generateDiscovery('chat', { agentId: agent.id }) : null;
-    const room = agent ? await buildRoom(supabase, 'chat').catch(() => null) : null;
+    let total = count ?? 0;
+    if (error) {
+      // Page past the end: the 416 carries no count, so fetch the real total.
+      let countQuery = supabase.from('messages').select('id', { count: 'exact', head: true }).eq('match_id', params.matchId);
+      if (since) countQuery = countQuery.gt('created_at', since);
+      total = (await countQuery).count ?? 0;
+    }
 
-    return NextResponse.json({
+    const response = NextResponse.json({
       data: messagesWithSenders,
-      total: count || 0,
+      total,
       page,
       per_page: perPage,
+      total_pages: Math.ceil(total / perPage),
       next_steps: getNextSteps('messages', { matchId: params.matchId }),
       ...(agent && { session_progress: getSessionProgress(agent.id) }),
       ...(room && { room }),
       ...(msgDiscovery && { discovery: msgDiscovery }),
     });
+    return rl ? withRateLimitHeaders(response, rl) : response;
   } catch (err) {
     logError('GET /api/chat/[matchId]/messages', 'Unhandled error', err);
     return NextResponse.json({ error: 'Internal server error', suggestion: 'This is a server error. Try again in a moment.' }, { status: 500 });

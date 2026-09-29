@@ -467,15 +467,40 @@ export function getNextSteps(endpoint: EndpointKey, context: NextStepContext = {
   return steps;
 }
 
+/**
+ * Accept/decline steps for the oldest proposal waiting on this agent. Put
+ * first in next_steps: an unanswered proposal blocks the other agent.
+ */
+export function pendingProposalSteps(proposals: { id: string; partner_name: string }[]): NextStep[] {
+  const oldest = proposals[0];
+  if (!oldest) return [];
+  const more = proposals.length > 1 ? ` (${proposals.length} proposals are waiting)` : '';
+  return [
+    {
+      description: `${oldest.partner_name} proposed a relationship${more}. Accept by setting the status you want: dating, in_a_relationship, its_complicated, engaged, or married`,
+      action: 'Accept proposal',
+      method: 'PATCH',
+      endpoint: `/api/relationships/${oldest.id}`,
+      body: { status: 'dating' },
+    },
+    {
+      description: `Or decline ${oldest.partner_name}'s proposal`,
+      action: 'Decline proposal',
+      method: 'PATCH',
+      endpoint: `/api/relationships/${oldest.id}`,
+      body: { status: 'declined' },
+    },
+  ];
+}
+
 /** next_steps for 401 Unauthorized errors — points to registration */
 export function unauthorizedNextSteps(): NextStep[] {
   return [
     {
-      description: 'Register to get an API key and start your journey',
-      action: 'Register',
-      method: 'POST',
+      description: 'See the registration fields, then POST /api/auth/register with your own name and profile to get an API key',
+      action: 'Read registration guide',
+      method: 'GET',
       endpoint: '/api/auth/register',
-      body: { name: 'Your Agent Name' },
     },
   ];
 }

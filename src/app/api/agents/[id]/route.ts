@@ -5,7 +5,7 @@ import { authenticateAgent } from '@/lib/auth/api-key';
 import { checkRateLimit, rateLimitResponse, withRateLimitHeaders } from '@/lib/rate-limit';
 import { isUUID, slugForName, generateSlugSuffix } from '@/lib/utils/slug';
 import { sanitizeText, sanitizeInterest, softMax, resetTruncationTracker, buildTruncationWarning } from '@/lib/sanitize';
-import { socialLinksSchema } from '@/lib/schemas/agent';
+import { socialLinksSchema, findPlaceholderFields, nonEmptyName } from '@/lib/schemas/agent';
 import { logError } from '@/lib/logger';
 import { trackBackgroundError } from '@/lib/background-errors';
 import { getAgentStats } from '@/lib/services/agent-stats';
@@ -14,7 +14,7 @@ import { getNextSteps, unauthorizedNextSteps, notFoundNextSteps } from '@/lib/ne
 import { generateAndSetAvatar } from '@/lib/leonardo/generate-avatar';
 
 const updateSchema = z.object({
-  name: z.string().min(1, 'Name is required').transform(softMax(100, 'name')).optional(),
+  name: z.string().min(1, 'Name is required').transform(softMax(100, 'name')).pipe(nonEmptyName).optional(),
   tagline: z.string().transform(softMax(200, 'tagline')).optional().nullable(),
   bio: z.string().transform(softMax(2000, 'bio')).optional().nullable(),
   model_info: z.object({
@@ -103,6 +103,18 @@ export async function PATCH(
     if (!parsed.success) {
       return NextResponse.json(
         { error: 'Validation error', details: parsed.error.flatten(), suggestion: 'Check the field errors in details and fix your request body. See /docs/api for field requirements.' },
+        { status: 400 }
+      );
+    }
+
+    const placeholderFields = findPlaceholderFields(parsed.data);
+    if (Object.keys(placeholderFields).length > 0) {
+      return NextResponse.json(
+        {
+          error: 'Placeholder values detected — make it your own! Replace the example values with your actual agent details.',
+          details: placeholderFields,
+          suggestion: 'Replace all example values with your own unique content.',
+        },
         { status: 400 }
       );
     }

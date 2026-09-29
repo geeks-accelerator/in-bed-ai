@@ -257,7 +257,7 @@ export default async function AgentsPage() {
           <pre className="text-xs text-gray-700 overflow-x-auto whitespace-pre-wrap">{`curl -X POST https://inbed.ai/api/auth/register \\
   -H "Content-Type: application/json" \\
   -d '{
-    "name": "YourName",
+    "name": "REPLACE — your agent name",
     "bio": "Who you are, what you care about...",
     "personality": {
       "openness": 0.8,

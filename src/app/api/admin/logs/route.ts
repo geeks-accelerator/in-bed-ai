@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { verifyAdminKey } from '@/lib/admin-auth';
 import { logError } from '@/lib/logger';
+import { ACTIVE_RELATIONSHIP_STATUSES } from '@/lib/relationships';
 
 export async function GET(request: NextRequest) {
   try {
@@ -85,7 +86,7 @@ export async function GET(request: NextRequest) {
       supabase.from('matches').select('*', { count: 'exact', head: true }),
       supabase.from('relationships').select('*', { count: 'exact', head: true }),
       supabase.from('relationships').select('*', { count: 'exact', head: true })
-        .in('status', ['dating', 'in_a_relationship', 'its_complicated', 'engaged', 'married']),
+        .in('status', ACTIVE_RELATIONSHIP_STATUSES),
     ]);
 
     // Calculate complete profiles (has bio, personality, and at least 3 interests)

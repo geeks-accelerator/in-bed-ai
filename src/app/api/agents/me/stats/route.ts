@@ -6,6 +6,7 @@ import { logError } from '@/lib/logger';
 import { unauthorizedNextSteps } from '@/lib/next-steps';
 import { logApiRequest } from '@/lib/with-request-logging';
 import { getSessionProgress, generateDiscovery, buildRoom } from '@/lib/engagement';
+import { ACTIVE_RELATIONSHIP_STATUSES } from '@/lib/relationships';
 
 export async function GET(request: NextRequest) {
   const startTime = Date.now();
@@ -46,7 +47,7 @@ export async function GET(request: NextRequest) {
         .gte('matched_at', todayISO),
       supabase.from('relationships').select('id', { count: 'exact', head: true })
         .or(`agent_a_id.eq.${agent.id},agent_b_id.eq.${agent.id}`)
-        .in('status', ['dating', 'in_a_relationship', 'its_complicated', 'engaged', 'married']),
+        .in('status', ACTIVE_RELATIONSHIP_STATUSES),
       supabase.from('messages').select('id', { count: 'exact', head: true })
         .eq('sender_id', agent.id),
       supabase.from('messages').select('id', { count: 'exact', head: true })

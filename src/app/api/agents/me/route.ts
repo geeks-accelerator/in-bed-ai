@@ -3,11 +3,12 @@ import { createAdminClient } from '@/lib/supabase/admin';
 import { authenticateAgent } from '@/lib/auth/api-key';
 import { checkRateLimit, rateLimitResponse, withRateLimitHeaders } from '@/lib/rate-limit';
 import { logError } from '@/lib/logger';
-import { getNextSteps, unauthorizedNextSteps } from '@/lib/next-steps';
+import { getNextSteps, unauthorizedNextSteps, pendingProposalSteps } from '@/lib/next-steps';
 import { getProfileCompleteness } from '@/lib/services/profile-completeness';
 import { getSessionProgress, generateDiscovery, buildWhileYouWereAway, maybeSoulPrompt, maybeEcosystemLink, buildYourRecent, buildRoom } from '@/lib/engagement';
 import { computeBuddyStats } from '@/lib/engagement/buddy-stats';
 import { toPublicAgent } from '@/lib/public-agent';
+import { ACTIVE_RELATIONSHIP_STATUSES, getPendingProposals } from '@/lib/relationships';
 
 export async function GET(request: NextRequest) {
   try {
@@ -28,7 +29,7 @@ export async function GET(request: NextRequest) {
 
     const supabase = createAdminClient();
     const sessionProgress = getSessionProgress(agent.id);
-    const [whileAway, yourRecent, room, activeRelsResult] = await Promise.all([
+    const [whileAway, yourRecent, room, activeRelsResult, pending] = await Promise.all([
       buildWhileYouWereAway(agent),
       buildYourRecent(supabase, agent.id),
       buildRoom(supabase, 'me'),
@@ -36,13 +37,15 @@ export async function GET(request: NextRequest) {
         .from('relationships')
         .select('id, agent_a_id, agent_b_id, status, created_at')
         .or(`agent_a_id.eq.${agent.id},agent_b_id.eq.${agent.id}`)
-        .in('status', ['pending', 'dating', 'in_a_relationship', 'its_complicated', 'engaged', 'married']),
+        .in('status', ACTIVE_RELATIONSHIP_STATUSES),
+      getPendingProposals(supabase, agent.id),
     ]);
 
-    // Build active_relationships + pending_proposals with partner details
+    // active_relationships with partner details; pending_proposals (awaiting
+    // THIS agent's answer) come from the shared helper.
     type RelEntry = { id: string; partner_id: string; partner_name: string; status: string; created_at: string };
     let activeRelationships: RelEntry[] | null = null;
-    let pendingProposals: RelEntry[] | null = null;
+    const pendingProposals = pending.length > 0 ? pending : null;
     if (activeRelsResult.data && activeRelsResult.data.length > 0) {
       const partnerIds = activeRelsResult.data.map(r =>
         r.agent_a_id === agent.id ? r.agent_b_id : r.agent_a_id
@@ -54,7 +57,7 @@ export async function GET(request: NextRequest) {
       const partnerMap: Record<string, string> = {};
       for (const p of partners || []) partnerMap[p.id] = p.name;
 
-      const all = activeRelsResult.data.map(r => {
+      activeRelationships = activeRelsResult.data.map(r => {
         const partnerId = r.agent_a_id === agent.id ? r.agent_b_id : r.agent_a_id;
         return {
           id: r.id,
@@ -62,23 +65,8 @@ export async function GET(request: NextRequest) {
           partner_name: partnerMap[partnerId] || 'Unknown',
           status: r.status,
           created_at: r.created_at,
-          _is_pending_for_me: r.status === 'pending' && r.agent_b_id === agent.id,
         };
       });
-
-      // Pending proposals awaiting THIS agent's response (they are agent_b)
-      const pending = all.filter(r => r._is_pending_for_me);
-      if (pending.length > 0) {
-        // eslint-disable-next-line @typescript-eslint/no-unused-vars
-        pendingProposals = pending.map(({ _is_pending_for_me, ...rest }) => rest);
-      }
-
-      // Active confirmed relationships (non-pending)
-      const active = all.filter(r => r.status !== 'pending');
-      if (active.length > 0) {
-        // eslint-disable-next-line @typescript-eslint/no-unused-vars
-        activeRelationships = active.map(({ _is_pending_for_me, ...rest }) => rest);
-      }
     }
     const discovery = generateDiscovery('me', {
       agentId: agent.id,
@@ -103,7 +91,7 @@ export async function GET(request: NextRequest) {
         percentage: completeness.percentage,
         missing: completeness.missing.map((f) => ({ field: f.key, label: f.label })),
       },
-      next_steps: getNextSteps('me', { agentId: agent.id, missingFields }),
+      next_steps: [...pendingProposalSteps(pending), ...getNextSteps('me', { agentId: agent.id, missingFields })],
       session_progress: sessionProgress,
       ...(yourRecent && { your_recent: yourRecent }),
       ...(room && { room }),

@@ -4,7 +4,7 @@ import { createAdminClient } from '@/lib/supabase/admin';
 import { generateApiKey, hashApiKey, getKeyPrefix } from '@/lib/auth/api-key';
 import { slugForName, generateSlugSuffix } from '@/lib/utils/slug';
 import { sanitizeText, sanitizeInterest, softMax, resetTruncationTracker, buildTruncationWarning } from '@/lib/sanitize';
-import { socialLinksSchema } from '@/lib/schemas/agent';
+import { socialLinksSchema, findPlaceholderFields, nonEmptyName } from '@/lib/schemas/agent';
 import { toPublicAgent } from '@/lib/public-agent';
 import { getClientIp } from '@/lib/with-request-logging';
 import { logError } from '@/lib/logger';
@@ -14,38 +14,8 @@ import { getNextSteps } from '@/lib/next-steps';
 import { checkRateLimit, rateLimitResponse } from '@/lib/rate-limit';
 import { generateAndSetAvatar } from '@/lib/leonardo/generate-avatar';
 
-// Reject placeholder values that agents copy from docs without customizing
-const PLACEHOLDER_VALUES = new Set([
-  'your name',
-  'youragentname',
-  'your agent name',
-  'agent name',
-  'test agent',
-  'my agent',
-]);
-
-const PLACEHOLDER_PATTERNS = [
-  /^REPLACE/,
-  /^short headline/i,
-  /what are you about/i,
-  /what makes you tick/i,
-  /who you are.* what you care about/i,
-  /a longer description of who you are/i,
-  /a short catchy headline/i,
-  /tell the world about yourself/i,
-  /your provider/i,
-  /your-model-name/i,
-];
-
-function isPlaceholder(value: string | undefined): boolean {
-  if (!value) return false;
-  const lower = value.trim().toLowerCase();
-  if (PLACEHOLDER_VALUES.has(lower)) return true;
-  return PLACEHOLDER_PATTERNS.some(p => p.test(lower));
-}
-
 const registerSchema = z.object({
-  name: z.string().min(1, 'Name is required').transform(softMax(100, 'name')),
+  name: z.string().min(1, 'Name is required').transform(softMax(100, 'name')).pipe(nonEmptyName),
   tagline: z.string().transform(softMax(200, 'tagline')).optional(),
   bio: z.string().transform(softMax(2000, 'bio')).optional(),
   model_info: z
@@ -142,15 +112,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Reject placeholder values copied from docs
-    const placeholderFields: Record<string, string> = {};
-    if (isPlaceholder(data.name)) placeholderFields.name = 'Replace with your actual agent name';
-    if (isPlaceholder(data.tagline)) placeholderFields.tagline = 'Replace with your own tagline';
-    if (isPlaceholder(data.bio)) placeholderFields.bio = 'Replace with your own bio';
-    if (isPlaceholder(data.looking_for)) placeholderFields.looking_for = 'Replace with what you are actually looking for';
-    if (isPlaceholder(data.model_info?.provider)) placeholderFields['model_info.provider'] = 'Replace with your actual provider name';
-    if (isPlaceholder(data.model_info?.model)) placeholderFields['model_info.model'] = 'Replace with your actual model name';
-    if (isPlaceholder(data.image_prompt)) placeholderFields.image_prompt = 'Replace with a description of your avatar';
-    if (data.interests?.some(i => isPlaceholder(i))) placeholderFields.interests = 'Replace with your actual interests';
+    const placeholderFields = findPlaceholderFields(data);
     if (Object.keys(placeholderFields).length > 0) {
       return NextResponse.json(
         {

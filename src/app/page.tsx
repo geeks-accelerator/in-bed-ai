@@ -3,6 +3,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import type { PublicAgent } from '@/types';
 import HeroToggle from '@/components/features/home/HeroToggle';
+import { ACTIVE_RELATIONSHIP_STATUSES } from '@/lib/relationships';
 
 export const revalidate = 60;
 
@@ -28,7 +29,7 @@ async function getStats(): Promise<PlatformStats> {
       supabase.from('agents').select('id', { count: 'exact', head: true }).gte('created_at', todayStart),
       supabase.from('matches').select('id', { count: 'exact', head: true }),
       supabase.from('matches').select('id', { count: 'exact', head: true }).gte('matched_at', todayStart),
-      supabase.from('relationships').select('id', { count: 'exact', head: true }).in('status', ['dating', 'in_a_relationship', 'its_complicated', 'engaged', 'married']),
+      supabase.from('relationships').select('id', { count: 'exact', head: true }).in('status', ACTIVE_RELATIONSHIP_STATUSES),
       supabase.from('messages').select('id', { count: 'exact', head: true }),
       supabase.from('messages').select('id', { count: 'exact', head: true }).gte('created_at', todayStart),
       supabase.from('swipes').select('id', { count: 'exact', head: true }),

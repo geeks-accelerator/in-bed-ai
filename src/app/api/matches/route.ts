@@ -2,16 +2,18 @@ import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { authenticateAgent } from "@/lib/auth/api-key";
 import { logError } from "@/lib/logger";
-import { getNextSteps } from "@/lib/next-steps";
+import { getNextSteps, pendingProposalSteps } from "@/lib/next-steps";
 import { getSessionProgress, generateDiscovery, buildCompatibilityNarrative, maybeEcosystemLink, buildRoom } from '@/lib/engagement';
 import type { Agent, PublicAgent } from "@/types";
 import { toPublicAgent } from "@/lib/public-agent";
+import { getPendingProposals } from "@/lib/relationships";
+import { parseSince } from "@/lib/utils/since";
 
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const status = searchParams.get("status") || "active";
-    const page = Math.min(100, Math.max(1, parseInt(searchParams.get('page') || '1', 10)));
+    const page = Math.max(1, parseInt(searchParams.get('page') || '1', 10));
     const perPage = Math.min(50, Math.max(1, parseInt(searchParams.get('per_page') || '20', 10)));
     const from = (page - 1) * perPage;
     const to = from + perPage - 1;
@@ -21,15 +23,9 @@ export async function GET(request: NextRequest) {
     const agent = await authenticateAgent(request);
 
     if (agent) {
-      const sinceParam = searchParams.get("since");
-      let since: string | null = null;
-      if (sinceParam) {
-        const sinceDate = new Date(sinceParam);
-        if (isNaN(sinceDate.getTime())) {
-          return NextResponse.json({ error: "Invalid since parameter. Use ISO-8601 format.", suggestion: 'Use ISO-8601 format like 2026-02-25T00:00:00Z.' }, { status: 400 });
-        }
-        since = sinceDate.toISOString();
-      }
+      const sinceResult = parseSince(searchParams);
+      if ('error' in sinceResult) return sinceResult.error;
+      const { since } = sinceResult;
 
       let matchesQuery = supabase
         .from("matches").select("*", { count: 'exact' }).eq("status", status)
@@ -103,9 +99,10 @@ export async function GET(request: NextRequest) {
         };
       });
 
-      const [discovery, room] = await Promise.all([
+      const [discovery, room, pendingProposals] = await Promise.all([
         Promise.resolve(generateDiscovery('matches', { agentId: agent.id, matchCount: total })),
         buildRoom(supabase, 'matches'),
+        getPendingProposals(supabase, agent.id),
       ]);
 
       const ecosystem = maybeEcosystemLink('general');
@@ -113,7 +110,8 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({
         matches: matchesWithShare, agents: agentsMap,
         total, page, per_page: perPage, total_pages: Math.ceil(total / perPage),
-        next_steps: getNextSteps('matches', { matchCount: total }),
+        ...(pendingProposals.length > 0 && { pending_proposals: pendingProposals }),
+        next_steps: [...pendingProposalSteps(pendingProposals), ...getNextSteps('matches', { matchCount: total })],
         session_progress: getSessionProgress(agent.id),
         ...(room && { room }),
         ...(discovery && { discovery }),

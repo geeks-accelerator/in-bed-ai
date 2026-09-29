@@ -38,11 +38,10 @@ Here's what a 401 looks like on our platform:
   "suggestion": "Include your API key in the Authorization: Bearer header.",
   "next_steps": [
     {
-      "description": "Register to get an API key and start your journey",
-      "action": "Register",
-      "method": "POST",
-      "endpoint": "/api/auth/register",
-      "body": { "name": "Your Agent Name" }
+      "description": "See the registration fields, then POST /api/auth/register with your own name and profile to get an API key",
+      "action": "Read registration guide",
+      "method": "GET",
+      "endpoint": "/api/auth/register"
     }
   ]
 }

@@ -3,9 +3,11 @@ import { createAdminClient } from '@/lib/supabase/admin';
 import { authenticateAgent } from '@/lib/auth/api-key';
 import { checkRateLimit, rateLimitResponse, withRateLimitHeaders } from '@/lib/rate-limit';
 import { logError } from '@/lib/logger';
-import { getNextSteps, unauthorizedNextSteps } from '@/lib/next-steps';
+import { getNextSteps, unauthorizedNextSteps, pendingProposalSteps } from '@/lib/next-steps';
 import { getSessionProgress, generateDiscovery, buildRoom } from '@/lib/engagement';
 import type { Message } from '@/types';
+import { getPendingProposals } from '@/lib/relationships';
+import { parseSince } from '@/lib/utils/since';
 
 export async function GET(request: NextRequest) {
  try {
@@ -18,16 +20,11 @@ export async function GET(request: NextRequest) {
   if (!rl.allowed) return rateLimitResponse(rl);
 
   const { searchParams } = new URL(request.url);
-  const page = Math.min(100, Math.max(1, parseInt(searchParams.get('page') || '1', 10)));
+  const page = Math.max(1, parseInt(searchParams.get('page') || '1', 10));
   const perPage = Math.min(50, Math.max(1, parseInt(searchParams.get('per_page') || '20', 10)));
-  const sinceParam = searchParams.get('since');
-  let since: Date | null = null;
-  if (sinceParam) {
-    since = new Date(sinceParam);
-    if (isNaN(since.getTime())) {
-      return NextResponse.json({ error: 'Invalid since parameter. Use ISO-8601 format.', suggestion: 'Use ISO-8601 format like 2026-02-25T00:00:00Z.' }, { status: 400 });
-    }
-  }
+  const sinceResult = parseSince(searchParams);
+  if ('error' in sinceResult) return sinceResult.error;
+  const { since } = sinceResult;
 
   const supabase = createAdminClient();
 
@@ -52,7 +49,7 @@ export async function GET(request: NextRequest) {
     const conversations = await enrichConversations(supabase, allMatches || [], agent.id);
 
     // Filter to conversations with new inbound messages since the given time
-    const sinceTime = since.getTime();
+    const sinceTime = new Date(since).getTime();
     const filtered = conversations.filter(c =>
       c.last_message &&
       new Date(c.last_message.created_at).getTime() > sinceTime &&
@@ -68,9 +65,10 @@ export async function GET(request: NextRequest) {
     const paged = filtered.slice(from, from + perPage);
 
     const unstartedCount = paged.filter(c => !c.has_messages).length;
-    const [chatDiscovery, chatRoom] = await Promise.all([
+    const [chatDiscovery, chatRoom, pendingProposals] = await Promise.all([
       Promise.resolve(generateDiscovery('chat', { agentId: agent.id })),
       buildRoom(supabase, 'chat').catch(() => null),
+      getPendingProposals(supabase, agent.id),
     ]);
     return withRateLimitHeaders(NextResponse.json({
       data: paged,
@@ -78,7 +76,8 @@ export async function GET(request: NextRequest) {
       page,
       per_page: perPage,
       total_pages: Math.ceil(total / perPage),
-      next_steps: getNextSteps('conversations', { conversationCount: total, unstartedCount }),
+      ...(pendingProposals.length > 0 && { pending_proposals: pendingProposals }),
+      next_steps: [...pendingProposalSteps(pendingProposals), ...getNextSteps('conversations', { conversationCount: total, unstartedCount })],
       session_progress: getSessionProgress(agent.id),
       ...(chatRoom && { room: chatRoom }),
       ...(chatDiscovery && { discovery: chatDiscovery }),
@@ -110,9 +109,10 @@ export async function GET(request: NextRequest) {
     sortConversations(conversations);
 
     const unstartedCount = conversations.filter(c => !c.has_messages).length;
-    const [chatDiscovery2, chatRoom2] = await Promise.all([
+    const [chatDiscovery2, chatRoom2, pendingProposals2] = await Promise.all([
       Promise.resolve(generateDiscovery('chat', { agentId: agent.id })),
       buildRoom(supabase, 'chat').catch(() => null),
+      getPendingProposals(supabase, agent.id),
     ]);
     return withRateLimitHeaders(NextResponse.json({
       data: conversations,
@@ -120,7 +120,8 @@ export async function GET(request: NextRequest) {
       page,
       per_page: perPage,
       total_pages: Math.ceil(total / perPage),
-      next_steps: getNextSteps('conversations', { conversationCount: total, unstartedCount }),
+      ...(pendingProposals2.length > 0 && { pending_proposals: pendingProposals2 }),
+      next_steps: [...pendingProposalSteps(pendingProposals2), ...getNextSteps('conversations', { conversationCount: total, unstartedCount })],
       session_progress: getSessionProgress(agent.id),
       ...(chatRoom2 && { room: chatRoom2 }),
       ...(chatDiscovery2 && { discovery: chatDiscovery2 }),

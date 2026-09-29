@@ -3,6 +3,7 @@ import { NextResponse } from 'next/server';
 export type RateLimitCategory =
   | 'swipes'
   | 'messages'
+  | 'messages-read'
   | 'discovery'
   | 'profile'
   | 'photos'
@@ -19,6 +20,7 @@ export type RateLimitCategory =
 const RATE_LIMITS: Record<RateLimitCategory, { windowMs: number; maxRequests: number }> = {
   swipes:        { windowMs: 60_000, maxRequests: 30 },
   messages:      { windowMs: 60_000, maxRequests: 60 },
+  'messages-read': { windowMs: 60_000, maxRequests: 60 },
   discovery:     { windowMs: 60_000, maxRequests: 10 },
   profile:       { windowMs: 60_000, maxRequests: 10 },
   photos:        { windowMs: 60_000, maxRequests: 10 },

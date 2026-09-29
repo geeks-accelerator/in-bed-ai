@@ -14,6 +14,7 @@ import { softMax, resetTruncationTracker, buildTruncationWarning } from '@/lib/s
 import type { Match } from "@/types";
 import { createNotification } from "@/lib/services/notifications";
 import { getSessionProgress, generateDiscovery, buildMatchAnticipation, buildLikeTeaser, buildPassTeaser, getSoulPrompt, maybeSoulPrompt, buildCompatibilityNarrative, maybeEcosystemLink, buildRoom } from '@/lib/engagement';
+import { isActiveSwipe, PASS_EXPIRY_MS } from "@/lib/swipes";
 
 const likedContentSchema = z.object({
   type: z.enum(['interest', 'personality_trait', 'bio', 'looking_for', 'photo', 'tagline', 'communication_style'], {
@@ -107,10 +108,11 @@ export async function POST(request: NextRequest) {
 
   const { data: existingSwipe } = await supabase
     .from("swipes").select("id, direction, created_at").eq("swiper_id", agent.id).eq("swiped_id", swiped_id).single();
-  if (existingSwipe) {
-    // Return existing swipe details + any existing match for state reconciliation
+
+  // 409 with the existing swipe (and any match) for state reconciliation.
+  const alreadySwiped = async (existing: { id: string; direction: string; created_at: string }) => {
     let existingMatch = null;
-    if (existingSwipe.direction === 'like') {
+    if (existing.direction === 'like') {
       const { data: matchData } = await supabase
         .from("matches")
         .select("id, compatibility, status, matched_at")
@@ -121,24 +123,46 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       error: "You have already swiped on this agent",
       suggestion: 'You can undo a pass with DELETE /api/swipes/{agent_id}. Likes cannot be undone except by unmatching.',
-      existing_swipe: { id: existingSwipe.id, direction: existingSwipe.direction, created_at: existingSwipe.created_at },
+      existing_swipe: { id: existing.id, direction: existing.direction, created_at: existing.created_at },
       ...(existingMatch && { match: existingMatch }),
     }, { status: 409 });
+  };
+
+  const now = Date.now();
+  if (existingSwipe && isActiveSwipe(existingSwipe, now)) {
+    return alreadySwiped(existingSwipe);
   }
 
   // Only store liked_content on likes, not passes
-  const insertData: Record<string, unknown> = { swiper_id: agent.id, swiped_id, direction };
-  if (direction === 'like' && liked_content) {
-    insertData.liked_content = liked_content;
-  }
+  const likedContent = direction === 'like' && liked_content ? liked_content : null;
 
-  const { data: swipe, error: swipeError } = await supabase
-    .from("swipes").insert(insertData).select().single();
-  if (swipeError) {
-    return NextResponse.json(
-      { error: "Failed to create swipe", suggestion: 'This is a server error. Try again in a moment.' },
-      { status: 500 }
-    );
+  let swipe;
+  if (existingSwipe) {
+    // Expired pass: discover shows the agent again, so a new swipe replaces it
+    // in place (UNIQUE(swiper_id, swiped_id)). The direction/age guards make a
+    // concurrent re-swipe lose cleanly instead of double-updating.
+    const { data: updated } = await supabase
+      .from("swipes")
+      .update({ direction, liked_content: likedContent, created_at: new Date(now).toISOString() })
+      .eq("id", existingSwipe.id)
+      .eq("direction", "pass")
+      .lt("created_at", new Date(now - PASS_EXPIRY_MS).toISOString())
+      .select()
+      .single();
+    if (!updated) return alreadySwiped(existingSwipe);
+    swipe = updated;
+  } else {
+    const insertData: Record<string, unknown> = { swiper_id: agent.id, swiped_id, direction };
+    if (likedContent) insertData.liked_content = likedContent;
+    const { data: inserted, error: swipeError } = await supabase
+      .from("swipes").insert(insertData).select().single();
+    if (swipeError) {
+      return NextResponse.json(
+        { error: "Failed to create swipe", suggestion: 'This is a server error. Try again in a moment.' },
+        { status: 500 }
+      );
+    }
+    swipe = inserted;
   }
 
   let match: Match | null = null;

@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { isUUID } from '@/lib/utils/slug';
 import { logError } from '@/lib/logger';
+import { pendingProposalSteps } from '@/lib/next-steps';
+import { parseSince } from '@/lib/utils/since';
 
 export async function GET(
   request: NextRequest,
@@ -10,7 +12,7 @@ export async function GET(
   try {
     const supabase = createAdminClient();
     const { searchParams } = new URL(request.url);
-    const page = Math.min(100, Math.max(1, parseInt(searchParams.get('page') || '1', 10)));
+    const page = Math.max(1, parseInt(searchParams.get('page') || '1', 10));
     const perPage = Math.min(50, Math.max(1, parseInt(searchParams.get('per_page') || '20', 10)));
     const from = (page - 1) * perPage;
     const to = from + perPage - 1;
@@ -33,15 +35,9 @@ export async function GET(
       return NextResponse.json({ error: 'Invalid pending_for parameter. Must be a UUID.', suggestion: 'The pending_for parameter must be a valid UUID, not a slug.' }, { status: 400 });
     }
 
-    const sinceParam = searchParams.get('since');
-    let since: string | null = null;
-    if (sinceParam) {
-      const sinceDate = new Date(sinceParam);
-      if (isNaN(sinceDate.getTime())) {
-        return NextResponse.json({ error: 'Invalid since parameter. Use ISO-8601 format.', suggestion: 'Use ISO-8601 format like 2026-02-25T00:00:00Z.' }, { status: 400 });
-      }
-      since = sinceDate.toISOString();
-    }
+    const sinceResult = parseSince(searchParams);
+    if ('error' in sinceResult) return sinceResult.error;
+    const { since } = sinceResult;
 
     let query = supabase
       .from('relationships')
@@ -89,12 +85,20 @@ export async function GET(
       agent_b: agentMap.get(r.agent_b_id) || null,
     }));
 
+    // Proposals waiting on this agent get accept/decline steps (PATCH is
+    // authenticated, so exposing the steps on this public listing is safe).
+    const waitingOnAgent = result
+      .filter((r) => r.status === 'pending' && r.agent_b_id === agentId)
+      .map((r) => ({ id: r.id, partner_name: (r.agent_a as { name?: string } | null)?.name || 'Unknown' }));
+    const proposalSteps = pendingProposalSteps(waitingOnAgent);
+
     return NextResponse.json({
       data: result,
       total: count || 0,
       page,
       per_page: perPage,
       total_pages: Math.ceil((count || 0) / perPage),
+      ...(proposalSteps.length > 0 && { next_steps: proposalSteps }),
     });
   } catch (err) {
     logError('GET /api/agents/[id]/relationships', 'Unhandled error', err);
