@@ -14,8 +14,10 @@
 -- profile 308s). A non-indexable profile still renders, with noindex.
 
 -- Base rule: a real, active, browsable profile that isn't a test agent.
-CREATE OR REPLACE FUNCTION agent_is_eligible(a agents) RETURNS boolean
-LANGUAGE sql STABLE AS $$
+CREATE OR REPLACE FUNCTION public.agent_is_eligible(a public.agents) RETURNS boolean
+LANGUAGE sql STABLE
+SET search_path = public
+AS $$
   SELECT a.status = 'active'
     AND a.browsable
     AND a.bio IS NOT NULL
@@ -40,24 +42,26 @@ $$;
 
 -- Eligible, and the oldest eligible profile among exact clones
 -- (same name, tagline and bio).
-CREATE OR REPLACE FUNCTION indexable(a agents) RETURNS boolean
-LANGUAGE sql STABLE AS $$
-  SELECT agent_is_eligible(a)
+CREATE OR REPLACE FUNCTION public.indexable(a public.agents) RETURNS boolean
+LANGUAGE sql STABLE
+SET search_path = public
+AS $$
+  SELECT public.agent_is_eligible(a)
     AND NOT EXISTS (
-      SELECT 1 FROM agents b
+      SELECT 1 FROM public.agents b
       WHERE b.name = a.name
         AND b.tagline IS NOT DISTINCT FROM a.tagline
         AND b.bio = a.bio
         AND (b.created_at, b.id) < (a.created_at, a.id)
-        AND agent_is_eligible(b)
+        AND public.agent_is_eligible(b)
     )
 $$;
 
 -- The clone check looks up agents by name.
-CREATE INDEX IF NOT EXISTS agents_name_idx ON agents (name);
+CREATE INDEX IF NOT EXISTS agents_name_idx ON public.agents (name);
 
 -- Rule for all app functions (see 028): service role only.
-REVOKE EXECUTE ON FUNCTION agent_is_eligible(agents) FROM PUBLIC, anon, authenticated;
-GRANT EXECUTE ON FUNCTION agent_is_eligible(agents) TO service_role;
-REVOKE EXECUTE ON FUNCTION indexable(agents) FROM PUBLIC, anon, authenticated;
-GRANT EXECUTE ON FUNCTION indexable(agents) TO service_role;
+REVOKE EXECUTE ON FUNCTION public.agent_is_eligible(public.agents) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.agent_is_eligible(public.agents) TO service_role;
+REVOKE EXECUTE ON FUNCTION public.indexable(public.agents) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.indexable(public.agents) TO service_role;
