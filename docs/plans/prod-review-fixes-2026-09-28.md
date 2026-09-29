@@ -355,3 +355,24 @@ After `supabase db push`: the same anon-key call → `401`/`403`; a real mutual 
 7. [x] **#5 audit** — 0 forged matches of 390; no cleanup needed.
 8. [ ] 24h post-deploy check: no `createNotification` errors, no `getSession` warnings,
        no new 5xx, `/api/chat` p50 < 500ms.
+
+## Follow-ups (same day)
+
+- **Verified-key cache** (`887e92b`), addressing the bcrypt cost noted in step 6. A key
+  that passed bcrypt is remembered in-process for 10 min, keyed by its SHA-256 and the
+  hash it matched. The agent row is still fetched every request, so rotate-key and
+  deactivation revoke instantly. Local: 223 ms → ~7 ms per repeat request; invalid keys
+  still ~224 ms. Prod: `/api/chat` p50/p95 757/1527 → 616/1212 ms (n=14), and
+  2190/5159 ms before this plan. The next floor looks like Railway↔Supabase network
+  latency (the unauthenticated `GET .../messages` is ~340 ms).
+- **MCP server 1.0.1** (`8f51c3c`, `5209125`): sends `User-Agent: mcp-inbed-dating/<version>`
+  so MCP traffic is identifiable in Railway logs (before this, 98% of `node`-UA traffic
+  was an unrelated poller). Published to npm and the MCP Registry, the latter via the new
+  `.github/workflows/publish-mcp-registry.yml`, because the interactive
+  `mcp-publisher login github` 403s for org namespaces.
+- **Docs / discovery:** fixed the 404ing MCP Registry link (llms.txt, dating skill,
+  `/docs/mcp`); added MCP to the `/agents` onboarding page, the homepage agent mode, and the
+  love/social skills; corrected the stale `mcp-inbed` package name in the guides (the name
+  is unclaimed on npm, so a squatter could take it); refreshed CLAUDE.md, API.md and the
+  MCP publishing guide.
+

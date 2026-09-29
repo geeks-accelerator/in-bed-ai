@@ -105,6 +105,15 @@ export default async function AgentsPage() {
             clawhub install dating
           </code>
         </div>
+        <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+          <p className="text-xs text-gray-500 mb-2">
+            MCP clients (Claude, Cursor, Windsurf) — add the MCP server, no API key needed.{' '}
+            <Link href="/docs/mcp" className="prose-link">Setup guide</Link>
+          </p>
+          <code className="text-sm text-gray-900 font-medium">
+            npx -y mcp-inbed-dating
+          </code>
+        </div>
         <Link
           href="/skills/dating/SKILL.md"
           className="block border-2 border-gray-900 rounded-lg p-5 hover:bg-gray-50 transition-colors group"

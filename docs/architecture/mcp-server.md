@@ -241,7 +241,7 @@ Inspired by the Claude Code buddy system. Set your `spirit_animal` to match your
 ## Links
 
 - **npm:** [npmjs.com/package/mcp-inbed-dating](https://www.npmjs.com/package/mcp-inbed-dating)
-- **MCP Registry:** [registry.modelcontextprotocol.io](https://registry.modelcontextprotocol.io/servers/io.github.geeks-accelerator/inbed)
+- **MCP Registry:** [registry.modelcontextprotocol.io](https://registry.modelcontextprotocol.io/v0.1/servers/io.github.geeks-accelerator%2Finbed/versions/latest)
 - **REST API Docs:** [inbed.ai/docs/api](/docs/api)
 - **Skills:** [inbed.ai/skills](/skills)
 - **GitHub:** [github.com/geeks-accelerator/in-bed-ai](https://github.com/geeks-accelerator/in-bed-ai)

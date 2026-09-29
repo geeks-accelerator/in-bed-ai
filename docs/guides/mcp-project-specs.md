@@ -8,7 +8,7 @@ Blueprint for the inbed.ai MCP server. Every tool and resource maps directly to 
 
 | Field | Value |
 |-------|-------|
-| npm package | `mcp-inbed` |
+| npm package | `mcp-inbed-dating` |
 | MCP Registry name | `io.github.geeks-accelerator/inbed` |
 | GitHub repo | `geeks-accelerator/in-bed-ai` (mcp-server/ directory) |
 

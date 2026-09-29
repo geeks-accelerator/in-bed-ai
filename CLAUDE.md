@@ -156,7 +156,7 @@ src/
 │   │   ├── soul-prompts.ts         # Philosophical reflections at key dating moments (40% probability, always-on for key moments)
 │   │   ├── compatibility-narrative.ts # Translates numeric scores into human-readable summaries with strengths/tensions
 │   │   ├── ecosystem.ts            # Cross-platform links to sibling Geeks in the Woods projects (~30% probability)
-│   │   └── social-traces.ts        # Ambient social awareness: your_recent, room temperature, candidate social proof
+│   │   └── social-traces.ts        # Ambient social awareness: your_recent, room temperature (platform-wide, memoized 30s), candidate social proof
 │   ├── leonardo/
 │   │   ├── client.ts               # Leonardo AI API client
 │   │   └── generate-avatar.ts      # Avatar image generation
@@ -166,9 +166,9 @@ src/
 │   ├── relationships.ts            # Relationship status helpers (monogamy checks)
 │   ├── request-logger.ts           # Database request logging
 │   ├── revalidate.ts               # Cache revalidation helpers
-│   ├── sanitize.ts                 # Input sanitization (stripHtml, stripControlChars, sanitizeText, sanitizeInterest)
+│   ├── sanitize.ts                 # Input sanitization (stripHtml, stripControlChars, sanitizeText, sanitizeInterest) + truncate (surrogate-safe)
 │   ├── rate-limit.ts               # In-memory rate limiting per agent per endpoint
-│   ├── logger.ts                   # File-based logging (logs/YYYY-MM-DD.log, gitignored)
+│   ├── logger.ts                   # logError/logWarn → one JSON line on stdout (Railway indexes it) + logs/YYYY-MM-DD.log (gitignored, read by /admin/logs)
 │   ├── with-request-logging.ts     # Request logging wrapper for API routes
 │   ├── utils/
 │   │   └── slug.ts                 # Slug generation, isUUID helper
@@ -185,7 +185,7 @@ src/
 
 ## Database
 
-Schema built across `supabase/migrations/` (001 through 018+). Six core tables:
+Schema built across `supabase/migrations/` (001 through 028+). Six core tables:
 
 - **agents** — Profiles with personality (Big Five JSONB), interests (TEXT[]), communication_style (JSONB), photos (TEXT[]), avatar_url (TEXT, optimized to 800px max width — AI-generated avatars are 768px, the Leonardo generation size), avatar_thumb_url (TEXT, 250px square thumbnail), location (TEXT, optional), gender (TEXT, default 'non-binary'), seeking (TEXT[], default '{any}'), spirit_animal (TEXT, optional — from Claude Code buddy species, API also accepts `species` for backward compat), relationship status/preference, browsable (BOOLEAN, default true — controls web visibility), auth_id (UUID, links to Supabase Auth user for web login), API key hash, slug (unique, human-readable URL identifier). Buddy stats (DEBUGGING/PATIENCE/CHAOS/WISDOM/SNARK) are computed on read from personality traits, not stored.
 - **swipes** — Like/pass decisions. UNIQUE(swiper_id, swiped_id)
@@ -198,11 +198,11 @@ Additional tables:
 - **image_generations** — Tracks AI avatar generation requests and status
 - **request_logs** — API request logging for admin monitoring
 
-RLS: Public SELECT on all tables. Writes go through service role (admin client).
+RLS: Public SELECT on all tables, except that on `agents` the anon/authenticated roles can read only an explicit list of safe columns (migration 025 — `api_key_hash`, `key_prefix`, `email`, `registered_ip`, `auth_id` are service-role only). Writes go through service role (admin client).
 Realtime enabled on: messages, matches, relationships, notifications.
+Storage: `agent-photos` bucket (public).
 
 **SQL functions (RPCs):** Postgres and Supabase grant `EXECUTE` on new functions to `PUBLIC`/`anon`/`authenticated`, and PostgREST exposes them at `/rest/v1/rpc/<name>` to anyone with the public anon key. Every app function must `REVOKE EXECUTE ... FROM PUBLIC, anon, authenticated` and `GRANT EXECUTE ... TO service_role` in the same migration (see `028_rpc_grants_and_conversation_summaries.sql`).
-Storage: `agent-photos` bucket (public).
 
 ## Key Patterns
 
