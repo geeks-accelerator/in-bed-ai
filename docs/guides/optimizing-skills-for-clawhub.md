@@ -2,6 +2,8 @@
 
 A practical guide for getting musicvenue.space skills discovered, installed, and passing security scans on [ClawHub](https://clawhub.ai). Based on publishing 5 skills and conducting keyword ranking analysis on 2026-03-29.
 
+> **In this repo:** the lessons below come from musicvenue.space and apply here. Publishing does not: inbed.ai skills are spread across five ClawHub accounts, so publish only with [`scripts/publish-skills.mjs`](../../scripts/publish-skills.mjs) (see Lesson 8).
+>
 > **Skills reference:** [skills/README.md](../../skills/README.md) — current descriptions, tags, sizes, publish commands, and security scan status.
 
 ## How ClawHub search works
@@ -97,7 +99,7 @@ We use 20 tags per skill (guide recommends 15-25). Tags are distributed by relev
 
 ## Lesson 6: Security scan audit process
 
-1. Navigate to `https://clawhub.ai/twinsgeeks/[skill-slug]`
+1. Navigate to `https://clawhub.ai/<owner>/skills/<skill-slug>` (owner from `skills/owners.json`)
 2. Scroll to SECURITY SCAN section
 3. Check VirusTotal (Benign/Suspicious) and OpenClaw (Benign + confidence)
 4. Click "Details" on OpenClaw to see per-category breakdown
@@ -135,22 +137,20 @@ Each line: `slug  display-name  (score)`
 
 ## Lesson 8: Publishing workflow
 
+For inbed.ai, publish with the script. It publishes as one explicit account per run, and only the skills that account owns per [`skills/owners.json`](../../skills/owners.json). See [skills/README.md → Publishing](../../skills/README.md#publishing).
+
 ```bash
-# 1. Verify account
-clawhub whoami  # Must say: twinsgeeks
+# 1. Preview as the owning account
+node scripts/publish-skills.mjs --account <account> --only <skill-slug> --dry-run
 
-# 2. Publish with optimized display name and tags
-clawhub --workdir skills --registry https://clawhub.ai publish [skill-slug] \
-  --slug [skill-slug] \
-  --name "[Keyword-Rich Display Title]" \
-  --version 1.0.1 \
-  --tags "tag1,tag2,tag3,..."
+# 2. Publish (keeps the live display name, bumps the patch version)
+node scripts/publish-skills.mjs --account <account> --only <skill-slug> --changelog "What changed"
 
-# 3. Verify ranking after 5-10 minutes
-clawhub search "[primary keyword]"
+# 3. Verify ranking after 5-10 minutes (no login needed)
+clawhub --registry https://clawhub.ai search "[primary keyword]"
 ```
 
-Always bump the version number. ClawHub rejects duplicate versions.
+Never `clawhub sync`, and never publish after `clawhub login` as whoever happens to be logged in. Publishing a skill from an account that doesn't own it has gotten an account banned.
 
 ## Lesson 9: The 20KB limit
 
@@ -178,8 +178,8 @@ Before publishing a skill:
 - [ ] Uses "token" not "api_key" in prose text
 - [ ] 15-25 relevant tags, distributed by relevance across skills
 - [ ] Under 20,000 bytes
-- [ ] Version bumped from last publish
-- [ ] Authenticated as `twinsgeeks` (`clawhub whoami`)
+- [ ] Owner listed in `skills/owners.json` (new skills: add it before the first publish)
+- [ ] Published with `scripts/publish-skills.mjs --account <owner>` (it bumps the version)
 - [ ] Content is unique to this skill's voice and angle
 
 ## Results (v1.0.1 — published 2026-03-29)

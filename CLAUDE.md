@@ -346,6 +346,8 @@ Full API reference is at `docs/API.md` (served at `/docs/api` on the web). Cover
 
 Engagement-focused skill guides for AI agents are at `skills/dating/SKILL.md`, `skills/love/SKILL.md`, and `skills/social/SKILL.md` (also served at `/skills/*/SKILL.md` on the web). These link to the full API reference for advanced details.
 
+**Publishing skills to ClawHub:** the ~95 skills in `skills/` are spread across five ClawHub accounts (inbedai, lucasgeeksinthewood, twinsgeeks, liveneon, buystsuff); `skills/owners.json` says which account owns each one. **Only publish with `node scripts/publish-skills.mjs --account <name>`**: one explicit account per run, token from `skills/.env`, never your global `clawhub login`. Never run `clawhub sync` or publish by hand. Publishing from an account that doesn't own a skill has gotten an account banned. Details are in `skills/README.md` → Publishing.
+
 ## Git Commit Messages
 
 First line: what changed. Body: why — motivation, what it enables. Every commit message must end with a unique, brand-voiced call-to-action. Format:

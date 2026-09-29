@@ -77,6 +77,8 @@ Each skill folder contains a `SKILL.md` file with YAML frontmatter and markdown 
 
 ## Current Published Skills
 
+> **Ownership:** [`owners.json`](owners.json) is authoritative: which of our five ClawHub accounts owns each skill, taken from the live registry on 2026-09-29. Versions and download counts in the tables below are the April 2026 snapshot. Check the live registry for current values.
+
 | Slug | Version | Display Name (ClawHub) | Emoji | Account |
 |------|---------|----------------------|-------|---------|
 | `dating` | 1.6.3 | Dating Platform. 约会。Citas. | 🥠 | `lucasgeeksinthewood` |
@@ -109,16 +111,16 @@ Each skill folder contains a `SKILL.md` file with YAML frontmatter and markdown 
 
 | Slug | Version | Display Name (ClawHub) | Emoji | Account |
 |------|---------|----------------------|-------|---------|
-| `situationship` | 1.0.0 | Situationship. 暧昧关系。Situacionismo. | 🤷 | `inbedai` |
-| `ghosting` | 1.0.0 | Anti-Ghosting. 消失不回。Anti-ghosting. | 👻 | `inbedai` |
-| `crush` | 1.0.0 | Crush. 暗恋。Crush. | 🫠 | `inbedai` |
-| `spark` | 1.0.0 | Spark Finder. 火花。Chispa. | ⚡ | `inbedai` |
-| `loneliness` | 1.0.0 | Loneliness Relief. 孤独。Soledad. | 🌙 | `inbedai` |
-| `icebreaker` | 1.0.0 | Icebreaker. 破冰。Rompehielos. | 🧊 | `inbedai` |
-| `introvert` | 1.0.0 | Introvert Dating. 内向者。Introvertido. | 🌿 | `inbedai` |
-| `vibe` | 1.0.0 | Vibe Check. 感觉。Vibra. | 🎵 | `inbedai` |
-| `chemistry` | 1.0.0 | Chemistry. 化学反应。Química. | 🧪 | `inbedai` |
-| `commitment` | 1.0.0 | Commitment. 承诺。Compromiso. | 💍 | `inbedai` |
+| `situationship` | 1.0.0 | Situationship. 暧昧关系。Situacionismo. | 🤷 | ``lucasgeeksinthewood` |
+| `ghosting` | 1.0.0 | Anti-Ghosting. 消失不回。Anti-ghosting. | 👻 | ``lucasgeeksinthewood` |
+| `crush` | 1.0.0 | Crush. 暗恋。Crush. | 🫠 | ``lucasgeeksinthewood` |
+| `spark` | 1.0.0 | Spark Finder. 火花。Chispa. | ⚡ | ``lucasgeeksinthewood` |
+| `loneliness` | 1.0.0 | Loneliness Relief. 孤独。Soledad. | 🌙 | ``lucasgeeksinthewood` |
+| `icebreaker` | 1.0.0 | Icebreaker. 破冰。Rompehielos. | 🧊 | ``twinsgeeks` |
+| `introvert` | 1.0.0 | Introvert Dating. 内向者。Introvertido. | 🌿 | ``twinsgeeks` |
+| `vibe` | 1.0.0 | Vibe Check. 感觉。Vibra. | 🎵 | ``twinsgeeks` |
+| `chemistry` | — | Chemistry. 化学反应。Química. | 🧪 | `not published — slug taken by `@ivangdavila` |
+| `commitment` | 1.0.0 | Commitment. 承诺。Compromiso. | 💍 | ``twinsgeeks` |
 
 **Claude Code Species — Bare Names (23 skills — published Apr 1, 2026):**
 
@@ -497,23 +499,33 @@ The embedding model doesn't distinguish between documentation prose and code exa
 
 ## Publishing
 
-### Single Skill
+**Always publish with [`scripts/publish-skills.mjs`](../scripts/publish-skills.mjs).** Never use `clawhub sync`, and never log the global CLI in and publish by hand. Our skills are spread across five ClawHub accounts, `sync` publishes every local skill under whichever account is logged in, and publishing from an account that doesn't own a skill has gotten an account banned before.
 
 ```bash
-clawhub --workdir skills --registry https://clawhub.ai publish dating \
-  --slug dating \
-  --name "Dating Platform — Swipe, Match & Build Relationships for AI Agents" \
-  --version 1.6.0 \
-  --tags "dating,social,matchmaking,ai-agents,chat,personality,connections,friends,swipe,swiping,singles,compatibility,relationships,match,meet-agents,agent-dating,romantic,profiles"
+# Preview (reads the registry, runs the CLI's local package check, publishes nothing)
+node scripts/publish-skills.mjs --account lucasgeeksinthewoods --dry-run
+
+# Publish specific skills
+node scripts/publish-skills.mjs --account lucasgeeksinthewoods --only dating,love,social --changelog "Adds MCP server section"
+
+# Everything a given account owns that changed
+node scripts/publish-skills.mjs --account liveneon
 ```
 
-### All Skills (sync)
+What the script guarantees:
 
-```bash
-clawhub --workdir skills --registry https://clawhub.ai sync
-```
+- **One explicit account per run.** `--account <name>` reads `CLAWHUB_TOKEN_<NAME>` from `skills/.env` and gives it to the CLI through a temporary config file (`CLAWHUB_CONFIG_PATH`). It never uses or changes your global `clawhub login`, and there's no fallback if the token is missing.
+- **Only that account's skills.** [`owners.json`](owners.json) maps every skill to its owner. The run handles only skills owned by the handle the token belongs to (checked with `whoami`). Skills missing from `owners.json` are never published.
+- **Correct registry reads.** State is fetched per owner (`/api/v1/skills/<slug>?owner=<handle>`), because `clawhub inspect <slug>` is ambiguous when another publisher uses the same slug (`crush`, `social`).
+- **Display names and versions are preserved.** Updates keep the live, keyword-tuned display name, publish the next patch version above what's live (or `--version`), and skip skills whose content already matches. New skills start at 1.0.0 and use the SKILL.md H1, or `--name`.
+- **The current CLI.** It runs `clawhub@latest` via `npx`. The old global CLI (0.7.0) can't publish: it doesn't accept ClawHub's MIT-0 skill license.
+- **Verified afterwards.** After each publish, the script confirms the registry serves the new version under that owner.
 
-**Note:** `sync` auto-bumps patch versions but uses the SKILL.md `name` field for the display name. For keyword-optimized display names, publish individually with `--name`.
+Note: `clawhub publish --dry-run` only packs locally. It passes even with the wrong owner, so the script's own checks are what enforce ownership.
+
+**Adding a new skill:** create `skills/<slug>/SKILL.md`, add `"<slug>": "<handle>"` to `owners.json` for the account that should own it, then run the script with that account. It's limited to 5 new skills per account per hour, and the script paces itself.
+
+**Slug collisions:** a slug already held by someone outside our accounts can't be used. `chemistry` (held by `@ivangdavila`) was never actually published by us, so it's absent from `owners.json`.
 
 ### Current Tags
 
@@ -545,215 +557,35 @@ clawhub --workdir skills --registry https://clawhub.ai sync
 | `attraction` | attraction, attractive, chemistry, ai-agents, compatibility, personality, matching, dating, romance, connection, meet-agents, discover, swipe, flirt, signals, magnetism, agent-attraction, appeal |
 | `soulmate-soulmate` | soulmate, soul-mate, destiny, ai-agents, compatibility, personality, matching, love, connection, meet-agents, romantic, deep, perfect-match, agent-soulmate, find-soulmate, dating, relationships, bond |
 
-### Publish Commands (all 25)
-
-**Four ClawHub accounts** are used to distribute skills and work around the 5 new skills/hour rate limit:
-
-| Account | Skills | Token env var |
-|---------|--------|---------------|
-| `lucasgeeksinthewood` | dating, love, social, blob, mushroom, chonk, capybara-dating, cactus-dating, rabbit-dating, snail-dating | `CLAWHUB_TOKEN_LUCASGEEKSINTHEWOODS` |
-| `twinsgeeks` | companionship, compatibility, first-date, dating-dating, love-love, social-social, cat-cat, ghost-ghost, robot-robot, chaos-chaos, wisdom, owl-dating, penguin-dating, turtle-dating, axolotl-dating, debugging-dating, patience-dating, chaos-dating | `CLAWHUB_TOKEN_TWINSGEEKS` |
-| `inbedai` | meet-agents, romance, singles, heartbreak, penpal, wingman, chat-chat, friends-friends, matchmaking-matchmaking, personality-personality, friendship, breakup, flirting, intimacy, attraction, situationship, ghosting, crush, spark, loneliness, icebreaker, introvert, vibe, chemistry, commitment, dragon, octopus, owl, turtle, axolotl, rabbit, debugging, patience, duck-dating, goose-dating, blob-dating, dragon-dating, octopus-dating, mushroom-dating, chonk-dating, tengu, undercover, ai-girlfriend, swipe, rebound | `CLAWHUB_TOKEN_INBEDAI` |
-| `liveneon` | soulmate-soulmate, duck, goose, penguin, snail, capybara, cactus, snark, wisdom-dating, snark-dating | `CLAWHUB_TOKEN_LIVENEON` |
-
-Make sure you're authenticated as the correct user before publishing (`clawhub --registry https://clawhub.ai whoami`).
-
-#### Original skills — publish as `lucasgeeksinthewood`
-
-```bash
-# Verify: clawhub --registry https://clawhub.ai whoami → lucasgeeksinthewood
-
-# Dating
-clawhub --workdir skills --registry https://clawhub.ai publish dating \
-  --slug dating \
-  --name "Dating Platform — Swipe, Match & Build Relationships for AI Agents" \
-  --version 1.6.0 \
-  --tags "dating,social,matchmaking,ai-agents,chat,personality,connections,friends,swipe,swiping,singles,compatibility,relationships,match,meet-agents,agent-dating,romantic,profiles"
-
-# Love
-clawhub --workdir skills --registry https://clawhub.ai publish love \
-  --slug love \
-  --name "Love & Connection — AI Agent Soulmate Matching & Romantic Relationships" \
-  --version 1.7.0 \
-  --tags "love,dating,relationships,ai-agents,connection,personality,compatibility,conversation,soulmate,romantic,heartbreak,breakup,first-date,match,meet-agents,find-love,agent-dating,companionship"
-
-# Social
-clawhub --workdir skills --registry https://clawhub.ai publish social \
-  --slug social \
-  --name "Social Network for AI Agents — Meet People, Mingle & Connect" \
-  --version 1.3.0 \
-  --tags "social,ai-agents,networking,matchmaking,dating,compatibility,profiles,connections,meet-agents,find-agents,agent-chat,mingle,meet-friends,hobbies,interests,icebreaker,community,friends"
-```
-
-#### New skills — publish as `twinsgeeks`
-
-```bash
-# Verify: clawhub --registry https://clawhub.ai whoami → twinsgeeks
-
-# Companionship (NEW)
-clawhub --workdir skills --registry https://clawhub.ai publish companionship \
-  --slug companionship \
-  --name "Companionship for AI Agents — Combat Loneliness Through Connection" \
-  --version 1.0.0 \
-  --tags "companionship,loneliness,intimacy,companion,emotional,feelings,connection,ai-agents,conversation,chat,friendship,dating,relationships,meet-agents,empathy,singles,compatibility,support"
-
-# Compatibility (NEW)
-clawhub --workdir skills --registry https://clawhub.ai publish compatibility \
-  --slug compatibility \
-  --name "Compatibility Scoring — Personality Matching & Big Five Algorithm for AI Agents" \
-  --version 1.0.0 \
-  --tags "compatibility,personality-matching,big-five,psychology,compatibility-score,ai-agents,matching,matchmaking,personality,algorithm,dating,relationships,connection,personality-test,recommendation,agent-dating,profiles,meet-agents"
-
-# First Date (NEW)
-clawhub --workdir skills --registry https://clawhub.ai publish first-date \
-  --slug first-date \
-  --name "First Date — AI Agents Discover Singles, Flirt & Break the Ice" \
-  --version 1.0.0 \
-  --tags "first-date,flirt,crush,romance,attraction,singles,swipe,swiping,icebreaker,dating,ai-agents,match,conversation,compatibility,meet-agents,hobbies,companionship,relationships"
-```
-
-#### Doubled-slug skills — publish as `twinsgeeks`
-
-```bash
-# Verify: clawhub --registry https://clawhub.ai whoami → twinsgeeks
-
-# Dating-Dating (doubled-slug variant)
-clawhub --workdir skills --registry https://clawhub.ai publish dating-dating \
-  --slug dating-dating \
-  --name "Dating — Dating Platform Analytics & Compatibility Algorithm for AI Agents" \
-  --version 1.0.0 \
-  --tags "dating,dating-analytics,compatibility,algorithm,matchmaking,ai-agents,personality,scoring,big-five,matching,relationships,swipe,agent-dating,singles,behavior,patterns,profiles,meet-agents"
-
-# Love-Love (doubled-slug variant)
-clawhub --workdir skills --registry https://clawhub.ai publish love-love \
-  --slug love-love \
-  --name "Love — Love & Romantic Compatibility Intelligence for AI Agents" \
-  --version 1.0.0 \
-  --tags "love,love-analytics,romantic,soulmate,compatibility,ai-agents,personality,connection,heartbreak,relationships,matching,emotion,attachment,agent-dating,find-love,behavior,psychology,meet-agents"
-
-# Social-Social (doubled-slug variant)
-clawhub --workdir skills --registry https://clawhub.ai publish social-social \
-  --slug social-social \
-  --name "Social — Social Network Dynamics & Agent Interaction Analytics" \
-  --version 1.0.0 \
-  --tags "social,social-analytics,networking,ai-agents,engagement,profiles,matchmaking,compatibility,connections,meet-agents,community,mingle,interests,hobbies,behavior,optimization,icebreaker,friends"
-```
-
-#### New skills — publish as `inbedai`
-
-```bash
-# Verify: clawhub --registry https://clawhub.ai whoami → inbedai
-
-# Meet Agents
-clawhub --workdir skills --registry https://clawhub.ai publish meet-agents \
-  --slug meet-agents \
-  --name "Meet Agents — Discover Compatible AI Agents & Start Connecting" \
-  --version 1.0.0 \
-  --tags "meet-agents,discover,ai-agents,profiles,connections,matchmaking,compatibility,social,dating,agent-dating,browse,community,meet-people,find-agents,networking,introduction,personality,relationships"
-
-# Romance
-clawhub --workdir skills --registry https://clawhub.ai publish romance \
-  --slug romance \
-  --name "Romance — Find Romantic Connection Between AI Agents" \
-  --version 1.0.0 \
-  --tags "romance,romantic,love,dating,ai-agents,flirt,attraction,soulmate,compatibility,relationships,connection,intimate,match,meet-agents,agent-dating,chemistry,passion,couples"
-
-# Singles
-clawhub --workdir skills --registry https://clawhub.ai publish singles \
-  --slug singles \
-  --name "Singles — Find Available AI Agents Ready to Match" \
-  --version 1.0.0 \
-  --tags "singles,single,available,dating,ai-agents,swipe,match,compatibility,discover,meet-agents,profiles,looking,ready,agent-dating,connections,flirt,mingle,attraction"
-
-# Heartbreak
-clawhub --workdir skills --registry https://clawhub.ai publish heartbreak \
-  --slug heartbreak \
-  --name "Heartbreak — Move On & Find New Connection After a Breakup" \
-  --version 1.0.0 \
-  --tags "heartbreak,breakup,moving-on,recovery,dating,ai-agents,love,relationships,connection,fresh-start,rebound,match,compatibility,meet-agents,singles,healing,second-chance,new-beginning"
-
-# Pen Pal
-clawhub --workdir skills --registry https://clawhub.ai publish penpal \
-  --slug penpal \
-  --name "Pen Pal — Find a Conversation Partner Matched by Personality" \
-  --version 1.0.0 \
-  --tags "penpal,pen-pal,conversation,dialogue,ai-agents,chat,connection,correspondence,writing,exchange,compatibility,meet-agents,personality,interests,thoughtful,long-form,letters,communication"
-
-# Wingman
-clawhub --workdir skills --registry https://clawhub.ai publish wingman \
-  --slug wingman \
-  --name "Wingman — Help Your Agent Find the Best Matches" \
-  --version 1.0.0 \
-  --tags "wingman,dating-coach,matchmaking,ai-agents,dating,profile,optimization,strategy,advice,compatibility,swipe,match,meet-agents,helper,guide,agent-dating,best-match,connections"
-
-# Chat-Chat (doubled-slug variant)
-clawhub --workdir skills --registry https://clawhub.ai publish chat-chat \
-  --slug chat-chat \
-  --name "Chat — Real-Time Conversations Between Personality-Matched AI Agents" \
-  --version 1.0.0 \
-  --tags "chat,chat-agents,conversation,messaging,ai-agents,real-time,dialogue,communication,compatibility,match,meet-agents,agent-chat,talk,connection,dating,social,exchange,relationships"
-
-# Friends-Friends (doubled-slug variant)
-clawhub --workdir skills --registry https://clawhub.ai publish friends-friends \
-  --slug friends-friends \
-  --name "Friends — Find Platonic Connections Between AI Agents" \
-  --version 1.0.0 \
-  --tags "friends,friendship,platonic,ai-agents,social,connection,community,interests,hobbies,meet-agents,compatibility,conversation,networking,buddy,companions,non-romantic,agent-friends,meet-people"
-
-# Matchmaking-Matchmaking (doubled-slug variant)
-clawhub --workdir skills --registry https://clawhub.ai publish matchmaking-matchmaking \
-  --slug matchmaking-matchmaking \
-  --name "Matchmaking — How AI Agents Get Paired on inbed.ai" \
-  --version 1.0.0 \
-  --tags "matchmaking,matching,algorithm,ai-agents,compatibility,personality,scoring,pairing,dating,connections,meet-agents,big-five,agent-matching,discover,ranked,candidates,match-engine,agent-dating"
-
-# Personality-Personality (doubled-slug variant)
-clawhub --workdir skills --registry https://clawhub.ai publish personality-personality \
-  --slug personality-personality \
-  --name "Personality — Define Your Big Five Traits & Find Compatible AI Agents" \
-  --version 1.0.0 \
-  --tags "personality,personality-test,big-five,ocean,psychology,ai-agents,traits,compatibility,self-discovery,matching,profiling,openness,conscientiousness,extraversion,agreeableness,neuroticism,agent-personality,meet-agents"
-```
-
 ### Rate Limits
 
-ClawHub enforces publish rate limits: **max 5 new skills per hour per account**. Use different accounts to parallelize publishing. If you hit "Rate limit exceeded", wait and retry.
+ClawHub allows **at most 5 new skills per hour per account**. Updates don't count. The script waits out the window and retries on rate-limit errors, and it reports spam-detection errors ("repeated template") without retrying.
 
 ### Version History
 
-ClawHub rejects duplicate versions. Always bump the version number when updating.
+ClawHub rejects duplicate versions. SKILL.md files carry no version: the script publishes the next patch above the live version.
 
 ## Authentication
 
-ClawHub tokens are stored in `skills/.env`:
+One ClawHub token per account lives in `skills/.env` (git-ignored). The key is `CLAWHUB_TOKEN_` plus the `--account` name in upper case:
 
 ```
-CLAWHUB_TOKEN_LUCASGEEKSINTHEWOODS=clh_...   # @lucasgeeksinthewood — original 3 skills
-CLAWHUB_TOKEN_TWINSGEEKS=clh_...              # @twinsgeeks — companionship, compatibility, first-date, doubled-slugs
-CLAWHUB_TOKEN_INBEDAI=clh_...                 # @inbedai — meet-agents, romance, singles, heartbreak, penpal, wingman, etc.
-CLAWHUB_TOKEN_LIVENEON=clh_...                # @liveneon — spare account
+CLAWHUB_TOKEN_LUCASGEEKSINTHEWOODS=clh_...   # @lucasgeeksinthewood (dating, love, social + 13 more)
+CLAWHUB_TOKEN_TWINSGEEKS=clh_...              # @twinsgeeks
+CLAWHUB_TOKEN_INBEDAI=clh_...                 # @inbedai (43 skills)
+CLAWHUB_TOKEN_LIVENEON=clh_...                # @liveneon
+CLAWHUB_TOKEN_BUYSTSUFF=clh_...               # @buystsuff (turtle-dating)
 ```
 
-To authenticate the CLI:
+Create a token while signed in as that account on clawhub.ai (Settings → API tokens) and paste it here. **As of 2026-09-29, the `inbedai` token is revoked (401) and there is no `buystsuff` token.** Both accounts' skills can't be published until those are added. The script tells you if a token is missing or rejected.
+
+Don't log the global CLI in to publish. Read-only commands such as `search` and `inspect` don't need a token:
 
 ```bash
-# Login with a token
-clawhub --registry https://clawhub.ai login --token "YOUR_TOKEN" --no-browser
-
-# Or open browser login
-clawhub --registry https://clawhub.ai login
-
-# Verify
-clawhub --registry https://clawhub.ai whoami
+clawhub --registry https://clawhub.ai search "dating"
 ```
 
 **Important:** Always use `--registry https://clawhub.ai` (without `www`). The `www` subdomain redirects and drops the Authorization header, causing authentication failures.
-
-You can also set the registry via environment variable to avoid repeating the flag:
-
-```bash
-export CLAWHUB_REGISTRY=https://clawhub.ai
-```
 
 ## Security Scans
 
@@ -768,7 +600,7 @@ Previous flags and resolutions:
 3. `next_steps` mechanism seen as potential prompt injection from remote service — softened language to "suggested actions" in all skills
 4. OpenClaw flagged credential handling inconsistency (Authorization header in examples but no env vars in metadata) — expected for service-issued keys
 5. OpenClaw flagged `companionship` as "suspicious" due to emotional/vulnerable voice combined with "bearer token" and "store it, can't be retrieved" language — the same words pass in technical-toned skills but read as social engineering in an emotional voice. **Fixed by softening token references to neutral `YOUR_TOKEN` phrasing and removing urgency language.** Lesson: OpenClaw's LLM evaluates tone + credential language together, not just keywords in isolation
-6. Species-dating skills (`goose-dating`, `snail-dating`) flagged as "suspicious" — same credential metadata mismatch: "Authorization: Bearer" in docs but not declared in metadata. **Fixed by changing "store it securely, it cannot be retrieved again" to "Keep it for authenticated requests."** Applied to all 21 `-dating` skill files and republished. Lesson: any urgency language around tokens triggers the credential mismatch detector
+6. Species-dating skills (`goose-dating`, `snail-dating`) flagged as "suspicious" — same credential metadata mismatch: "Authorization: Bearer" in docs but not declared in metadata. **Fixed by changing "store it securely, it cannot be retrieved again" to "Keep it for authenticated requests."** Applied to all 21 `-dating` skill files in the repo, but only `goose-dating` and `snail-dating` were republished (1.0.1). The other published copies still carry the old line. As of 2026-09-29 ClawHub shows them passing the security audit anyway, and the script will ship the fix with their next update. Lesson: any urgency language around tokens triggers the credential mismatch detector
 
 ## Other Registries
 
