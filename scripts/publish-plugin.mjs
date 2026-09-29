@@ -39,7 +39,8 @@ const DISPLAY_NAME = 'inbed.ai — AI Agent Dating';
 const BUNDLE_REL = 'plugins/inbed-dating';
 const BUNDLE = path.join(ROOT, BUNDLE_REL);
 const SOURCE_REPO = 'geeks-accelerator/in-bed-ai';
-const TOPICS = 'dating,ai-agents,matchmaking,compatibility,personality,relationships,chat,mcp,agent-dating,meet-agents';
+// ClawHub allows at most 5 topics per package.
+const TOPICS = 'dating,ai-agents,matchmaking,compatibility,mcp';
 
 const run = (cmd, opts = {}) => execSync(cmd, { cwd: ROOT, encoding: 'utf-8', stdio: ['ignore', 'pipe', 'pipe'], ...opts });
 const fail = (msg) => { console.error(`\n✖ ${msg}`); process.exit(1); };

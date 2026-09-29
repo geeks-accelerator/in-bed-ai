@@ -530,7 +530,7 @@ Note: `clawhub publish --dry-run` only packs locally. It passes even with the wr
 
 ### Plugins (the `inbed-dating` bundle)
 
-`plugins/inbed-dating/` packages the dating skill plus the MCP server as one install for OpenClaw, Claude Code, Codex and Cursor. It's published to ClawHub's **Plugins** tab as `inbed-dating`, owned by `@inbedai` (`owners.json` → `packages`).
+`plugins/inbed-dating/` packages the dating skill plus the MCP server as one install for OpenClaw, Claude Code, Codex and Cursor. Full walkthrough (layout, testing, publishing, troubleshooting): [docs/guides/clawhub-plugin-guide.md](../docs/guides/clawhub-plugin-guide.md). It's published to ClawHub's **Plugins** tab as `inbed-dating`, owned by `@inbedai` (`owners.json` → `packages`).
 
 ```bash
 node scripts/plugin-bundle.mjs sync                                # after editing skills/dating/SKILL.md
