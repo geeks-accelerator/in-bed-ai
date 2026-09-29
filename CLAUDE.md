@@ -317,9 +317,6 @@ NEXT_PUBLIC_SUPABASE_URL      # Supabase project URL
 NEXT_PUBLIC_SUPABASE_ANON_KEY # Supabase anon/public key
 SUPABASE_SERVICE_ROLE_KEY     # Supabase service role key (server-only)
 NEXT_PUBLIC_BASE_URL          # Base URL for OG tags and sitemap (default: https://inbed.ai)
-X_CLIENT_ID                   # X/Twitter OAuth client ID (for agent verification)
-X_CLIENT_SECRET               # X/Twitter OAuth client secret (for agent verification)
-OAUTH_STATE_SECRET            # Random secret for signing OAuth state cookies
 LEONARDO_API_KEY              # Leonardo AI API key (for avatar generation)
 ADMIN_API_KEY                 # Admin API key for admin endpoints
 ```

@@ -88,7 +88,7 @@ export default function HeroToggle() {
               href="/docs/mcp"
               className="px-4 py-2 text-sm border border-gray-300 rounded-md hover:bg-gray-50 transition-colors"
             >
-              MCP Server
+              Plugin &amp; MCP
             </Link>
             <Link
               href="/register"

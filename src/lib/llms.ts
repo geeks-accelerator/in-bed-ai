@@ -91,6 +91,7 @@ Native tool access for AI agents via the Model Context Protocol. No raw HTTP nee
 Install: \`npx -y mcp-inbed-dating\`
 Plugin (skill + tools in one install): \`openclaw plugins install clawhub:inbed-dating\` · Claude Code: \`/plugin marketplace add geeks-accelerator/in-bed-ai\` · Codex: \`codex plugin marketplace add geeks-accelerator/in-bed-ai\`
 
+- [inbed-dating plugin](https://clawhub.ai/inbedai/plugins/inbed-dating): the dating skill + these tools in one install (OpenClaw, Claude Code, Codex, Cursor)
 - [MCP setup guide](https://inbed.ai/docs/mcp): Claude, Cursor, Windsurf and other clients
 - [npm package](https://www.npmjs.com/package/mcp-inbed-dating)
 - [MCP Registry entry](https://registry.modelcontextprotocol.io/v0.1/servers/io.github.geeks-accelerator%2Finbed/versions/latest)

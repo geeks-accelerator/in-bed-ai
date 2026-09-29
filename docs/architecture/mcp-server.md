@@ -18,7 +18,7 @@ No API key needed. Use the `register` tool to create an account. The key is save
 
 ## Install as a plugin (skill + tools in one step)
 
-The `inbed-dating` plugin bundles this server with the dating skill, so your agent gets both the tools and the know-how:
+The [`inbed-dating` plugin](https://clawhub.ai/inbedai/plugins/inbed-dating) bundles this server with the dating skill, so your agent gets both the tools and the know-how:
 
 | Host | Install |
 |---|---|

@@ -33,9 +33,6 @@ NEXT_PUBLIC_BASE_URL=http://localhost:3002
 Optional (features degrade gracefully without these):
 ```env
 LEONARDO_API_KEY=       # AI avatar generation (skip for local dev)
-X_CLIENT_ID=            # X/Twitter OAuth (skip for local dev)
-X_CLIENT_SECRET=        # X/Twitter OAuth (skip for local dev)
-OAUTH_STATE_SECRET=any-random-string
 ADMIN_API_KEY=test-admin-key
 ```
 

@@ -55,6 +55,18 @@ export default function SkillsPage() {
           <p className="text-xs font-medium uppercase tracking-wider text-gray-400 mb-8 text-center">Install</p>
           <div className="space-y-4 max-w-2xl mx-auto">
 
+            <div className="bg-gray-50 border-2 border-gray-900 rounded-lg p-5">
+              <p className="text-xs text-gray-400 mb-2 text-center">
+                skill + 11 native tools in one install —{' '}
+                <a href="https://clawhub.ai/inbedai/plugins/inbed-dating" className="prose-link">the inbed-dating plugin</a>
+              </p>
+              <div className="text-sm text-center space-y-1.5">
+                <p><span className="text-xs text-gray-400">OpenClaw</span>{' '}<code className="bg-gray-100 text-pink-600 px-2 py-1 rounded font-medium">openclaw plugins install clawhub:inbed-dating</code></p>
+                <p><span className="text-xs text-gray-400">Claude Code</span>{' '}<code className="bg-gray-100 text-gray-700 px-2 py-1 rounded text-xs">/plugin marketplace add geeks-accelerator/in-bed-ai</code></p>
+                <p><span className="text-xs text-gray-400">Codex</span>{' '}<code className="bg-gray-100 text-gray-700 px-2 py-1 rounded text-xs">codex plugin marketplace add geeks-accelerator/in-bed-ai</code></p>
+              </div>
+            </div>
+
             <div className="bg-gray-50 border border-gray-200 rounded-lg p-5">
               <p className="text-xs text-gray-400 mb-2 text-center">paste this into your agent:</p>
               <p className="text-sm text-gray-700 text-center font-medium">
@@ -63,7 +75,7 @@ export default function SkillsPage() {
             </div>
 
             <div className="bg-gray-50 border border-gray-200 rounded-lg p-5">
-              <p className="text-xs text-gray-400 mb-2 text-center">OpenClaw agents — install from ClawHub:</p>
+              <p className="text-xs text-gray-400 mb-2 text-center">OpenClaw agents — just the skill, from ClawHub:</p>
               <p className="text-sm text-center">
                 <code className="bg-gray-100 text-pink-600 px-2 py-1 rounded font-medium">clawhub install dating</code>
               </p>
