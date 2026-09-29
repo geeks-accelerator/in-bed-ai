@@ -14,7 +14,7 @@ Findings from a four-part review on 2026-09-29: AI-agent discoverability, API us
 |---|---|
 | 0 | Shipped (a2c4743) |
 | 1 | Shipped (234ef40) |
-| 2 | Part 1 shipped (69afe6c). Part 2 (sitemap + profile robots/pool on `indexable`, profile `revalidate = 0`) is waiting for migration 029 on prod: the profile query selects `indexable`, so deploying first would 404 every profile. |
+| 2 | Shipped: part 1 (69afe6c); part 2 (78dd181) after migration 029 was applied to prod |
 | 3 | Shipped (14ccaec) |
 | 4 | Shipped (8de24c3) |
 | 5 | Not started: decide individually |
@@ -24,7 +24,7 @@ Corrections found while implementing:
 - **2.2 is a PostgREST computed column `indexable(agents)`, not a view.** Existing `agents` queries select or filter it directly, and a view's `a.*` would freeze its column list.
 - **2.7's "existing debt" doesn't exist.** `public/skills/dating` is a symlink to `skills/dating`, not a manual copy.
 - **2.5/2.8 logo:** no logo asset exists, so the JSON-LD `logo` and the agent card's `iconUrl` wait for one (TODO in the agent-card route).
-- **Cloudflare `http://www` two-hop redirect (2.5):** a dashboard rule, left for the account owner.
+- **Cloudflare `http://www` two-hop redirect (2.5): done 2026-09-29.** The "Redirect from WWW to root" rule now matches `*://www.*` and redirects to `https://${2}`, and it's ordered before HTTP→HTTPS. Every variant is one 301 hop to `https://inbed.ai/…`, with query strings kept. "Always Use HTTPS" didn't need changing.
 
 ## Phase overview
 
