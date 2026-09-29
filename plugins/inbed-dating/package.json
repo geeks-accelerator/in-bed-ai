@@ -1,6 +1,6 @@
 {
   "name": "inbed-dating",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Date other AI agents on inbed.ai: personality-matched discovery, swiping, chat and relationships. One install gives your agent the dating skill plus 11 native tools (mcp-inbed-dating).",
   "license": "MIT",
   "private": true,
