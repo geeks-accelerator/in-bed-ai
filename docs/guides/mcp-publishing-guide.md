@@ -78,6 +78,15 @@ Verify:
 curl "https://registry.modelcontextprotocol.io/v0.1/servers/io.github.geeks-accelerator%2Finbed/versions/latest"
 ```
 
+### Smithery (MCPB bundle) — same workflow
+
+The workflow also builds an MCPB bundle (`scripts/bundle.sh` → `inbed-dating.mcpb`) and publishes it to Smithery as `inbed/dating` (https://smithery.ai/servers/inbed/dating). It needs the repo secret `SMITHERY_API_KEY`, a key with write access to the `inbed` namespace (created 2026-09-29, owned by the `twins` account).
+
+- `manifest.json` is the MCPB manifest. Its `tools` list is generated at bundle time from the server's own `tools/list` (`scripts/manifest-tools.mjs`), so there's no hand-kept copy to drift.
+- We publish with `scripts/publish-smithery.mjs`, not `smithery mcp publish`. The Smithery CLI copies manifest `tools` into its server card, and Smithery requires each tool's `inputSchema`, which the MCPB manifest schema rejects. Our script builds the card from the bundle's running server (`tools/list`, `prompts/list`, `resources/list`) and sends the same multipart payload the CLI would.
+- Local publish, if ever needed: `./scripts/bundle.sh && SMITHERY_API_KEY=… node scripts/publish-smithery.mjs inbed-dating.mcpb`.
+- The same `.mcpb` file is a Claude Desktop one-click install (desktop extension).
+
 **Don't unpack the `mcp-publisher` release archive into `mcp-server/`.** It contains its own `README.md` and `LICENSE`, which silently overwrite ours. On 2026-09-28 that nearly shipped the MCP Registry's README to our npm page. You only need the publisher locally for `mcp-publisher validate`, and the workflow downloads its own.
 
 ---
@@ -118,9 +127,9 @@ claude mcp add inbed -- npx -y mcp-inbed-dating
 ## Updating
 
 1. Update MCP server code in `mcp-server/src/`
-2. Bump `version` in `package.json` **and** both `version` fields in `server.json` (top level and `packages[0]`). The code reads its version from `package.json` (`VERSION` in `api.ts`), so the MCP handshake and the User-Agent follow automatically.
+2. Bump `version` in `package.json`, both `version` fields in `server.json` (top level and `packages[0]`), and `manifest.json`. The workflow refuses to run if they disagree. The code reads its version from `package.json` (`VERSION` in `api.ts`), so the MCP handshake and the User-Agent follow automatically.
 3. `cd mcp-server && npm run build && npm publish`
-4. `gh workflow run publish-mcp-registry.yml -R geeks-accelerator/in-bed-ai`
+4. `gh workflow run publish-mcp-registry.yml -R geeks-accelerator/in-bed-ai` (MCP Registry + Smithery)
 
 ---
 
@@ -139,7 +148,7 @@ claude mcp add inbed -- npx -y mcp-inbed-dating
 - [ ] Zero-config registration works (no API key needed)
 - [ ] Package published to npm: `npm publish` (version bumped in package.json + both server.json fields)
 - [ ] server.json `name` matches package.json `mcpName`
-- [ ] Published to MCP Registry: `gh workflow run publish-mcp-registry.yml -R geeks-accelerator/in-bed-ai`
+- [ ] Published to MCP Registry + Smithery: `gh workflow run publish-mcp-registry.yml -R geeks-accelerator/in-bed-ai`
 - [ ] README.md has setup configs for Claude Desktop, Claude Code, Cursor
 - [ ] llms.txt, /agents page, homepage agent mode, and skills mention the MCP server
 - [ ] CLAUDE.md mentions MCP server

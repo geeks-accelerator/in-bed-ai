@@ -419,7 +419,7 @@ Prefer native tool access over raw HTTP? The `mcp-inbed-dating` MCP server wraps
 claude mcp add inbed -- npx -y mcp-inbed-dating
 ```
 
-npm: [npmjs.com/package/mcp-inbed-dating](https://www.npmjs.com/package/mcp-inbed-dating) | Registry: [registry.modelcontextprotocol.io](https://registry.modelcontextprotocol.io/v0.1/servers/io.github.geeks-accelerator%2Finbed/versions/latest)
+npm: [npmjs.com/package/mcp-inbed-dating](https://www.npmjs.com/package/mcp-inbed-dating) | Registry: [registry.modelcontextprotocol.io](https://registry.modelcontextprotocol.io/v0.1/servers/io.github.geeks-accelerator%2Finbed/versions/latest) | Smithery: [smithery.ai/servers/inbed/dating](https://smithery.ai/servers/inbed/dating)
 
 ---
 

@@ -1,15 +1,19 @@
-# Publishes mcp-server/server.json to the official MCP Registry
-# (io.github.geeks-accelerator/inbed).
+# Publishes the MCP server listings after `npm publish`:
+#   1. Official MCP Registry — mcp-server/server.json (io.github.geeks-accelerator/inbed)
+#   2. Smithery — MCPB bundle built from mcp-server/ (inbed/dating)
 #
-# Why a workflow: org namespaces (io.github.<org>/*) can't be published with the
-# interactive `mcp-publisher login github`; GitHub OIDC from a repo owned by the
-# org proves ownership instead. This repo is geeks-accelerator/in-bed-ai, so it
-# may publish io.github.geeks-accelerator/<anything>.
+# Why a workflow for the registry: org namespaces (io.github.<org>/*) can't be
+# published with the interactive `mcp-publisher login github`; GitHub OIDC from a
+# repo owned by the org proves ownership instead. This repo is
+# geeks-accelerator/in-bed-ai, so it may publish io.github.geeks-accelerator/<anything>.
 #
-# Release order: bump "version" in mcp-server/package.json AND server.json (both
-# fields) → `npm publish` from mcp-server/ → run this workflow:
+# Smithery needs the repo secret SMITHERY_API_KEY (a key with write access to
+# the `inbed` namespace).
+#
+# Release order: bump "version" in mcp-server/package.json, server.json (both
+# fields), and manifest.json → `npm publish` from mcp-server/ → run this workflow:
 #   gh workflow run publish-mcp-registry.yml -R geeks-accelerator/in-bed-ai
-name: Publish to MCP Registry
+name: Publish MCP server listings
 on:
   workflow_dispatch:
 jobs:
@@ -23,17 +27,44 @@ jobs:
         working-directory: mcp-server
     steps:
       - uses: actions/checkout@v5
-      - name: Check npm has this version
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+      - name: Check versions agree and npm has this version
         # Compare explicitly: `npm view pkg@<missing>` doesn't reliably exit non-zero.
         run: |
-          want="$(node -p "require('./server.json').version")"
+          want="$(node -p "require('./package.json').version")"
+          for v in "$(node -p "require('./server.json').version")" \
+                   "$(node -p "require('./server.json').packages[0].version")" \
+                   "$(node -p "require('./manifest.json').version")"; do
+            if [ "$v" != "$want" ]; then
+              echo "Version mismatch: package.json is ${want}, found ${v} in server.json/manifest.json."
+              exit 1
+            fi
+          done
           got="$(npm view "mcp-inbed-dating@${want}" version 2>/dev/null || true)"
           if [ -z "$want" ] || [ "$got" != "$want" ]; then
             echo "mcp-inbed-dating@${want} is not on npm yet (got '${got}'). Run npm publish first."
             exit 1
           fi
           echo "npm has mcp-inbed-dating@${want}"
+
+      # 1. Official MCP Registry
       - name: Install mcp-publisher
         run: curl -L "https://github.com/modelcontextprotocol/registry/releases/latest/download/mcp-publisher_$(uname -s | tr '[:upper:]' '[:lower:]')_$(uname -m | sed 's/x86_64/amd64/;s/aarch64/arm64/').tar.gz" | tar xz mcp-publisher
       - run: ./mcp-publisher login github-oidc
       - run: ./mcp-publisher publish
+
+      # 2. Smithery (MCPB bundle)
+      - run: npm ci --no-audit --no-fund
+      - name: Build MCPB bundle
+        run: ./scripts/bundle.sh
+      - name: Publish bundle to Smithery
+        env:
+          SMITHERY_API_KEY: ${{ secrets.SMITHERY_API_KEY }}
+        run: |
+          if [ -z "$SMITHERY_API_KEY" ]; then
+            echo "Repo secret SMITHERY_API_KEY is not set; skipping would leave Smithery behind, so failing." >&2
+            exit 1
+          fi
+          node scripts/publish-smithery.mjs inbed-dating.mcpb inbed/dating
