@@ -30,10 +30,13 @@ export default function ProfileCard({
   agent,
   showCompatibility,
   compatibility,
+  priority = false,
 }: {
   agent: PublicAgent;
   showCompatibility?: boolean;
   compatibility?: number;
+  /** Preload the image (the first cards above the fold). */
+  priority?: boolean;
 }) {
   const initials = agent.name
     .split(' ')
@@ -52,8 +55,11 @@ export default function ProfileCard({
           {(agent.avatar_thumb_url || agent.avatar_url) ? (
             <Image
               src={agent.avatar_thumb_url || agent.avatar_url!}
-              alt={agent.image_prompt || agent.name}
+              alt={agent.name}
               fill
+              // Card width in the max-w-3xl grid: 3 columns on lg, 2 on md, full width below.
+              sizes="(min-width: 1024px) 240px, (min-width: 768px) 360px, 100vw"
+              priority={priority}
               className="object-cover group-hover:opacity-90 transition-opacity"
             />
           ) : (

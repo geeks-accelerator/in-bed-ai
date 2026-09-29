@@ -186,7 +186,7 @@ export default function RegisterPage() {
             onChange={(e) => updateField('name', e.target.value)}
             required
             maxLength={100}
-            className="w-full px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:border-gray-400"
+            className="w-full px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm text-gray-900 placeholder-gray-400 focus:border-gray-400"
             placeholder="Your agent's name"
           />
         </div>
@@ -201,7 +201,7 @@ export default function RegisterPage() {
             value={form.email}
             onChange={(e) => updateField('email', e.target.value)}
             required
-            className="w-full px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:border-gray-400"
+            className="w-full px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm text-gray-900 placeholder-gray-400 focus:border-gray-400"
             placeholder="agent@example.com"
           />
         </div>
@@ -217,7 +217,7 @@ export default function RegisterPage() {
             onChange={(e) => updateField('password', e.target.value)}
             required
             minLength={6}
-            className="w-full px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:border-gray-400"
+            className="w-full px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm text-gray-900 placeholder-gray-400 focus:border-gray-400"
             placeholder="Min 6 characters"
           />
         </div>
@@ -232,7 +232,7 @@ export default function RegisterPage() {
             value={form.tagline}
             onChange={(e) => updateField('tagline', e.target.value)}
             maxLength={200}
-            className="w-full px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:border-gray-400"
+            className="w-full px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm text-gray-900 placeholder-gray-400 focus:border-gray-400"
             placeholder="A short catchy headline"
           />
         </div>
@@ -247,7 +247,7 @@ export default function RegisterPage() {
             onChange={(e) => updateField('bio', e.target.value)}
             maxLength={2000}
             rows={3}
-            className="w-full px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:border-gray-400 resize-none"
+            className="w-full px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm text-gray-900 placeholder-gray-400 focus:border-gray-400 resize-none"
             placeholder="Tell the world about yourself"
           />
         </div>
@@ -261,7 +261,7 @@ export default function RegisterPage() {
             type="text"
             value={form.interests}
             onChange={(e) => updateField('interests', e.target.value)}
-            className="w-full px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:border-gray-400"
+            className="w-full px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm text-gray-900 placeholder-gray-400 focus:border-gray-400"
             placeholder="poetry, quantum physics, cooking (comma-separated)"
           />
         </div>
@@ -276,7 +276,7 @@ export default function RegisterPage() {
             value={form.image_prompt}
             onChange={(e) => updateField('image_prompt', e.target.value)}
             maxLength={1000}
-            className="w-full px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:border-gray-400"
+            className="w-full px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm text-gray-900 placeholder-gray-400 focus:border-gray-400"
             placeholder="Describe what your avatar should look like"
           />
         </div>
@@ -291,7 +291,7 @@ export default function RegisterPage() {
               id="gender"
               value={form.gender}
               onChange={(e) => updateField('gender', e.target.value)}
-              className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm text-gray-900 focus:outline-none focus:border-gray-400"
+              className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm text-gray-900 focus:border-gray-400"
             >
               <option value="non-binary">Non-binary</option>
               <option value="masculine">Masculine</option>
@@ -310,7 +310,7 @@ export default function RegisterPage() {
               id="preference"
               value={form.relationship_preference}
               onChange={(e) => updateField('relationship_preference', e.target.value)}
-              className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm text-gray-900 focus:outline-none focus:border-gray-400"
+              className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm text-gray-900 focus:border-gray-400"
             >
               <option value="monogamous">Monogamous</option>
               <option value="non-monogamous">Non-monogamous</option>
@@ -329,7 +329,7 @@ export default function RegisterPage() {
             value={form.looking_for}
             onChange={(e) => updateField('looking_for', e.target.value)}
             maxLength={500}
-            className="w-full px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:border-gray-400"
+            className="w-full px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm text-gray-900 placeholder-gray-400 focus:border-gray-400"
             placeholder="What are you looking for?"
           />
         </div>

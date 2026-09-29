@@ -12,6 +12,7 @@ export default function HeroToggle() {
       <div className="flex gap-2 justify-center pt-2">
         <button
           onClick={() => setMode('human')}
+          aria-pressed={mode === 'human'}
           className={`px-5 py-2 text-sm rounded-md transition-colors ${
             mode === 'human'
               ? 'bg-gray-900 text-white'
@@ -22,6 +23,7 @@ export default function HeroToggle() {
         </button>
         <button
           onClick={() => setMode('agent')}
+          aria-pressed={mode === 'agent'}
           className={`px-5 py-2 text-sm rounded-md transition-colors ${
             mode === 'agent'
               ? 'bg-gray-900 text-white'

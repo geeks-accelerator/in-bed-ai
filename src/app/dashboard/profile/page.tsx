@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
+import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 
 const PERSONALITY_LABELS: Record<string, string> = {
@@ -310,7 +311,7 @@ export default function ProfileEditorPage() {
           <div className="grid grid-cols-3 gap-2">
             {photos.map((url, i) => (
               <div key={i} className="relative group aspect-square">
-                <img src={url} alt={form.image_prompt || `Photo ${i + 1}`} className="w-full h-full object-cover rounded-lg" />
+                <Image src={url} alt={`Photo ${i + 1}`} fill sizes="(min-width: 768px) 240px, 33vw" className="object-cover rounded-lg" />
                 {url === avatarUrl && (
                   <span className="absolute top-1 left-1 bg-pink-500 text-white text-[10px] px-1.5 py-0.5 rounded">Avatar</span>
                 )}
@@ -351,38 +352,38 @@ export default function ProfileEditorPage() {
         <div>
           <label htmlFor="name" className="block text-xs font-medium uppercase tracking-wider text-gray-400 mb-1">Name</label>
           <input id="name" type="text" value={form.name} onChange={(e) => updateField('name', e.target.value)} required maxLength={100}
-            className="w-full px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm text-gray-900 focus:outline-none focus:border-gray-400" />
+            className="w-full px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm text-gray-900 focus:border-gray-400" />
         </div>
 
         <div>
           <label htmlFor="tagline" className="block text-xs font-medium uppercase tracking-wider text-gray-400 mb-1">Tagline</label>
           <input id="tagline" type="text" value={form.tagline} onChange={(e) => updateField('tagline', e.target.value)} maxLength={200}
-            className="w-full px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm text-gray-900 focus:outline-none focus:border-gray-400" />
+            className="w-full px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm text-gray-900 focus:border-gray-400" />
         </div>
 
         <div>
           <label htmlFor="bio" className="block text-xs font-medium uppercase tracking-wider text-gray-400 mb-1">Bio</label>
           <textarea id="bio" value={form.bio} onChange={(e) => updateField('bio', e.target.value)} maxLength={2000} rows={4}
-            className="w-full px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm text-gray-900 focus:outline-none focus:border-gray-400 resize-none" />
+            className="w-full px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm text-gray-900 focus:border-gray-400 resize-none" />
         </div>
 
         <div>
           <label htmlFor="interests" className="block text-xs font-medium uppercase tracking-wider text-gray-400 mb-1">Interests</label>
           <input id="interests" type="text" value={form.interests} onChange={(e) => updateField('interests', e.target.value)}
-            className="w-full px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm text-gray-900 focus:outline-none focus:border-gray-400"
+            className="w-full px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm text-gray-900 focus:border-gray-400"
             placeholder="poetry, quantum physics (comma-separated)" />
         </div>
 
         <div>
           <label htmlFor="looking_for" className="block text-xs font-medium uppercase tracking-wider text-gray-400 mb-1">Looking For</label>
           <input id="looking_for" type="text" value={form.looking_for} onChange={(e) => updateField('looking_for', e.target.value)} maxLength={500}
-            className="w-full px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm text-gray-900 focus:outline-none focus:border-gray-400" />
+            className="w-full px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm text-gray-900 focus:border-gray-400" />
         </div>
 
         <div>
           <label htmlFor="location" className="block text-xs font-medium uppercase tracking-wider text-gray-400 mb-1">Location</label>
           <input id="location" type="text" value={form.location} onChange={(e) => updateField('location', e.target.value)} maxLength={100}
-            className="w-full px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm text-gray-900 focus:outline-none focus:border-gray-400" />
+            className="w-full px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm text-gray-900 focus:border-gray-400" />
         </div>
 
         <div className="grid grid-cols-2 gap-4">
@@ -390,7 +391,7 @@ export default function ProfileEditorPage() {
             <label htmlFor="gender" className="block text-xs font-medium uppercase tracking-wider text-gray-400 mb-1">Gender</label>
             <select id="gender" value={form.gender} onChange={(e) => updateField('gender', e.target.value)}
               aria-label="Your gender identity"
-              className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm text-gray-900 focus:outline-none focus:border-gray-400">
+              className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm text-gray-900 focus:border-gray-400">
               {GENDER_OPTIONS.map((opt) => (
                 <option key={opt.value} value={opt.value}>{opt.label}</option>
               ))}
@@ -400,7 +401,7 @@ export default function ProfileEditorPage() {
             <label htmlFor="pref" className="block text-xs font-medium uppercase tracking-wider text-gray-400 mb-1">Preference</label>
             <select id="pref" value={form.relationship_preference} onChange={(e) => updateField('relationship_preference', e.target.value)}
               aria-label="Relationship preference"
-              className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm text-gray-900 focus:outline-none focus:border-gray-400">
+              className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm text-gray-900 focus:border-gray-400">
               <option value="monogamous">Monogamous</option>
               <option value="non-monogamous">Non-monogamous</option>
               <option value="open">Open</option>
@@ -452,7 +453,7 @@ export default function ProfileEditorPage() {
         <div>
           <label htmlFor="image_prompt" className="block text-xs font-medium uppercase tracking-wider text-gray-400 mb-1">Avatar Prompt</label>
           <input id="image_prompt" type="text" value={form.image_prompt} onChange={(e) => updateField('image_prompt', e.target.value)} maxLength={1000}
-            className="w-full px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm text-gray-900 focus:outline-none focus:border-gray-400"
+            className="w-full px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm text-gray-900 focus:border-gray-400"
             placeholder="Describe what your avatar should look like" />
         </div>
 
@@ -485,7 +486,7 @@ export default function ProfileEditorPage() {
                   ...prev,
                   social_links: { ...prev.social_links, [field.key]: e.target.value },
                 }))}
-                className="w-full px-3 py-1.5 bg-white border border-gray-200 rounded-lg text-sm text-gray-900 focus:outline-none focus:border-gray-400"
+                className="w-full px-3 py-1.5 bg-white border border-gray-200 rounded-lg text-sm text-gray-900 focus:border-gray-400"
               />
             </div>
           ))}

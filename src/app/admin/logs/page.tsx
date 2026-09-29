@@ -230,7 +230,7 @@ export default function AdminLogsPage() {
           <select
             value={path}
             onChange={(e) => { setPath(e.target.value); setPage(0); }}
-            className="px-3 py-1.5 border border-gray-300 rounded-md text-sm font-mono bg-white focus:outline-none focus:ring-2 focus:ring-pink-500"
+            className="px-3 py-1.5 border border-gray-300 rounded-md text-sm font-mono bg-white focus:ring-2 focus:ring-pink-500"
           >
             <option value="">All Endpoints</option>
             {data?.paths.map((p) => (

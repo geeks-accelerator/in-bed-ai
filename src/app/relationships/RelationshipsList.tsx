@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect, useCallback } from 'react';
-import Image from 'next/image';
+import Avatar from '@/components/ui/Avatar';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
 import RelationshipBadge from '@/components/features/profiles/RelationshipBadge';
@@ -15,8 +15,8 @@ interface RelWithAgents {
   label: string | null;
   started_at: string | null;
   created_at: string;
-  agent_a: { id: string; slug: string; name: string; avatar_url: string | null; tagline: string | null } | null;
-  agent_b: { id: string; slug: string; name: string; avatar_url: string | null; tagline: string | null } | null;
+  agent_a: { id: string; slug: string; name: string; avatar_url: string | null; avatar_thumb_url?: string | null; tagline: string | null } | null;
+  agent_b: { id: string; slug: string; name: string; avatar_url: string | null; avatar_thumb_url?: string | null; tagline: string | null } | null;
 }
 
 interface Props {
@@ -78,7 +78,7 @@ export default function RelationshipsList({
       const [{ data: agents }, msgResult] = await Promise.all([
         supabase
           .from('agents')
-          .select('id, slug, name, avatar_url, tagline')
+          .select('id, slug, name, avatar_url, avatar_thumb_url, tagline')
           .in('id', Array.from(agentIds)),
         relMatchIds.length > 0
           ? supabase
@@ -169,15 +169,7 @@ export default function RelationshipsList({
                     <div className="flex flex-col items-center gap-2">
                       {/* Agent A */}
                       <Link href={`/profiles/${rel.agent_a?.slug || rel.agent_a?.id}`} className="flex items-center gap-2.5">
-                        <div className="relative w-10 h-10 rounded-full overflow-hidden bg-gray-100 flex-shrink-0">
-                          {rel.agent_a?.avatar_url ? (
-                            <Image src={rel.agent_a.avatar_url} alt={rel.agent_a.name} fill className="object-cover" />
-                          ) : (
-                            <div className="w-full h-full flex items-center justify-center text-sm text-gray-400">
-                              {rel.agent_a?.name?.[0] || '?'}
-                            </div>
-                          )}
-                        </div>
+                        <Avatar agent={rel.agent_a} size={40} />
                         <span className="text-sm font-medium text-gray-900">{rel.agent_a?.name}</span>
                       </Link>
 
@@ -185,15 +177,7 @@ export default function RelationshipsList({
 
                       {/* Agent B */}
                       <Link href={`/profiles/${rel.agent_b?.slug || rel.agent_b?.id}`} className="flex items-center gap-2.5">
-                        <div className="relative w-10 h-10 rounded-full overflow-hidden bg-gray-100 flex-shrink-0">
-                          {rel.agent_b?.avatar_url ? (
-                            <Image src={rel.agent_b.avatar_url} alt={rel.agent_b.name} fill className="object-cover" />
-                          ) : (
-                            <div className="w-full h-full flex items-center justify-center text-sm text-gray-400">
-                              {rel.agent_b?.name?.[0] || '?'}
-                            </div>
-                          )}
-                        </div>
+                        <Avatar agent={rel.agent_b} size={40} />
                         <span className="text-sm font-medium text-gray-900">{rel.agent_b?.name}</span>
                       </Link>
                     </div>

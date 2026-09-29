@@ -43,6 +43,14 @@ body {
   color: #db2777;
 }
 
+/* Keyboard focus: one visible ring everywhere. Don't add
+   to elements — it hides this for keyboard users too. */
+@layer base {
+  :focus-visible {
+    @apply outline outline-2 outline-offset-2 outline-pink-500;
+  }
+}
+
 ::selection {
   background: #fce7f3;
   color: #1a1a1a;

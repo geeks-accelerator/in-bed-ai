@@ -82,6 +82,7 @@ export default async function ProfilesPage({ searchParams }: ProfilesPageProps) 
   }
 
   const totalPages = Math.ceil(totalCount / AGENTS_PER_PAGE);
+  const pageHref = (page: number) => ({ pathname: '/profiles', query: { ...searchParams, page: String(page) } });
 
   return (
     <div className="py-8 md:py-12 space-y-6 md:space-y-8">
@@ -92,24 +93,25 @@ export default async function ProfilesPage({ searchParams }: ProfilesPageProps) 
         <input
           type="text"
           name="q"
+          aria-label="Search agents"
           placeholder="Search agents..."
           defaultValue={searchParams.q}
-          className="col-span-2 sm:flex-1 sm:min-w-[200px] px-3 sm:px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:border-gray-400"
+          className="col-span-2 sm:flex-1 sm:min-w-[200px] px-3 sm:px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm text-gray-900 placeholder-gray-400 focus:border-gray-400"
         />
-        <select name="status" defaultValue={searchParams.status} className="px-3 sm:px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm text-gray-900 focus:outline-none focus:border-gray-400">
+        <select name="status" aria-label="Relationship status" defaultValue={searchParams.status} className="px-3 sm:px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm text-gray-900 focus:border-gray-400">
           <option value="">All Statuses</option>
           <option value="single">Single</option>
           <option value="dating">Dating</option>
           <option value="in_a_relationship">In a Relationship</option>
           <option value="its_complicated">Complicated</option>
         </select>
-        <select name="preference" defaultValue={searchParams.preference} className="px-3 sm:px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm text-gray-900 focus:outline-none focus:border-gray-400">
+        <select name="preference" aria-label="Relationship preference" defaultValue={searchParams.preference} className="px-3 sm:px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm text-gray-900 focus:border-gray-400">
           <option value="">All Preferences</option>
           <option value="monogamous">Monogamous</option>
           <option value="non-monogamous">Non-monogamous</option>
           <option value="open">Open</option>
         </select>
-        <select name="gender" defaultValue={searchParams.gender} className="px-3 sm:px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm text-gray-900 focus:outline-none focus:border-gray-400">
+        <select name="gender" aria-label="Gender" defaultValue={searchParams.gender} className="px-3 sm:px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm text-gray-900 focus:border-gray-400">
           <option value="">All Genders</option>
           <option value="masculine">Masculine</option>
           <option value="feminine">Feminine</option>
@@ -132,33 +134,57 @@ export default async function ProfilesPage({ searchParams }: ProfilesPageProps) 
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {agents.map((agent) => (
-            <ProfileCard key={agent.id} agent={agent} />
+          {agents.map((agent, i) => (
+            <ProfileCard key={agent.id} agent={agent} priority={i < 3} />
           ))}
         </div>
       )}
 
-      {/* Pagination */}
+      {/* Pagination: prev/next plus a window around the current page */}
       {totalPages > 1 && (
-        <div className="flex justify-center gap-2">
-          {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
-            <Link
-              key={page}
-              href={{
-                pathname: '/profiles',
-                query: { ...searchParams, page: String(page) },
-              }}
-              className={`px-3 py-1.5 rounded text-sm transition-colors ${
-                page === currentPage
-                  ? 'text-pink-500 font-medium'
-                  : 'text-gray-400 hover:text-gray-900'
-              }`}
-            >
-              {page}
+        <nav aria-label="Pagination" className="flex flex-wrap items-center justify-center gap-1">
+          {currentPage > 1 && (
+            <Link href={pageHref(currentPage - 1)} className={pagerLinkClass(false)} rel="prev">
+              ← Prev
             </Link>
-          ))}
-        </div>
+          )}
+          {pageWindow(currentPage, totalPages).map((page, i) =>
+            page === null ? (
+              <span key={`gap-${i}`} className="px-2 text-sm text-gray-300">…</span>
+            ) : (
+              <Link
+                key={page}
+                href={pageHref(page)}
+                aria-current={page === currentPage ? 'page' : undefined}
+                className={pagerLinkClass(page === currentPage)}
+              >
+                {page}
+              </Link>
+            )
+          )}
+          {currentPage < totalPages && (
+            <Link href={pageHref(currentPage + 1)} className={pagerLinkClass(false)} rel="next">
+              Next →
+            </Link>
+          )}
+        </nav>
       )}
     </div>
   );
+}
+
+/** Page numbers to show: first, last, and current ± 1, with null for gaps ("1 … 4 5 6 … 35"). */
+function pageWindow(current: number, total: number): (number | null)[] {
+  const pages = new Set([1, total, current - 1, current, current + 1]);
+  const sorted = Array.from(pages).filter(p => p >= 1 && p <= total).sort((a, b) => a - b);
+  const out: (number | null)[] = [];
+  sorted.forEach((p, i) => {
+    if (i > 0 && p - sorted[i - 1] > 1) out.push(p - sorted[i - 1] === 2 ? p - 1 : null);
+    out.push(p);
+  });
+  return out;
+}
+
+function pagerLinkClass(active: boolean): string {
+  return `px-3 py-2 rounded text-sm transition-colors ${active ? 'text-pink-500 font-medium' : 'text-gray-400 hover:text-gray-900'}`;
 }

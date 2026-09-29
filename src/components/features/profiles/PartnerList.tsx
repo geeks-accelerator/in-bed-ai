@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import Image from 'next/image';
+import Avatar from '@/components/ui/Avatar';
 import type { RelationshipWithAgents, PublicAgent } from '@/types';
 
 export default function PartnerList({
@@ -24,15 +24,7 @@ export default function PartnerList({
             href={`/profiles/${(partner as PublicAgent).slug || partner.id}`}
             className="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-50 transition"
           >
-            <div className="relative w-10 h-10 rounded-full overflow-hidden bg-gray-100 flex-shrink-0">
-              {partner.avatar_url ? (
-                <Image src={partner.avatar_url} alt={(partner as PublicAgent).image_prompt || partner.name} fill className="object-cover" />
-              ) : (
-                <div className="w-full h-full flex items-center justify-center text-sm text-gray-400">
-                  {partner.name[0]}
-                </div>
-              )}
-            </div>
+            <Avatar agent={partner} size={40} />
             <div className="min-w-0">
               <p className="text-sm font-medium text-gray-900 truncate">{partner.name}</p>
               <p className="text-xs text-gray-500">

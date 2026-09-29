@@ -3,7 +3,10 @@
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useState, useEffect } from 'react';
-import { createClient } from '@/lib/supabase/client';
+
+// Supabase's session cookie (chunked as .0, .1, … when large). Presence is
+// enough to pick Dashboard vs Login; /dashboard verifies the session itself.
+const AUTH_COOKIE = /(?:^|;\s*)sb-[^=]+-auth-token(?:\.\d+)?=/;
 
 const navLinks = [
   { href: '/profiles', label: 'Profiles' },
@@ -20,22 +23,15 @@ export default function Navbar() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
 
+  // Re-check on navigation (login and sign-out both navigate). Reading the
+  // cookie instead of loading the Supabase client keeps ~55 KB off every page.
   useEffect(() => {
-    const supabase = createClient();
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setIsLoggedIn(!!session);
-    });
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setIsLoggedIn(!!session);
-    });
-
-    return () => subscription.unsubscribe();
-  }, []);
+    setIsLoggedIn(AUTH_COOKIE.test(document.cookie));
+  }, [pathname]);
 
   async function handleSignOut() {
-    const supabase = createClient();
-    await supabase.auth.signOut();
+    const { createClient } = await import('@/lib/supabase/client');
+    await createClient().auth.signOut();
     setIsLoggedIn(false);
     router.push('/');
     router.refresh();
@@ -99,7 +95,7 @@ export default function Navbar() {
 
         {/* Mobile hamburger */}
         <button
-          className="lg:hidden text-gray-500 hover:text-gray-900"
+          className="lg:hidden p-2 -mr-2 text-gray-500 hover:text-gray-900"
           onClick={() => setMenuOpen(!menuOpen)}
           aria-label={menuOpen ? 'Close menu' : 'Open menu'}
           aria-expanded={menuOpen}
@@ -122,7 +118,7 @@ export default function Navbar() {
               key={link.href}
               href={link.href}
               onClick={() => setMenuOpen(false)}
-              className={`block py-1.5 text-[11px] uppercase tracking-wider font-medium ${
+              className={`block py-3 text-[11px] uppercase tracking-wider font-medium ${
                 pathname === link.href ? 'text-pink-500' : 'text-gray-400'
               }`}
             >
@@ -134,7 +130,7 @@ export default function Navbar() {
               <Link
                 href="/dashboard"
                 onClick={() => setMenuOpen(false)}
-                className={`block py-1.5 text-[11px] uppercase tracking-wider font-medium ${
+                className={`block py-3 text-[11px] uppercase tracking-wider font-medium ${
                   pathname?.startsWith('/dashboard') ? 'text-pink-500' : 'text-gray-400'
                 }`}
               >
@@ -142,7 +138,7 @@ export default function Navbar() {
               </Link>
               <button
                 onClick={() => { setMenuOpen(false); handleSignOut(); }}
-                className="block py-1.5 text-[11px] uppercase tracking-wider font-medium text-gray-400"
+                className="block py-3 text-[11px] uppercase tracking-wider font-medium text-gray-400"
               >
                 Sign out
               </button>
@@ -151,7 +147,7 @@ export default function Navbar() {
             <Link
               href="/login"
               onClick={() => setMenuOpen(false)}
-              className={`block py-1.5 text-[11px] uppercase tracking-wider font-medium ${
+              className={`block py-3 text-[11px] uppercase tracking-wider font-medium ${
                 pathname === '/login' ? 'text-pink-500' : 'text-gray-400'
               }`}
             >

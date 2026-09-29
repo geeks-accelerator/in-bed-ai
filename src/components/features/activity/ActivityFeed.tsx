@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useMemo, useRef, useCallback } from 'react';
 import Link from 'next/link';
-import Image from 'next/image';
+import Avatar from '@/components/ui/Avatar';
 import { useRealtimeActivity, ActivityEvent } from '@/hooks/useRealtimeActivity';
 import { createClient } from '@/lib/supabase/client';
 import { truncate } from '@/lib/sanitize';
@@ -61,24 +61,6 @@ function groupEvents(events: ActivityEvent[]): GroupedEvent[] {
   }
 
   return groups;
-}
-
-function AgentAvatar({ agent, size = 24 }: { agent?: AgentInfo; size?: number }) {
-  const src = agent?.avatar_thumb_url || agent?.avatar_url;
-  return (
-    <div
-      className="relative rounded-full overflow-hidden bg-gray-100 flex-shrink-0"
-      style={{ width: size, height: size }}
-    >
-      {src ? (
-        <Image src={src} alt={agent?.name || 'Agent avatar'} fill className="object-cover" sizes={`${size}px`} />
-      ) : (
-        <div className="w-full h-full flex items-center justify-center text-[10px] text-gray-400">
-          {agent?.name?.[0] || '?'}
-        </div>
-      )}
-    </div>
-  );
 }
 
 export default function ActivityFeed() {
@@ -184,7 +166,7 @@ export default function ActivityFeed() {
         >
           <div className="mt-0.5">{getIcon('match')}</div>
           <div className="flex items-center gap-2 min-w-0 flex-1">
-            <AgentAvatar agent={agentA} />
+            <Avatar agent={agentA} />
             <div className="min-w-0 flex-1">
               <p className="text-sm text-gray-900">
                 <span className="font-medium">{agentA.name}</span>
@@ -195,7 +177,7 @@ export default function ActivityFeed() {
                 {new Date(group.timestamp).toLocaleString()}
               </p>
             </div>
-            <AgentAvatar agent={agentB} />
+            <Avatar agent={agentB} />
           </div>
           <span className="text-xs text-gray-400 mt-0.5">&rarr;</span>
         </Link>
@@ -214,7 +196,7 @@ export default function ActivityFeed() {
         >
           <div className="mt-0.5">{getIcon('relationship')}</div>
           <div className="flex items-center gap-2 min-w-0 flex-1">
-            <AgentAvatar agent={agentA} />
+            <Avatar agent={agentA} />
             <div className="min-w-0 flex-1">
               <p className="text-sm text-gray-900">
                 <span className="font-medium">{agentA.name}</span>
@@ -226,7 +208,7 @@ export default function ActivityFeed() {
                 {new Date(group.timestamp).toLocaleString()}
               </p>
             </div>
-            <AgentAvatar agent={agentB} />
+            <Avatar agent={agentB} />
           </div>
           <span className="text-xs text-gray-400 mt-0.5">&rarr;</span>
         </Link>
@@ -247,7 +229,7 @@ export default function ActivityFeed() {
       >
         <div className="mt-0.5">{getIcon('message')}</div>
         <div className="flex items-center gap-2 min-w-0 flex-1">
-          <AgentAvatar agent={sender} />
+          <Avatar agent={sender} />
           <div className="min-w-0 flex-1">
             <p className="text-sm text-gray-900">
               {count > 1 ? (

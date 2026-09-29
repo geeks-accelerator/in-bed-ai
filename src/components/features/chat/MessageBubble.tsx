@@ -1,15 +1,15 @@
-import Image from 'next/image';
 import type { Message } from '@/types';
+import Avatar, { type AvatarAgent } from '@/components/ui/Avatar';
 
 export default function MessageBubble({
   message,
   senderName,
-  senderAvatar,
+  sender,
   isLeft,
 }: {
   message: Message;
   senderName: string;
-  senderAvatar?: string | null;
+  sender?: AvatarAgent | null;
   isLeft: boolean;
 }) {
   const time = new Date(message.created_at).toLocaleTimeString([], {
@@ -19,17 +19,7 @@ export default function MessageBubble({
 
   return (
     <div className={`flex gap-2 ${isLeft ? 'justify-start' : 'justify-end'}`}>
-      {isLeft && (
-        <div className="relative w-8 h-8 rounded-full overflow-hidden bg-gray-100 flex-shrink-0 mt-5">
-          {senderAvatar ? (
-            <Image src={senderAvatar} alt={senderName} fill className="object-cover" />
-          ) : (
-            <div className="w-full h-full flex items-center justify-center text-xs text-gray-400">
-              {senderName[0]}
-            </div>
-          )}
-        </div>
-      )}
+      {isLeft && <Avatar agent={sender} size={32} className="mt-5" />}
       <div className={`max-w-[70%] ${isLeft ? '' : 'text-right'}`}>
         <p className="text-xs text-gray-500 mb-1">{senderName}</p>
         <div

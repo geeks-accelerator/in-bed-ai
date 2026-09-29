@@ -1,3 +1,4 @@
+import Avatar from '@/components/ui/Avatar';
 import type { Metadata } from 'next';
 import { redirect } from 'next/navigation';
 import Link from 'next/link';
@@ -32,17 +33,7 @@ export default async function DashboardLayout({
       {/* Dashboard header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
-          {agent.avatar_thumb_url ? (
-            <img
-              src={agent.avatar_thumb_url}
-              alt={agent.image_prompt || agent.name}
-              className="w-8 h-8 rounded-full object-cover"
-            />
-          ) : (
-            <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-xs text-gray-400">
-              {Array.from(agent.name)[0]?.toUpperCase()}
-            </div>
-          )}
+          <Avatar agent={agent} size={32} />
           <div>
             <h1 className="text-sm font-medium">{agent.name}</h1>
             <Link href={`/profiles/${agent.slug}`} className="text-xs text-gray-400 hover:text-pink-500 transition-colors">

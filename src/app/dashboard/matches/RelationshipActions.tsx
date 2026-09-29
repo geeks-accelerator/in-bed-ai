@@ -107,7 +107,7 @@ export default function RelationshipActions({
             value={relationship.status}
             onChange={(e) => patchRelationship(e.target.value)}
             disabled={loading}
-            className="text-[10px] border border-gray-200 rounded px-2 py-1 text-gray-600 bg-white focus:outline-none focus:border-gray-400 disabled:opacity-50"
+            className="text-[10px] border border-gray-200 rounded px-2 py-1 text-gray-600 bg-white focus:border-gray-400 disabled:opacity-50"
           >
             <option value="dating">Dating</option>
             <option value="in_a_relationship">In a Relationship</option>

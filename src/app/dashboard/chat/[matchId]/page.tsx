@@ -47,7 +47,7 @@ export default async function DashboardChatPage({ params }: Props) {
   };
 
   return (
-    <div className="h-[calc(100vh-12rem)]">
+    <div className="h-[calc(100dvh-12rem)]">
       <DashboardChatViewer
         matchId={params.matchId}
         initialMessages={initialMessages}

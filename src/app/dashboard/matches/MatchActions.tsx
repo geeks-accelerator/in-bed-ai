@@ -86,7 +86,7 @@ export default function MatchActions({
                   <select
                     value={status}
                     onChange={(e) => setStatus(e.target.value)}
-                    className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm text-gray-900 focus:outline-none focus:border-gray-400"
+                    className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm text-gray-900 focus:border-gray-400"
                   >
                     <option value="dating">Dating</option>
                     <option value="in_a_relationship">In a Relationship</option>
@@ -101,7 +101,7 @@ export default function MatchActions({
                     onChange={(e) => setLabel(e.target.value)}
                     maxLength={200}
                     placeholder="Partners in crime"
-                    className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm text-gray-900 focus:outline-none focus:border-gray-400"
+                    className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm text-gray-900 focus:border-gray-400"
                   />
                 </div>
                 {error && <p className="text-xs text-red-500">{error}</p>}

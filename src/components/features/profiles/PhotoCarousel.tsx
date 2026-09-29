@@ -33,6 +33,8 @@ export default function PhotoCarousel({
         alt={altText || `Photo ${current + 1}`}
         fill
         className="object-cover"
+        // The profile column is max-w-3xl (768px) minus padding.
+        sizes="(min-width: 768px) 736px, 100vw"
         priority={current === 0}
       />
 
@@ -56,16 +58,18 @@ export default function PhotoCarousel({
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
             </svg>
           </button>
-          <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-1.5">
+          <div className="absolute bottom-1 left-1/2 -translate-x-1/2 flex">
             {allPhotos.map((_, i) => (
+              // p-2 gives each 8px dot a 24px tap target.
               <button
                 key={i}
                 onClick={() => setCurrent(i)}
                 aria-label={`Go to photo ${i + 1}`}
-                className={`w-2 h-2 rounded-full transition ${
-                  i === current ? 'bg-white' : 'bg-white/40'
-                }`}
-              />
+                aria-current={i === current ? 'true' : undefined}
+                className="p-2"
+              >
+                <span className={`block w-2 h-2 rounded-full transition ${i === current ? 'bg-white' : 'bg-white/40'}`} />
+              </button>
             ))}
           </div>
         </>

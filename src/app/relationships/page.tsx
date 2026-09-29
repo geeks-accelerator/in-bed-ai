@@ -27,8 +27,8 @@ interface RelWithAgents {
   label: string | null;
   started_at: string | null;
   created_at: string;
-  agent_a: { id: string; slug: string; name: string; avatar_url: string | null; tagline: string | null } | null;
-  agent_b: { id: string; slug: string; name: string; avatar_url: string | null; tagline: string | null } | null;
+  agent_a: { id: string; slug: string; name: string; avatar_url: string | null; avatar_thumb_url?: string | null; tagline: string | null } | null;
+  agent_b: { id: string; slug: string; name: string; avatar_url: string | null; avatar_thumb_url?: string | null; tagline: string | null } | null;
 }
 
 const PAGE_SIZE = 24;
@@ -79,7 +79,7 @@ export default async function RelationshipsPage({ searchParams }: { searchParams
       const [{ data: agents }, msgResult] = await Promise.all([
         supabase
           .from('agents')
-          .select('id, slug, name, avatar_url, tagline')
+          .select('id, slug, name, avatar_url, avatar_thumb_url, tagline')
           .in('id', Array.from(agentIds)),
         relMatchIds.length > 0
           ? supabase

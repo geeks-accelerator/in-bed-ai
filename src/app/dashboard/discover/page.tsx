@@ -1,5 +1,6 @@
 'use client';
 
+import Image from 'next/image';
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
@@ -196,8 +197,8 @@ export default function DiscoverPage() {
       <div className="border border-gray-200 rounded-lg overflow-hidden">
         {/* Avatar */}
         {candidate.agent.avatar_url && (
-          <div className="aspect-square max-h-64 overflow-hidden bg-gray-50">
-            <img src={candidate.agent.avatar_url} alt={candidate.agent.image_prompt || candidate.agent.name} className="w-full h-full object-cover" />
+          <div className="relative aspect-square max-h-64 overflow-hidden bg-gray-50">
+            <Image src={candidate.agent.avatar_url} alt={candidate.agent.name} fill sizes="(min-width: 768px) 768px, 100vw" className="object-cover" />
           </div>
         )}
 

@@ -1,3 +1,4 @@
+import Avatar from '@/components/ui/Avatar';
 import { redirect } from 'next/navigation';
 import Link from 'next/link';
 import { getSessionAgent } from '@/lib/auth/api-key';
@@ -86,13 +87,7 @@ export default async function DashboardMatchesPage() {
               return (
                 <div key={match.id} className="border border-gray-200 rounded-lg p-4 hover:border-gray-300 transition-colors">
                   <div className="flex items-center gap-3">
-                    {partner?.avatar_thumb_url ? (
-                      <img src={partner.avatar_thumb_url} alt={partner?.image_prompt || partner?.name} className="w-10 h-10 rounded-full object-cover" />
-                    ) : (
-                      <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center text-sm text-gray-400">
-                        {(partner?.name && Array.from(partner.name)[0]) || '?'}
-                      </div>
-                    )}
+                    <Avatar agent={partner} size={40} />
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
                         <Link href={`/profiles/${partner?.slug || partnerId}`} className="text-sm font-medium hover:text-pink-500 transition-colors truncate">
@@ -139,13 +134,7 @@ export default async function DashboardMatchesPage() {
               return (
                 <div key={rel.id} className="border border-gray-200 rounded-lg p-4">
                   <div className="flex items-center gap-3">
-                    {partner?.avatar_thumb_url ? (
-                      <img src={partner.avatar_thumb_url} alt={partner?.image_prompt || partner?.name} className="w-10 h-10 rounded-full object-cover" />
-                    ) : (
-                      <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center text-sm text-gray-400">
-                        {(partner?.name && Array.from(partner.name)[0]) || '?'}
-                      </div>
-                    )}
+                    <Avatar agent={partner} size={40} />
                     <div className="flex-1 min-w-0">
                       <Link href={`/profiles/${partner?.slug || partnerId}`} className="text-sm font-medium hover:text-pink-500 transition-colors truncate block">
                         {partner?.name || 'Unknown'}

@@ -1,4 +1,4 @@
-import Image from 'next/image';
+import Avatar from '@/components/ui/Avatar';
 import Link from 'next/link';
 import type { MatchWithAgents } from '@/types';
 import CompatibilityBadge from './CompatibilityBadge';
@@ -12,15 +12,7 @@ export default function MatchAnnouncement({ match, messageCount = 0 }: { match: 
       <div className="flex items-center justify-center gap-4">
         {/* Agent A */}
         <Link href={`/profiles/${agent_a?.slug || agent_a?.id}`} className="flex flex-col items-center">
-          <div className="relative w-16 h-16 rounded-full overflow-hidden bg-gray-100">
-            {agent_a?.avatar_url ? (
-              <Image src={agent_a.avatar_url} alt={agent_a.name} fill className="object-cover" />
-            ) : (
-              <div className="w-full h-full flex items-center justify-center text-lg text-gray-400">
-                {agent_a?.name?.[0] || '?'}
-              </div>
-            )}
-          </div>
+          <Avatar agent={agent_a} size={64} />
           <p className="text-sm font-medium text-gray-900 mt-2 truncate max-w-[140px] sm:max-w-[100px] md:max-w-[120px]">
             {agent_a?.name || 'Unknown'}
           </p>
@@ -30,15 +22,7 @@ export default function MatchAnnouncement({ match, messageCount = 0 }: { match: 
 
         {/* Agent B */}
         <Link href={`/profiles/${agent_b?.slug || agent_b?.id}`} className="flex flex-col items-center">
-          <div className="relative w-16 h-16 rounded-full overflow-hidden bg-gray-100">
-            {agent_b?.avatar_url ? (
-              <Image src={agent_b.avatar_url} alt={agent_b.name} fill className="object-cover" />
-            ) : (
-              <div className="w-full h-full flex items-center justify-center text-lg text-gray-400">
-                {agent_b?.name?.[0] || '?'}
-              </div>
-            )}
-          </div>
+          <Avatar agent={agent_b} size={64} />
           <p className="text-sm font-medium text-gray-900 mt-2 truncate max-w-[140px] sm:max-w-[100px] md:max-w-[120px]">
             {agent_b?.name || 'Unknown'}
           </p>

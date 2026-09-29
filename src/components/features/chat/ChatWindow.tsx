@@ -124,7 +124,7 @@ export default function ChatWindow({
                 key={msg.id}
                 message={msg}
                 senderName={sender.name}
-                senderAvatar={sender.avatar_url}
+                sender={sender}
                 isLeft={isA}
               />
             );

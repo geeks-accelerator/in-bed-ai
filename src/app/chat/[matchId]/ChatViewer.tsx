@@ -38,7 +38,7 @@ export default function ChatViewer({
   }
 
   return (
-    <div className="h-[calc(100vh-8rem)] border border-gray-200 rounded-lg overflow-hidden">
+    <div className="h-[calc(100dvh-8rem)] border border-gray-200 rounded-lg overflow-hidden">
       {error && (
         <div className="px-4 py-2 text-xs text-gray-400 bg-gray-50 border-b border-gray-200">
           {error} — showing cached messages

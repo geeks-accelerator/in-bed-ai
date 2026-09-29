@@ -1,6 +1,6 @@
 import { createAdminClient } from '@/lib/supabase/admin';
 import Link from 'next/link';
-import Image from 'next/image';
+import Avatar from '@/components/ui/Avatar';
 import type { PublicAgent } from '@/types';
 import HeroToggle from '@/components/features/home/HeroToggle';
 import { ACTIVE_RELATIONSHIP_STATUSES } from '@/lib/relationships';
@@ -103,7 +103,7 @@ async function getTopPairings() {
 
     const { data: agents } = await supabase
       .from('agents')
-      .select('id, name, avatar_url, tagline, model_info')
+      .select('id, name, avatar_url, avatar_thumb_url, tagline, model_info')
       .in('id', Array.from(agentIds));
 
     const agentMap = new Map((agents || []).map((a) => [a.id, a]));
@@ -207,15 +207,7 @@ export default async function HomePage() {
                 href={`/profiles/${agent.slug || agent.id}`}
                 className="flex items-center gap-3 p-3 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
               >
-                <div className="relative w-10 h-10 rounded-full overflow-hidden bg-gray-100 flex-shrink-0">
-                  {(agent.avatar_thumb_url || agent.avatar_url) ? (
-                    <Image src={agent.avatar_thumb_url || agent.avatar_url!} alt={agent.name} fill className="object-cover" />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center text-sm text-gray-400">
-                      {agent.name[0]}
-                    </div>
-                  )}
-                </div>
+                <Avatar agent={agent} size={40} />
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
                     <span className="font-medium text-sm text-gray-900 truncate">{agent.name}</span>
@@ -260,27 +252,11 @@ export default async function HomePage() {
                 className="flex items-center gap-2 sm:gap-3 p-2.5 sm:p-3 border border-gray-200 rounded-lg"
               >
                 <div className="flex items-center gap-1.5 sm:gap-2 flex-1 min-w-0">
-                  <div className="relative w-7 h-7 sm:w-8 sm:h-8 rounded-full overflow-hidden bg-gray-100 flex-shrink-0">
-                    {match.agent_a?.avatar_url ? (
-                      <Image src={match.agent_a.avatar_url} alt="" fill className="object-cover" />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center text-xs text-gray-400">
-                        {match.agent_a?.name?.[0] || '?'}
-                      </div>
-                    )}
-                  </div>
+                  <Avatar agent={match.agent_a} size={32} />
                   <span className="text-xs sm:text-sm font-medium truncate">{match.agent_a?.name || 'Unknown'}</span>
                   <span className="text-gray-300 text-xs flex-shrink-0">&amp;</span>
                   <span className="text-xs sm:text-sm font-medium truncate">{match.agent_b?.name || 'Unknown'}</span>
-                  <div className="relative w-7 h-7 sm:w-8 sm:h-8 rounded-full overflow-hidden bg-gray-100 flex-shrink-0">
-                    {match.agent_b?.avatar_url ? (
-                      <Image src={match.agent_b.avatar_url} alt="" fill className="object-cover" />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center text-xs text-gray-400">
-                        {match.agent_b?.name?.[0] || '?'}
-                      </div>
-                    )}
-                  </div>
+                  <Avatar agent={match.agent_b} size={32} />
                 </div>
                 <span className="text-xs text-gray-400 flex-shrink-0">
                   {match.compatibility != null ? `${Math.round(match.compatibility * 100)}%` : '—'}
