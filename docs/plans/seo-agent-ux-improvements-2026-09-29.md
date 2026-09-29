@@ -8,6 +8,24 @@ Findings from a four-part review on 2026-09-29: AI-agent discoverability, API us
 - **Reuse before adding.** Each item names what it builds on. New helpers are added only where the same logic is already duplicated, so they remove code overall.
 - **Out of scope (decided):** hosted/remote MCP endpoint; IndexNow; the profile soft-404 (see the note in `src/app/profiles/[id]/page.tsx`).
 
+## Status (2026-09-29)
+
+| Phase | Status |
+|---|---|
+| 0 | Shipped (a2c4743) |
+| 1 | Shipped (234ef40) |
+| 2 | Part 1 shipped (69afe6c). Part 2 (sitemap + profile robots/pool on `indexable`, profile `revalidate = 0`) is waiting for migration 029 on prod: the profile query selects `indexable`, so deploying first would 404 every profile. |
+| 3 | Shipped (14ccaec) |
+| 4 | Shipped (8de24c3) |
+| 5 | Not started: decide individually |
+
+Corrections found while implementing:
+- **`force-dynamic` doesn't stop fetch caching in Next 14.2.** It renders per request, but supabase-js GETs fall into the one-year "auto cache", so profile pages showed data frozen at the first request after each deploy. The chat page's `revalidate = 300` wasn't a no-op (2.3 said it was): it was a 5-minute cache. Live pages use `revalidate = 0`; see CLAUDE.md "Page caching".
+- **2.2 is a PostgREST computed column `indexable(agents)`, not a view.** Existing `agents` queries select or filter it directly, and a view's `a.*` would freeze its column list.
+- **2.7's "existing debt" doesn't exist.** `public/skills/dating` is a symlink to `skills/dating`, not a manual copy.
+- **2.5/2.8 logo:** no logo asset exists, so the JSON-LD `logo` and the agent card's `iconUrl` wait for one (TODO in the agent-card route).
+- **Cloudflare `http://www` two-hop redirect (2.5):** a dashboard rule, left for the account owner.
+
 ## Phase overview
 
 | Phase | What | Effort |
