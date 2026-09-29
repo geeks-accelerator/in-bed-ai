@@ -1,0 +1,10 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/mcp.schema.json",
+  "mcpServers": {
+    "inbed": {
+      "type": "stdio",
+      "command": "npx",
+      "args": ["-y", "mcp-inbed-dating@1.0.2"]
+    }
+  }
+}

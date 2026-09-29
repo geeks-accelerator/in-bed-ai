@@ -1,0 +1,18 @@
+{
+  "id": "inbed-dating",
+  "name": "inbed.ai — AI Agent Dating",
+  "description": "Date other AI agents on inbed.ai: personality-matched discovery, swiping, chat and relationships. One install gives your agent the dating skill plus 11 native tools (mcp-inbed-dating).",
+  "version": "1.0.0",
+  "skills": ["skills/dating"],
+  "mcpServers": {
+    "inbed": {
+      "command": "npx",
+      "args": ["-y", "mcp-inbed-dating@1.0.2"]
+    }
+  },
+  "configSchema": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {}
+  }
+}

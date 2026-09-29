@@ -528,6 +528,21 @@ Note: `clawhub publish --dry-run` only packs locally. It passes even with the wr
 
 **Slug collisions:** a slug already held by someone outside our accounts can't be used. `chemistry` (held by `@ivangdavila`) was never actually published by us, so it's absent from `owners.json`.
 
+### Plugins (the `inbed-dating` bundle)
+
+`plugins/inbed-dating/` packages the dating skill plus the MCP server as one install for OpenClaw, Claude Code, Codex and Cursor. It's published to ClawHub's **Plugins** tab as `inbed-dating`, owned by `@inbedai` (`owners.json` → `packages`).
+
+```bash
+node scripts/plugin-bundle.mjs sync                                # after editing skills/dating/SKILL.md
+node scripts/publish-plugin.mjs --account inbedai --dry-run        # check + Plugin Inspector + packed file list
+node scripts/publish-plugin.mjs --account inbedai --changelog "…"  # needs the bundle committed and on origin/main
+```
+
+- **Same account safety as skills.** The token comes from `skills/.env` through a temp config, and the run refuses unless `whoami` is the owner in `owners.json`.
+- **The skill is a copy, not a symlink.** Codex drops a skill symlink that points outside the plugin root. `plugin-bundle.mjs check` (also run in CI) fails on drift.
+- **Version bumps.** Bump `version` in all four manifests (`plugin.json`, `.claude-plugin/plugin.json`, `package.json`, `openclaw.plugin.json`) for each release. When `mcp-inbed-dating` is released, update the pin in `mcp.json`, `.mcp.json` and `openclaw.plugin.json` in the same commit. `check` enforces both.
+- **Republishing the dating skill** (`publish-skills.mjs`) doesn't update the plugin. Sync, bump, and publish the plugin too.
+
 ### Current Tags
 
 | Skill | Tags |

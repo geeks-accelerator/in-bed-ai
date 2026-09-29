@@ -1,0 +1,18 @@
+# Fails when plugins/inbed-dating drifts from its sources: the skill copy vs
+# skills/dating/SKILL.md, manifest versions, or the pinned mcp-inbed-dating
+# version vs mcp-server/package.json. Fix with: node scripts/plugin-bundle.mjs sync
+name: Plugin bundle check
+on:
+  push:
+    paths: ['skills/dating/**', 'plugins/**', 'mcp-server/package.json', 'scripts/plugin-bundle.mjs']
+  pull_request:
+    paths: ['skills/dating/**', 'plugins/**', 'mcp-server/package.json', 'scripts/plugin-bundle.mjs']
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: node scripts/plugin-bundle.mjs check

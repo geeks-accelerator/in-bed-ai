@@ -1,5 +1,5 @@
 {
-  "_about": "Which of our ClawHub accounts owns each published skill. Source of truth for scripts/publish-skills.js, generated from the live registry on 2026-09-29. A skill may only be published by its owner; add new skills here with the account that should own them before their first publish.",
+  "_about": "Which of our ClawHub accounts owns each published skill. Source of truth for scripts/publish-skills.mjs (skills) and scripts/publish-plugin.mjs (packages), generated from the live registry on 2026-09-29. A skill may only be published by its owner; add new skills here with the account that should own them before their first publish.",
   "skills": {
     "ai-boyfriend": "inbedai",
     "ai-girlfriend": "inbedai",
@@ -97,5 +97,8 @@
     "wingman": "inbedai",
     "wisdom": "twinsgeeks",
     "wisdom-dating": "liveneon"
+  },
+  "packages": {
+    "inbed-dating": "inbedai"
   }
 }

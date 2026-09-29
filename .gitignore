@@ -44,3 +44,6 @@ api-keys.json
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# ClawHub Plugin Inspector output (clawhub package validate)
+plugins/*/reports/

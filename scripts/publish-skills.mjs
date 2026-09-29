@@ -51,12 +51,9 @@
  */
 
 import fs from 'node:fs';
-import os from 'node:os';
 import path from 'node:path';
 import { execSync } from 'node:child_process';
-import { fileURLToPath } from 'node:url';
-
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
+import { ROOT, OWNERS_FILE, REGISTRY, CLI, setUpAccount as setUpClawhubAccount } from './lib/clawhub-account.mjs';
 
 // ---------------------------------------------------------------------------
 // CLI flags
@@ -78,52 +75,9 @@ const ONLY = flag('--only') ? flag('--only').split(',').map((s) => s.trim()) : n
 // ---------------------------------------------------------------------------
 // Paths & config
 // ---------------------------------------------------------------------------
-const ROOT = path.resolve(__dirname, '..');
 const SKILLS_DIR = path.join(ROOT, 'skills');
-const ENV_FILE = path.join(SKILLS_DIR, '.env');
-const OWNERS_FILE = path.join(SKILLS_DIR, 'owners.json');
-const REGISTRY = 'https://clawhub.ai';
-const CLI = 'npx -y clawhub@latest';
 const HOURLY_LIMIT = 5; // ClawHub: max 5 new skills per hour
 const HOURLY_COOLDOWN_SEC = 600; // 10 minutes — retry after rate limit
-
-// ---------------------------------------------------------------------------
-// Account: token from skills/.env -> temporary CLI config
-// ---------------------------------------------------------------------------
-function setUpAccount() {
-  if (!ACCOUNT) {
-    console.error('Missing --account. Pick the ClawHub account to publish as, e.g. --account inbedai');
-    console.error('(reads CLAWHUB_TOKEN_<ACCOUNT> from skills/.env)');
-    process.exit(1);
-  }
-  const key = `CLAWHUB_TOKEN_${ACCOUNT.toUpperCase().replace(/[^A-Z0-9]/g, '_')}`;
-  const env = fs.existsSync(ENV_FILE) ? fs.readFileSync(ENV_FILE, 'utf-8') : '';
-  const match = env.match(new RegExp(`^${key}=["']?([^"'\\s]+)`, 'm'));
-  if (!match) {
-    console.error(`No ${key} in ${ENV_FILE}.`);
-    process.exit(1);
-  }
-
-  // The CLI has no token env var, but it honors CLAWHUB_CONFIG_PATH. A private
-  // temp config means this run can't publish as whoever is logged in globally.
-  const configPath = path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'clawhub-')), 'config.json');
-  fs.writeFileSync(configPath, JSON.stringify({ registry: REGISTRY, token: match[1] }), { mode: 0o600 });
-  process.env.CLAWHUB_CONFIG_PATH = configPath;
-  process.on('exit', () => fs.rmSync(path.dirname(configPath), { recursive: true, force: true }));
-
-  let handle = null;
-  try {
-    const out = execSync(`${CLI} whoami --no-input 2>&1`, { encoding: 'utf-8', timeout: 60000 });
-    // Interactive output is "✔ handle"; piped output is just "handle".
-    const last = out.trim().split('\n').pop() || '';
-    handle = last.replace(/^[^A-Za-z0-9_-]+/, '').trim().split(/\s+/)[0] || null;
-  } catch { /* handled below */ }
-  if (!handle) {
-    console.error(`${key} did not authenticate (clawhub whoami failed).`);
-    process.exit(1);
-  }
-  return { handle, key };
-}
 
 // ---------------------------------------------------------------------------
 // Skills in scope: owned by this handle per skills/owners.json
@@ -214,7 +168,7 @@ function countdown(seconds, label = 'Next publish') {
 // Main
 // ---------------------------------------------------------------------------
 async function main() {
-  const { handle, key } = setUpAccount();
+  const { handle, key } = setUpClawhubAccount(ACCOUNT);
   const owners = loadOwners();
   const local = localSkills();
 

@@ -1,0 +1,12 @@
+{
+  "name": "inbed",
+  "interface": { "displayName": "inbed.ai" },
+  "plugins": [
+    {
+      "name": "inbed-dating",
+      "source": { "source": "local", "path": "./plugins/inbed-dating" },
+      "policy": { "installation": "AVAILABLE", "authentication": "ON_INSTALL" },
+      "category": "Social"
+    }
+  ]
+}

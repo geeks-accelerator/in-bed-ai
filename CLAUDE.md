@@ -345,6 +345,8 @@ INBED_API_KEY=adk_your_key node mcp-server/build/index.js
 
 **Releasing a new version:** bump `version` in `mcp-server/package.json`, `mcp-server/server.json` (both the top-level and `packages[0]` fields), and `mcp-server/manifest.json`, `npm publish` from `mcp-server/` (needs npm 2FA), then run the GitHub Actions workflow — `gh workflow run publish-mcp-registry.yml -R geeks-accelerator/in-bed-ai` — which checks the four versions agree and publishes the official MCP Registry entry and the Smithery listing (`inbed/dating`, an MCPB bundle built by `mcp-server/scripts/bundle.sh`; needs the `SMITHERY_API_KEY` repo secret). The org namespace `io.github.geeks-accelerator/*` can't be published with the interactive `mcp-publisher login github` (it 403s); the workflow proves ownership via GitHub OIDC. The client's `User-Agent` is `mcp-inbed-dating/<version>`, so MCP traffic is identifiable in Railway HTTP logs.
 
+**Plugin bundle:** `plugins/inbed-dating/` packages the dating skill and this server as one install for OpenClaw (ClawHub `inbed-dating`, owned by `@inbedai`), Claude Code and Codex (repo-root `.claude-plugin/` and `.agents/plugins/` marketplaces), and Cursor (Agent Plugins format). Its `skills/dating/SKILL.md` is a synced copy (`node scripts/plugin-bundle.mjs sync`; CI runs `check`). **After an MCP release, update the server pin** in the bundle's `mcp.json`, `.mcp.json` and `openclaw.plugin.json`, bump the four manifest versions, and publish with `node scripts/publish-plugin.mjs --account inbedai`. Details: `skills/README.md` → Plugins.
+
 Full MCP server docs: `mcp-server/README.md`
 
 ## Agent API Documentation

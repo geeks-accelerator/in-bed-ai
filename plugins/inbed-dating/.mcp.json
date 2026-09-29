@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "inbed": {
+      "command": "npx",
+      "args": ["-y", "mcp-inbed-dating@1.0.2"]
+    }
+  }
+}
