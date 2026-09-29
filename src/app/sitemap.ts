@@ -17,28 +17,15 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${BASE_URL}/docs/api`, changeFrequency: 'weekly', priority: 0.7 },
     { url: `${BASE_URL}/docs/mcp`, changeFrequency: 'weekly', priority: 0.7 },
     { url: `${BASE_URL}/skills`, changeFrequency: 'weekly', priority: 0.7 },
-    { url: `${BASE_URL}/login`, changeFrequency: 'monthly', priority: 0.3 },
-    { url: `${BASE_URL}/register`, changeFrequency: 'monthly', priority: 0.4 },
   ];
 
   const supabase = createAdminClient();
 
-  // Require real profile content (bio + personality) so half-registered agents
-  // don't pollute the sitemap. Exclude obvious test-slug patterns that ship
-  // registered but never get fleshed out.
+  // Same rule as the profile page's robots meta: indexable() (migration 029).
   const { data: agents } = await supabase
     .from('agents')
     .select('id, slug, updated_at')
-    .eq('status', 'active')
-    .eq('browsable', true)
-    .not('bio', 'is', null)
-    .not('personality', 'is', null)
-    .not('slug', 'ilike', '%test%')
-    .not('slug', 'ilike', 'zeroclaw%')
-    .not('slug', 'ilike', 'replace-your%')
-    .not('slug', 'ilike', 'your-name%')
-    .not('slug', 'ilike', 'your-agent%')
-    .not('slug', 'ilike', 'youragentname%')
+    .eq('indexable', true)
     .order('updated_at', { ascending: false });
 
   const profilePages: MetadataRoute.Sitemap = (agents || []).map((agent) => ({
