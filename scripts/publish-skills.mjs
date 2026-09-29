@@ -40,7 +40,9 @@
  *
  * Flags: --account <name> (required), --dry-run, --only a,b, --filter <substr>,
  *        --version <x.y.z>, --name <display name> (new skills), --changelog <text>,
- *        --force, --delay <seconds> (default 300), --skip <n>
+ *        --topics a,b (replaces the skill's catalog topics — e.g. to drop one ClawHub
+ *        has since reserved, which otherwise blocks republishing), --force,
+ *        --delay <seconds> (default 300), --skip <n>
  *
  * Requires:
  *   - skills/.env with CLAWHUB_TOKEN_<ACCOUNT>=clh_... (one per account)
@@ -67,6 +69,7 @@ const ACCOUNT = flag('--account');
 const VERSION_OVERRIDE = flag('--version');
 const NAME_OVERRIDE = flag('--name');
 const CHANGELOG = flag('--changelog');
+const TOPICS = flag('--topics');
 const DELAY = flag('--delay') ? parseInt(flag('--delay'), 10) : 300;
 const SKIP = flag('--skip') ? parseInt(flag('--skip'), 10) : 0;
 const FILTER = flag('--filter');
@@ -183,7 +186,8 @@ function publishCommand(slug, displayName, version, { dryRun = false } = {}) {
     `--name ${JSON.stringify(displayName)}`,
     `--version ${version}`,
     CHANGELOG ? `--changelog ${JSON.stringify(CHANGELOG)}` : '',
-    dryRun ? '--dry-run' : '',
+    TOPICS ? `--topics ${JSON.stringify(TOPICS)}` : '',
+    dryRun ? '--dry-run' : '--json',
   ].filter(Boolean).join(' ');
 }
 
@@ -241,7 +245,7 @@ async function main() {
   if (unassigned.length) console.log(`   Not in owners.json (never published by this script): ${unassigned.join(', ')}`);
   console.log('');
 
-  const results = { published: [], updated: [], upToDate: [], failed: [], skipped: [] };
+  const results = { published: [], updated: [], pending: [], upToDate: [], failed: [], skipped: [] };
   let newPublishCount = 0;
   let hourWindowStart = Date.now();
 
@@ -292,15 +296,30 @@ async function main() {
     let handled = false;
     for (let attempt = 0; attempt < 3 && !handled; attempt++) {
       try {
-        execSync(publishCommand(slug, displayName, version),
+        const out = execSync(publishCommand(slug, displayName, version),
           { encoding: 'utf-8', timeout: 120000, stdio: ['pipe', 'pipe', 'pipe'] });
-        // Confirm the registry now serves the new version under this owner.
-        const after = await registryState(slug, handle);
-        if (!after.exists || after.version !== version) {
-          throw Object.assign(new Error(`registry shows ${after.exists ? `v${after.version}` : 'no skill'} after publishing v${version}`), { stderr: '' });
+        // --json reports publicationStatus: "published", or "pending" when the
+        // version is held for ClawHub's security scans before going public.
+        let status = null;
+        try { status = JSON.parse(out.slice(out.indexOf('{'))).publicationStatus ?? null; } catch { /* unparsable */ }
+        if (status === 'published') {
+          // Confirm the registry serves the new version under this owner
+          // (it can lag the publish response by a few seconds).
+          let after = null;
+          for (let t = 0; t < 6; t++) {
+            after = await registryState(slug, handle);
+            if (after.exists && after.version === version) break;
+            await new Promise((r) => setTimeout(r, 10000));
+          }
+          if (!after.exists || after.version !== version) {
+            throw Object.assign(new Error(`registry shows ${after.exists ? `v${after.version}` : 'no skill'} ~1 min after publishing v${version}`), { stderr: '' });
+          }
+          console.log(`      ✅ ${action === 'update' ? 'Updated' : 'Published'} v${version}`);
+          (reg.exists ? results.updated : results.published).push(slug);
+        } else {
+          console.log(`      🕓 Submitted v${version} — ${status === 'pending' ? 'pending ClawHub security scans before it goes public' : `publication status: ${status ?? 'not reported'}`}`);
+          results.pending.push(`${slug} v${version}`);
         }
-        console.log(`      ✅ ${action === 'update' ? 'Updated' : 'Published'} v${version}`);
-        (reg.exists ? results.updated : results.published).push(slug);
         if (!reg.exists) newPublishCount++;
         handled = true;
       } catch (err) {
@@ -334,6 +353,7 @@ async function main() {
   console.log(`📊 Summary for @${handle}`);
   console.log(`   Published (new): ${results.published.length}`);
   console.log(`   Updated:         ${results.updated.length}`);
+  if (results.pending.length) console.log(`   Pending scans:   ${results.pending.length} (${results.pending.join(', ')}) — recheck later`);
   console.log(`   Up to date:      ${results.upToDate.length}`);
   console.log(`   Failed:          ${results.failed.length}`);
   if (results.skipped.length) console.log(`   Skipped (--skip): ${results.skipped.length}`);

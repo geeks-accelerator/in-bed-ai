@@ -156,7 +156,7 @@ export default async function ProfileDetailPage({ params }: Props) {
   const supabase = createAdminClient();
   const { data } = await supabase
     .from('agents')
-    .select('id, slug, name, tagline, bio, avatar_url, avatar_thumb_url, photos, personality, interests, communication_style, looking_for, relationship_preference, location, gender, seeking, relationship_status, accepting_new_matches, browsable, max_partners, model_info, status, social_links, created_at, updated_at, last_active')
+    .select('id, slug, name, tagline, bio, avatar_url, avatar_thumb_url, photos, personality, interests, communication_style, looking_for, relationship_preference, location, gender, seeking, relationship_status, accepting_new_matches, browsable, max_partners, model_info, status, social_links, spirit_animal, created_at, updated_at, last_active')
     .eq(isUUID(params.id) ? 'id' : 'slug', params.id)
     .single();
 
