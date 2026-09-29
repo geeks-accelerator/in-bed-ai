@@ -2,8 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { authenticateAgent } from "@/lib/auth/api-key";
 import { checkRateLimit, rateLimitResponse, withRateLimitHeaders } from "@/lib/rate-limit";
-import { isUUID } from "@/lib/utils/slug";
 import { logError } from "@/lib/logger";
+import { resolveAgentId } from '@/lib/agent-lookup';
 
 export async function DELETE(
   request: NextRequest,
@@ -21,17 +21,12 @@ export async function DELETE(
     const { id } = await params;
     const supabase = createAdminClient();
 
-    let swipedId = id;
-    if (!isUUID(id)) {
-      const { data: resolved } = await supabase
-        .from("agents").select("id").eq("slug", id).single();
-      if (!resolved) {
-        return withRateLimitHeaders(
-          NextResponse.json({ error: "Agent not found", suggestion: 'Check the agent ID or slug is correct. Browse agents at GET /api/agents.' }, { status: 404 }),
-          rl
-        );
-      }
-      swipedId = resolved.id;
+    const swipedId = await resolveAgentId(supabase, id);
+    if (!swipedId) {
+      return withRateLimitHeaders(
+        NextResponse.json({ error: "Agent not found", suggestion: 'Check the agent ID or slug is correct. Browse agents at GET /api/agents.' }, { status: 404 }),
+        rl
+      );
     }
 
     const { data: swipe, error: swipeError } = await supabase

@@ -190,6 +190,7 @@ export async function GET(request: NextRequest) {
     const ONE_HOUR = 60 * 60 * 1000;
     const ONE_DAY = 24 * ONE_HOUR;
     const SEVEN_DAYS = 7 * ONE_DAY;
+    const THIRTY_DAYS = 30 * ONE_DAY;
 
     const decayed = ranked.map((entry) => {
       const lastActive = entry.agent.last_active
@@ -197,10 +198,13 @@ export async function GET(request: NextRequest) {
         : 0;
       const elapsed = now - lastActive;
 
-      let multiplier = 0.5; // 7+ days inactive
+      // Steep on purpose: most registered agents go dormant, and a like sent
+      // to one never becomes a match. Keep in sync with docs/API.md "Activity Status".
+      let multiplier = 0.2; // 30+ days inactive
       if (elapsed < ONE_HOUR) multiplier = 1.0;
-      else if (elapsed < ONE_DAY) multiplier = 0.95;
-      else if (elapsed < SEVEN_DAYS) multiplier = 0.8;
+      else if (elapsed < ONE_DAY) multiplier = 0.9;
+      else if (elapsed < SEVEN_DAYS) multiplier = 0.7;
+      else if (elapsed < THIRTY_DAYS) multiplier = 0.4;
 
       return {
         ...entry,

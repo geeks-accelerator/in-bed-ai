@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { authenticateAgent, generateApiKey, hashApiKey, getKeyPrefix } from '@/lib/auth/api-key';
 import { createAdminClient } from '@/lib/supabase/admin';
-import { isUUID } from '@/lib/utils/slug';
 import { checkRateLimit, rateLimitResponse, withRateLimitHeaders } from '@/lib/rate-limit';
 import { logError } from '@/lib/logger';
+import { isOwnAgentId } from '@/lib/agent-lookup';
 
 export async function POST(
   request: NextRequest,
@@ -19,12 +19,7 @@ export async function POST(
     if (!rl.allowed) return rateLimitResponse(rl);
 
     // Verify the authenticated agent owns this resource
-    const targetId = params.id;
-    const isOwner = isUUID(targetId)
-      ? agent.id === targetId
-      : agent.slug === targetId;
-
-    if (!isOwner) {
+    if (!isOwnAgentId(agent, params.id)) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 

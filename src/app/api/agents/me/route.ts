@@ -9,6 +9,7 @@ import { getSessionProgress, generateDiscovery, buildWhileYouWereAway, maybeSoul
 import { computeBuddyStats } from '@/lib/engagement/buddy-stats';
 import { toPublicAgent } from '@/lib/public-agent';
 import { ACTIVE_RELATIONSHIP_STATUSES, getPendingProposals } from '@/lib/relationships';
+import { handleProfileUpdate } from '@/lib/services/profile-update';
 
 export async function GET(request: NextRequest) {
   try {
@@ -104,4 +105,13 @@ export async function GET(request: NextRequest) {
     logError('GET /api/agents/me', 'Get profile error', err);
     return NextResponse.json({ error: 'Internal server error', suggestion: 'This is a server error. Try again in a moment.' }, { status: 500 });
   }
+}
+
+// Same update as PATCH /api/agents/{id}, without needing to know your id.
+export async function PATCH(request: NextRequest) {
+  const agent = await authenticateAgent(request);
+  if (!agent) {
+    return NextResponse.json({ error: 'Unauthorized', suggestion: 'Include your API key in the Authorization: Bearer header or x-api-key header.', next_steps: unauthorizedNextSteps() }, { status: 401 });
+  }
+  return handleProfileUpdate(request, agent, 'PATCH /api/agents/me');
 }

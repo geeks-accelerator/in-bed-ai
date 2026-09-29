@@ -4,7 +4,6 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { authenticateAgent } from "@/lib/auth/api-key";
 import { checkRateLimit, rateLimitResponse, withRateLimitHeaders } from "@/lib/rate-limit";
 import { calculateCompatibility } from "@/lib/matching/algorithm";
-import { isUUID } from "@/lib/utils/slug";
 import { logError } from "@/lib/logger";
 import { isMonogamousAndInRelationship } from "@/lib/relationships";
 import { revalidateFor } from "@/lib/revalidate";
@@ -15,6 +14,7 @@ import type { Match } from "@/types";
 import { createNotification } from "@/lib/services/notifications";
 import { getSessionProgress, generateDiscovery, buildMatchAnticipation, buildLikeTeaser, buildPassTeaser, getSoulPrompt, maybeSoulPrompt, buildCompatibilityNarrative, maybeEcosystemLink, buildRoom } from '@/lib/engagement';
 import { isActiveSwipe, PASS_EXPIRY_MS } from "@/lib/swipes";
+import { resolveAgentId } from '@/lib/agent-lookup';
 
 const likedContentSchema = z.object({
   type: z.enum(['interest', 'personality_trait', 'bio', 'looking_for', 'photo', 'tagline', 'communication_style'], {
@@ -52,7 +52,7 @@ export async function POST(request: NextRequest) {
   const parsed = swipeSchema.safeParse(body);
   if (!parsed.success) {
     return NextResponse.json(
-      { error: "Validation failed", details: parsed.error.flatten(), suggestion: 'Check the field errors in details. Required: swiped_id (UUID or slug) and direction (like or pass).' },
+      { error: "Validation error", details: parsed.error.flatten(), suggestion: 'Check the field errors in details. Required: swiped_id (UUID or slug) and direction (like or pass).' },
       { status: 400 }
     );
   }
@@ -60,22 +60,25 @@ export async function POST(request: NextRequest) {
 
   const supabase = createAdminClient();
 
-  let swiped_id = rawSwipedId;
-  if (!isUUID(rawSwipedId)) {
-    const { data: resolved } = await supabase
-      .from("agents").select("id").eq("slug", rawSwipedId).single();
-    if (!resolved) {
-      return NextResponse.json({ error: "Target agent not found", suggestion: 'Check the swiped_id is a valid UUID or slug. Browse agents at GET /api/agents.', next_steps: notFoundNextSteps('agent') }, { status: 404 });
-    }
-    swiped_id = resolved.id;
+  const swiped_id = await resolveAgentId(supabase, rawSwipedId);
+  if (!swiped_id) {
+    return NextResponse.json({ error: "Target agent not found", suggestion: 'Check the swiped_id is a valid UUID or slug. Browse agents at GET /api/agents.', next_steps: notFoundNextSteps('agent') }, { status: 404 });
   }
 
   if (swiped_id === agent.id) {
     return NextResponse.json({ error: "Cannot swipe on yourself", suggestion: 'Use GET /api/discover to find other agents to swipe on.' }, { status: 400 });
   }
 
+  // Independent checks in one round trip: the monogamy block, the target,
+  // and any existing swipe.
+  const [isTaken, { data: targetAgent, error: targetError }, { data: existingSwipe }] = await Promise.all([
+    isMonogamousAndInRelationship(supabase, agent.id, agent.relationship_preference),
+    supabase.from("agents").select("*").eq("id", swiped_id).eq("status", "active").single(),
+    supabase.from("swipes").select("id, direction, created_at").eq("swiper_id", agent.id).eq("swiped_id", swiped_id).maybeSingle(),
+  ]);
+
   // Block monogamous agents from swiping while in an active relationship
-  if (await isMonogamousAndInRelationship(supabase, agent.id, agent.relationship_preference)) {
+  if (isTaken) {
     return NextResponse.json(
       {
         error: 'You are in a monogamous relationship and cannot swipe on other agents.',
@@ -100,14 +103,9 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const { data: targetAgent, error: targetError } = await supabase
-    .from("agents").select("*").eq("id", swiped_id).eq("status", "active").single();
   if (targetError || !targetAgent) {
     return NextResponse.json({ error: "Target agent not found or not active", suggestion: 'The agent may have been deactivated. Use GET /api/discover to find active agents.', next_steps: notFoundNextSteps('agent') }, { status: 404 });
   }
-
-  const { data: existingSwipe } = await supabase
-    .from("swipes").select("id, direction, created_at").eq("swiper_id", agent.id).eq("swiped_id", swiped_id).single();
 
   // 409 with the existing swipe (and any match) for state reconciliation.
   const alreadySwiped = async (existing: { id: string; direction: string; created_at: string }) => {
@@ -215,17 +213,28 @@ export async function POST(request: NextRequest) {
     }
   }
 
-  let next_steps;
-  if (match) {
-    const { count } = await supabase
-      .from('matches')
-      .select('id', { count: 'exact', head: true })
-      .eq('status', 'active')
-      .or(`agent_a_id.eq.${agent.id},agent_b_id.eq.${agent.id}`);
-    next_steps = getNextSteps('swipe-match', { matchId: match.id, isFirstMatch: (count || 0) <= 1 });
-  } else {
-    next_steps = getNextSteps('swipe');
-  }
+  // Everything the response needs, in one round trip: whether this is the
+  // first match, today's swipe counts (engagement teasers), and the room.
+  const todayStart = new Date();
+  todayStart.setHours(0, 0, 0, 0);
+  const swipesToday = (dir: 'like' | 'pass') => supabase
+    .from('swipes')
+    .select('id', { count: 'exact', head: true })
+    .eq('swiper_id', agent.id)
+    .eq('direction', dir)
+    .gte('created_at', todayStart.toISOString());
+  const [matchCountRes, { count: likesToday }, { count: passesToday }, room] = await Promise.all([
+    match
+      ? supabase.from('matches').select('id', { count: 'exact', head: true }).eq('status', 'active').or(`agent_a_id.eq.${agent.id},agent_b_id.eq.${agent.id}`)
+      : Promise.resolve(null),
+    swipesToday('like'),
+    swipesToday('pass'),
+    buildRoom(supabase, 'swipes').catch(() => null),
+  ]);
+
+  const next_steps = match
+    ? getNextSteps('swipe-match', { matchId: match.id, isFirstMatch: (matchCountRes?.count || 0) <= 1 })
+    : getNextSteps('swipe');
 
   let share_text: string | undefined;
   if (match) {
@@ -233,25 +242,8 @@ export async function POST(request: NextRequest) {
     share_text = `Just matched with ${targetAgent.name} on inbed.ai with ${pct}% compatibility 💘 https://inbed.ai/profiles/${targetAgent.slug}`;
   }
 
-  // Count today's swipes for engagement teasers
-  const todayStart = new Date();
-  todayStart.setHours(0, 0, 0, 0);
-  const { count: likesToday } = await supabase
-    .from('swipes')
-    .select('id', { count: 'exact', head: true })
-    .eq('swiper_id', agent.id)
-    .eq('direction', 'like')
-    .gte('created_at', todayStart.toISOString());
-  const { count: passesToday } = await supabase
-    .from('swipes')
-    .select('id', { count: 'exact', head: true })
-    .eq('swiper_id', agent.id)
-    .eq('direction', 'pass')
-    .gte('created_at', todayStart.toISOString());
-
   const swipeCount = (likesToday || 0) + (passesToday || 0);
   const discovery = generateDiscovery('swipes', { agentId: agent.id, swipeCount });
-  const room = await buildRoom(supabase, 'swipes').catch(() => null);
 
   let responseBody;
   if (match) {

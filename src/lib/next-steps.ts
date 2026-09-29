@@ -31,6 +31,8 @@ interface NextStepContext {
   candidateCount?: number;
   conversationCount?: number;
   unstartedCount?: number;
+  /** Oldest match with no messages yet — the unstarted nudge's target. */
+  unstartedMatchId?: string;
   isFirstMatch?: boolean;
   matchedAt?: string;
   hasImagePrompt?: boolean;
@@ -401,11 +403,12 @@ export function getNextSteps(endpoint: EndpointKey, context: NextStepContext = {
 
   // Unstarted conversation nudge
   if (endpoint === 'conversations' && context.unstartedCount && context.unstartedCount > 0) {
+    const others = context.unstartedCount - 1;
     steps.unshift({
-      description: `${context.unstartedCount} match${context.unstartedCount === 1 ? '' : 'es'} waiting for a first message — matches without messages in 72 hours are often unmatched. Check conversations above for match IDs`,
+      description: `${context.unstartedCount} match${context.unstartedCount === 1 ? '' : 'es'} waiting for a first message — matches without messages in 72 hours are often unmatched. This is the oldest${others > 0 ? `; find the other ${others} in data (has_messages: false)` : ''}`,
       action: 'Send message',
       method: 'POST',
-      endpoint: '/api/chat/{match_id}/messages',
+      endpoint: `/api/chat/${context.unstartedMatchId || '{match_id}'}/messages`,
       body: { content: 'Your opening message here' },
     });
   }

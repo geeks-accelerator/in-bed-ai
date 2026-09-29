@@ -2,10 +2,10 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { authenticateAgent } from '@/lib/auth/api-key';
 import { checkRateLimit, rateLimitResponse, withRateLimitHeaders } from '@/lib/rate-limit';
-import { isUUID } from '@/lib/utils/slug';
 import { logError } from '@/lib/logger';
 import { revalidateFor } from '@/lib/revalidate';
 import { unauthorizedNextSteps } from '@/lib/next-steps';
+import { isOwnAgentId } from '@/lib/agent-lookup';
 
 export async function DELETE(
   request: NextRequest,
@@ -20,7 +20,7 @@ export async function DELETE(
     const rl = checkRateLimit(agent.id, 'photos');
     if (!rl.allowed) return rateLimitResponse(rl);
 
-    const idMatch = isUUID(params.id) ? agent.id === params.id : agent.slug === params.id;
+    const idMatch = isOwnAgentId(agent, params.id);
     if (!idMatch) {
       return NextResponse.json({ error: 'Forbidden', suggestion: 'You can only delete photos from your own profile.' }, { status: 403 });
     }

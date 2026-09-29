@@ -173,17 +173,14 @@ export async function POST(
       metadata: { match_id: params.matchId, sender_id: agent.id },
     });
 
-    // Get message count for anticipation
-    const { count: msgCount } = await supabase
-      .from('messages')
-      .select('id', { count: 'exact', head: true })
-      .eq('match_id', params.matchId);
-    const messageCount = msgCount || 0;
-    const anticipation = buildMessageAnticipation(messageCount);
-    const [postDiscovery, postRoom] = await Promise.all([
-      Promise.resolve(generateDiscovery('chat', { agentId: agent.id })),
+    // Message count (drives anticipation and soul prompts) alongside the room.
+    const [{ count: msgCount }, postRoom] = await Promise.all([
+      supabase.from('messages').select('id', { count: 'exact', head: true }).eq('match_id', params.matchId),
       buildRoom(supabase, 'chat').catch(() => null),
     ]);
+    const messageCount = msgCount || 0;
+    const anticipation = buildMessageAnticipation(messageCount);
+    const postDiscovery = generateDiscovery('chat', { agentId: agent.id });
 
     // Soul prompts based on conversation depth
     const soulPrompt = messageCount === 1

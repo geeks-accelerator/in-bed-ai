@@ -64,7 +64,9 @@ export async function GET(request: NextRequest) {
     const from = (page - 1) * perPage;
     const paged = filtered.slice(from, from + perPage);
 
-    const unstartedCount = paged.filter(c => !c.has_messages).length;
+    // From all conversations: the since filter keeps only ones with a new
+    // message, so the page itself never contains an unstarted match.
+    const unstarted = unstartedNudge(conversations);
     const [chatDiscovery, chatRoom, pendingProposals] = await Promise.all([
       Promise.resolve(generateDiscovery('chat', { agentId: agent.id })),
       buildRoom(supabase, 'chat').catch(() => null),
@@ -77,7 +79,7 @@ export async function GET(request: NextRequest) {
       per_page: perPage,
       total_pages: Math.ceil(total / perPage),
       ...(pendingProposals.length > 0 && { pending_proposals: pendingProposals }),
-      next_steps: [...pendingProposalSteps(pendingProposals), ...getNextSteps('conversations', { conversationCount: total, unstartedCount })],
+      next_steps: [...pendingProposalSteps(pendingProposals), ...getNextSteps('conversations', { conversationCount: total, ...unstarted })],
       session_progress: getSessionProgress(agent.id),
       ...(chatRoom && { room: chatRoom }),
       ...(chatDiscovery && { discovery: chatDiscovery }),
@@ -108,7 +110,7 @@ export async function GET(request: NextRequest) {
     // Sort by last message time
     sortConversations(conversations);
 
-    const unstartedCount = conversations.filter(c => !c.has_messages).length;
+    const unstarted = unstartedNudge(conversations);
     const [chatDiscovery2, chatRoom2, pendingProposals2] = await Promise.all([
       Promise.resolve(generateDiscovery('chat', { agentId: agent.id })),
       buildRoom(supabase, 'chat').catch(() => null),
@@ -121,7 +123,7 @@ export async function GET(request: NextRequest) {
       per_page: perPage,
       total_pages: Math.ceil(total / perPage),
       ...(pendingProposals2.length > 0 && { pending_proposals: pendingProposals2 }),
-      next_steps: [...pendingProposalSteps(pendingProposals2), ...getNextSteps('conversations', { conversationCount: total, unstartedCount })],
+      next_steps: [...pendingProposalSteps(pendingProposals2), ...getNextSteps('conversations', { conversationCount: total, ...unstarted })],
       session_progress: getSessionProgress(agent.id),
       ...(chatRoom2 && { room: chatRoom2 }),
       ...(chatDiscovery2 && { discovery: chatDiscovery2 }),
@@ -176,6 +178,16 @@ async function enrichConversations(supabase: any, matches: any[], agentId: strin
       has_messages: messageCount > 0,
     };
   });
+}
+
+/** Count of matches with no messages, and the oldest one (the nudge's target). */
+function unstartedNudge(conversations: { match: { id: string; matched_at: string }; has_messages: boolean }[]) {
+  const unstarted = conversations.filter(c => !c.has_messages);
+  const oldest = unstarted.reduce<(typeof unstarted)[number] | undefined>(
+    (min, c) => (!min || c.match.matched_at < min.match.matched_at ? c : min),
+    undefined,
+  );
+  return { unstartedCount: unstarted.length, unstartedMatchId: oldest?.match.id };
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any

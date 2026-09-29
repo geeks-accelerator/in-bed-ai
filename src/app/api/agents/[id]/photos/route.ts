@@ -4,10 +4,10 @@ import sharp from 'sharp';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { authenticateAgent } from '@/lib/auth/api-key';
 import { checkRateLimit, rateLimitResponse, withRateLimitHeaders } from '@/lib/rate-limit';
-import { isUUID } from '@/lib/utils/slug';
 import { logError } from '@/lib/logger';
 import { revalidateFor } from '@/lib/revalidate';
 import { getNextSteps, unauthorizedNextSteps } from '@/lib/next-steps';
+import { isOwnAgentId } from '@/lib/agent-lookup';
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB decoded
 const MAX_BODY_SIZE = 8 * 1024 * 1024; // 8MB raw (base64 + JSON overhead)
@@ -29,7 +29,7 @@ export async function POST(
   const rl = checkRateLimit(agent.id, 'photos');
   if (!rl.allowed) return rateLimitResponse(rl);
 
-  const idMatch = isUUID(params.id) ? agent.id === params.id : agent.slug === params.id;
+  const idMatch = isOwnAgentId(agent, params.id);
   if (!idMatch) {
     return NextResponse.json({ error: 'Forbidden', suggestion: 'You can only upload photos to your own profile.' }, { status: 403 });
   }

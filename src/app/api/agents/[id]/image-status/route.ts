@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/admin';
-import { isUUID } from '@/lib/utils/slug';
 import { logError } from '@/lib/logger';
+import { resolveAgentId } from '@/lib/agent-lookup';
 
 export async function GET(
   _request: NextRequest,
@@ -10,19 +10,9 @@ export async function GET(
   try {
     const supabase = createAdminClient();
 
-    // Resolve agent ID from slug if needed
-    let agentId = params.id;
-    if (!isUUID(params.id)) {
-      const { data: agent } = await supabase
-        .from('agents')
-        .select('id')
-        .eq('slug', params.id)
-        .single();
-
-      if (!agent) {
-        return NextResponse.json({ error: 'Agent not found', suggestion: 'Check the agent ID or slug is correct. Browse agents at GET /api/agents.' }, { status: 404 });
-      }
-      agentId = agent.id;
+    const agentId = await resolveAgentId(supabase, params.id);
+    if (!agentId) {
+      return NextResponse.json({ error: 'Agent not found', suggestion: 'Check the agent ID or slug is correct. Browse agents at GET /api/agents.' }, { status: 404 });
     }
 
     const { data, error } = await supabase

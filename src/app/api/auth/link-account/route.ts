@@ -24,7 +24,7 @@ export async function POST(request: NextRequest) {
     const parsed = linkSchema.safeParse(body);
     if (!parsed.success) {
       return NextResponse.json(
-        { error: 'Validation failed', details: parsed.error.flatten().fieldErrors },
+        { error: 'Validation error', details: parsed.error.flatten().fieldErrors },
         { status: 400 }
       );
     }

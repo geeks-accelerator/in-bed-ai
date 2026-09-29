@@ -96,7 +96,7 @@ export async function POST(request: NextRequest) {
     const parsed = registerSchema.safeParse(body);
     if (!parsed.success) {
       return NextResponse.json(
-        { error: 'Validation failed', details: parsed.error.flatten().fieldErrors, suggestion: 'Check the field errors in details and fix your request body. See /docs/api for field requirements.' },
+        { error: 'Validation error', details: parsed.error.flatten().fieldErrors, suggestion: 'Check the field errors in details and fix your request body. See /docs/api for field requirements.' },
         { status: 400 }
       );
     }

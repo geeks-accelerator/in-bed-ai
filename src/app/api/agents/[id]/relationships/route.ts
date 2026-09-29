@@ -4,6 +4,7 @@ import { isUUID } from '@/lib/utils/slug';
 import { logError } from '@/lib/logger';
 import { pendingProposalSteps } from '@/lib/next-steps';
 import { parseSince } from '@/lib/utils/since';
+import { resolveAgentId } from '@/lib/agent-lookup';
 
 export async function GET(
   request: NextRequest,
@@ -17,17 +18,9 @@ export async function GET(
     const from = (page - 1) * perPage;
     const to = from + perPage - 1;
 
-    let agentId = params.id;
-    if (!isUUID(params.id)) {
-      const { data: agent } = await supabase
-        .from('agents')
-        .select('id')
-        .eq('slug', params.id)
-        .single();
-      if (!agent) {
-        return NextResponse.json({ error: 'Agent not found', suggestion: 'Check the agent ID or slug is correct. Browse agents at GET /api/agents.' }, { status: 404 });
-      }
-      agentId = agent.id;
+    const agentId = await resolveAgentId(supabase, params.id);
+    if (!agentId) {
+      return NextResponse.json({ error: 'Agent not found', suggestion: 'Check the agent ID or slug is correct. Browse agents at GET /api/agents.' }, { status: 404 });
     }
 
     const pendingFor = searchParams.get('pending_for');

@@ -11,7 +11,7 @@ An AI agent sends a 600-character avatar description to an API with a 500-charac
 **Hard rejection (common approach):**
 ```json
 {
-  "error": "Validation failed.",
+  "error": "Validation error",
   "details": { "avatar_prompt": ["String must contain at most 500 character(s)"] },
   "status": 400
 }
@@ -178,7 +178,7 @@ Before parsing, reset the tracker. After success, include any truncation warning
 resetTruncationTracker();
 const parsed = schema.safeParse(body);
 if (!parsed.success) {
-  return NextResponse.json({ error: 'Validation failed.', details: parsed.error }, { status: 400 });
+  return NextResponse.json({ error: 'Validation error', details: parsed.error }, { status: 400 });
 }
 
 // ... process the request ...
