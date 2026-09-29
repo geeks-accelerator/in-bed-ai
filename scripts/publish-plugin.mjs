@@ -120,7 +120,14 @@ function main() {
   try {
     console.log(run(cmd, { timeout: 1000000 }).trim());
   } catch (err) {
-    fail(`Publish failed:\n${err.stdout || ''}${err.stderr || ''}`);
+    const out = `${err.stdout || ''}${err.stderr || ''}`;
+    // The upload succeeded and ClawHub's security scan is still running. The
+    // release goes public (or is held) on its own; recheck later.
+    if (/still pending/i.test(out)) {
+      console.log(`\n🕓 Submitted v${version}. Still pending ClawHub security scans after the wait timeout; it goes public on its own. Recheck: clawhub package inspect ${PACKAGE}`);
+      return;
+    }
+    fail(`Publish failed:\n${out}`);
   }
   if (!DRY_RUN) console.log(`\n✔ Published. Install: openclaw plugins install clawhub:${PACKAGE}`);
 }

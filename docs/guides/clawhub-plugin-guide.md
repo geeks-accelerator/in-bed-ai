@@ -128,10 +128,12 @@ What the script does:
 - **Account safety.** The token comes from `CLAWHUB_TOKEN_INBEDAI` in `skills/.env`, through a private temp config, never your global `clawhub login`. It refuses unless `whoami` matches `skills/owners.json` → `packages.inbed-dating`. Publishing from the wrong account has gotten an account banned before.
 - **Checks.** It runs `plugin-bundle.mjs check` and the Plugin Inspector, and refuses a version that's already live.
 - **The publish call:** `clawhub package publish plugins/inbed-dating --family bundle-plugin --name inbed-dating --display-name … --owner inbedai --version <plugin.json version> --topics … --source-repo … --source-commit <HEAD> --source-ref main --source-path plugins/inbed-dating --wait`.
-- **Waiting.** `--wait` blocks until ClawHub's security scan finishes, which can take many minutes. Until then the package is visible only to its owner, and `clawhub package inspect inbed-dating` returns "not found" for everyone else.
+- **Waiting.** `--wait` blocks until ClawHub's security scan finishes. The first release took about 21 minutes, longer than the 15-minute wait, so the script reports "still pending" instead of failing, and the release goes public on its own. Until then the package is visible only to its owner, and `clawhub package inspect inbed-dating` returns "not found" for everyone else.
+- **Listing URL.** `https://clawhub.ai/<owner>/plugins/<name>`: ours is https://clawhub.ai/inbedai/plugins/inbed-dating (`/plugins/inbed-dating` redirects there).
 
 ClawHub limits worth knowing:
 - **At most 5 topics** per package (`Topics are limited to 5`).
+- **Category.** Without a declared category the listing shows "Other". Set one controlled category slug in `openclaw.plugin.json` → `categories` (e.g. `["social"]`; check the slug list at publish time).
 - **Package names share a namespace with skills.** `dating` was taken by our own skill, which is why the plugin is `inbed-dating`.
 
 ## Releasing an update
@@ -153,4 +155,5 @@ ClawHub limits worth knowing:
 | Codex installs an empty `skills/` | Skill is a symlink outside the plugin root | Use the synced copy |
 | Plugin installs but the MCP server fails to start | Pin points at a server version that isn't on npm (yet) | Publish the server first; check `npm view` |
 | `publish-mcp-registry` fails at "npm has this version" | Workflow ran before npm finished processing | Wait for `npm view`, then re-run |
-| `inspect` says "not found" right after publishing | Security scan still pending | Wait; the owner can see it in the ClawHub dashboard |
+| `inspect` says "not found" right after publishing | Security scan still pending (~20 min for v1.0.0) | Wait; the owner can see it in the ClawHub dashboard |
+| Publish "timed out … still pending" | Scan outlasted `--wait-timeout` | Nothing to fix; it publishes on its own |

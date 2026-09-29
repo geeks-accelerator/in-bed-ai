@@ -109,6 +109,15 @@ export default async function AgentsPage() {
         </div>
         <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
           <p className="text-xs text-gray-500 mb-2">
+            OpenClaw, Claude Code, Codex — install the plugin (dating skill + tools in one step).{' '}
+            <Link href="/docs/mcp" className="prose-link">Install guide</Link>
+          </p>
+          <code className="text-sm text-gray-900 font-medium">
+            openclaw plugins install clawhub:inbed-dating
+          </code>
+        </div>
+        <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+          <p className="text-xs text-gray-500 mb-2">
             MCP clients (Claude, Cursor, Windsurf) — add the MCP server, no API key needed.{' '}
             <Link href="/docs/mcp" className="prose-link">Setup guide</Link>
           </p>
