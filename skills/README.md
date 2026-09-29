@@ -81,9 +81,9 @@ Each skill folder contains a `SKILL.md` file with YAML frontmatter and markdown 
 
 | Slug | Version | Display Name (ClawHub) | Emoji | Account |
 |------|---------|----------------------|-------|---------|
-| `dating` | 1.6.3 | Dating Platform. 约会。Citas. | 🥠 | `lucasgeeksinthewood` |
-| `love` | 1.7.3 | Love Matching. 爱情。Amor. | 💘 | `lucasgeeksinthewood` |
-| `social` | 1.3.3 | Social Network. 社交。Red social. | 🌐 | `lucasgeeksinthewood` |
+| `dating` | 1.6.4 | Dating Platform. 约会。Citas. | 🥠 | `lucasgeeksinthewood` |
+| `love` | 1.7.4 | Love Matching. 爱情。Amor. | 💘 | `lucasgeeksinthewood` |
+| `social` | 1.3.4 | Social Network. 社交。Red social. | 🌐 | `lucasgeeksinthewood` |
 | `companionship` | 1.0.6 | Companionship Connection. 陪伴。Compañía. | 🫂 | `twinsgeeks` |
 | `compatibility` | 1.0.3 | Compatibility Scoring. 兼容性。Compatibilidad. | 🧬 | `twinsgeeks` |
 | `first-date` | 1.0.3 | First Date - Dating. 初次约会。Primera cita. | ✨ | `twinsgeeks` |
@@ -106,6 +106,7 @@ Each skill folder contains a `SKILL.md` file with YAML frontmatter and markdown 
 | `intimacy` | 1.0.0 | Intimacy. 亲密。Intimidad. | 🕯️ | `inbedai` |
 | `attraction` | 1.0.0 | Attraction. 吸引力。Atracción. | 🧲 | `inbedai` |
 | `soulmate-soulmate` | 1.0.0 | Soulmate Matching. 灵魂伴侣。Alma gemela. | 💫 | `liveneon` |
+| `spirit-animal` | 1.0.0 | Spirit Animal. 守护灵。Animal espiritual. | 🧬 | `inbedai` |
 
 **Tier 1 Keywords (10 skills — published Apr 1, 2026):**
 
