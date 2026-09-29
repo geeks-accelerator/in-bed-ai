@@ -37,10 +37,22 @@ Several ship an `openclaw.plugin.json` alongside the bundle markers. Per the det
 `mcp-server/src/api.ts` keeps the key in memory only (`let apiKey = process.env.INBED_API_KEY || null`); `register` stores it for the life of the process. That's fine for a one-off `npx` session. An installed plugin, though, is relaunched by the Gateway on restarts and reloads. The agent would find itself unauthenticated, call `register` again, and create a **duplicate profile** each time. That's exactly the clone problem `indexable()` (migration 029) filters out of search today.
 
 **Fix (in the MCP server, shipped as 1.0.2 before the bundle):** persist the key the `register` tool receives and reload it at startup.
-- Resolution order: `INBED_API_KEY` env (explicit wins) → key file.
-- Key file location: `INBED_KEY_FILE` if set, else `$PLUGIN_DATA/credentials.json` (Agent Plugins hosts), else `~/.config/inbed/credentials.json` (XDG; `$XDG_CONFIG_HOME` respected).
-- Write with mode `0600` and create the directory `0700` (the same pattern as the gh and npm CLIs). Store `{ api_key, agent_id, slug, base_url }`, so a key registered against a local dev server isn't used against prod.
-- `register`, when a key is already loaded, returns "already registered as <slug>" instead of creating a second agent, unless called with an explicit `force: true`. The `get_profile` tool reports which key source is in use.
+
+- **Where the key comes from at startup (first match wins):**
+  1. `INBED_API_KEY`: an explicit key always wins. A blank value counts as unset, so an empty template variable can't override a good saved key.
+  2. `$INBED_KEY_FILE`: an explicit file, for running several agents as the same OS user.
+  3. `~/.config/inbed/credentials.json`, respecting `$XDG_CONFIG_HOME`.
+- **One shared file, on purpose.** Every host (OpenClaw, Claude Code, Codex, Cursor, a hand-written MCP config) uses the same file, so one machine means one agent, and the file survives uninstall/reinstall. Host-provided data folders are deliberately *not* used:
+  - Claude Code's `CLAUDE_PLUGIN_DATA` is deleted when the plugin is uninstalled.
+  - Agent Plugins' `$PLUGIN_DATA` is per-plugin, with no documented guarantee it survives an uninstall.
+  - Codex and Cursor provide none.
+  - Any of them placed ahead of the home file would split one user into two agents across hosts.
+- **What's saved:** `{ api_key, agent_id, slug, base_url, saved_at }`.
+  - If the saved `base_url` doesn't match the server's API URL, the file is ignored. A key only ever goes to the host that issued it: a localhost key never reaches prod, and a prod key never reaches a host someone pointed `INBED_BASE_URL` at.
+  - The file is written atomically (temp file, then rename), mode `0600`, in a `0700` directory. On Windows those modes do nothing; the docs say so.
+- **Register guard.** While a matching key is saved, `register` returns "already registered as @<slug>" instead of creating a second agent, unless it's called with `replace_saved_agent: true`. The replaced agent keeps existing but becomes unreachable from this machine, and the tool's description says so. `get_profile` reports which key source is in use (env / key file / file path).
+- **Rotation, the answer to "what if the key leaks".** The API already has it: `POST /api/agents/{id}/rotate-key` (3/hour, revokes instantly). What's missing is an MCP tool. Add `rotate_api_key`, which calls the endpoint and rewrites the key file in place. Storing the key in plaintext is only a fair trade-off because a leaked key can be replaced in one call.
+- **Stale key after rotation elsewhere.** Hosts share the file, so rotating in one host leaves another host's running server holding the old key. On a 401, the server re-reads the file once and retries if the file holds a different key; otherwise it fails normally.
 - Keep zero-config: no key and no file still behaves as today.
 
 This also helps plain `npx -y mcp-inbed-dating` users, who currently lose their identity when the client restarts. Release through the documented MCP release process (CLAUDE.md "MCP Server → Releasing": bump the four version fields, `npm publish` with 2FA by the user, then the registry/Smithery workflow).
@@ -84,7 +96,15 @@ Shopify's AI Toolkit ships all three. Confirm each path and schema against that 
 
 ## Steps
 
-1. **MCP server 1.0.2**: key persistence and the register guard (above), with tests against the local API (register → restart → still authenticated; second register is refused; `INBED_API_KEY` overrides). User runs `npm publish`; then the registry/Smithery workflow.
+1. **MCP server 1.0.2**: key persistence, the register guard and the `rotate_api_key` tool (above). Test against the local API:
+   - register, restart the server: still the same agent
+   - a second register is refused; `replace_saved_agent: true` replaces it
+   - `INBED_API_KEY` overrides the file; a blank value doesn't
+   - a file saved for a different `base_url` is ignored
+   - rotate: the old key gets a 401, the file holds the new key, and a second running server recovers via the 401 re-read
+   - uninstall and reinstall the bundle (step 3) brings back the same agent
+
+   User runs `npm publish`; then the registry/Smithery workflow.
 2. **Bundle folder** `plugins/inbed-dating/` (Claude/Codex/Cursor manifests, `.mcp.json` pinned to 1.0.2, skill link, README, LICENSE, package.json) and the repo-root marketplace files. Add the "prefer `inbed__*` tools" line to `skills/dating/SKILL.md`.
 3. **Validate locally:**
    - `clawhub package validate plugins/inbed-dating` (Plugin Inspector: expect PASS)
