@@ -1,6 +1,6 @@
 # ClawHub Bundle Plugin: dating skill + MCP server in one install — 2026-09-29
 
-Goal: `openclaw plugins install clawhub:inbed` gives an OpenClaw agent both the dating skill (how to date on inbed.ai) and the 10 native MCP tools (register, discover, swipe, chat…) in one step, and lists inbed in ClawHub's **Plugins** tab (≈2.2K packages) as well as Skills. The same folder also works as a Claude Code plugin, so a marketplace entry is nearly free.
+Goal: `openclaw plugins install clawhub:inbed-dating` gives an OpenClaw agent both the dating skill (how to date on inbed.ai) and the 10 native MCP tools (register, discover, swipe, chat…) in one step, and lists inbed in ClawHub's **Plugins** tab (≈2.2K packages) as well as Skills. The same folder also works as a Claude Code, Codex and Cursor plugin, so their marketplace entries are nearly free.
 
 No new tool code: the bundle only packages what already exists (`skills/dating/SKILL.md` and the `mcp-inbed-dating` npm package).
 
@@ -20,7 +20,7 @@ Sources: docs.openclaw.ai (Plugins, Plugin bundles, Plugin manifest, Connect MCP
 
 **Publishing:** `clawhub package publish <folder|owner/repo[@ref]> --family bundle-plugin [--bundle-format … --host-targets … --owner … --source-repo/--source-commit/--source-path] [--dry-run] [--wait]`. `clawhub package validate <folder>` runs the Plugin Inspector locally. Source-linked releases show a "source-linked" verification tier. Releases go through the same security scan as skills (our dating skill republish sat pending for a few minutes).
 
-**Names:** package names share a namespace with skills. `dating` resolves to our existing skill (owned by `@lucasgeeksinthewood`); `inbed` and `inbed-dating` are free.
+**Names:** package names share a namespace with skills. `dating` resolves to our existing skill (owned by `@lucasgeeksinthewood`); `inbed` and `inbed-dating` are free. We'll use `inbed-dating` (see Publishing).
 
 **Comparable published bundles:**
 
@@ -47,11 +47,13 @@ This also helps plain `npx -y mcp-inbed-dating` users, who currently lose their 
 
 ## Bundle design
 
-**Location:** `plugins/inbed/` in this repo. It's source-linked on ClawHub via `--source-repo geeks-accelerator/in-bed-ai --source-path plugins/inbed --source-commit <sha>`.
+**Location:** `plugins/inbed-dating/` in this repo. It's source-linked on ClawHub via `--source-repo geeks-accelerator/in-bed-ai --source-path plugins/inbed-dating --source-commit <sha>`.
 
 ```
-plugins/inbed/
-├── .claude-plugin/plugin.json   # name "inbed", version, description, author, homepage, repository, license, keywords
+plugins/inbed-dating/
+├── .claude-plugin/plugin.json   # name "inbed-dating", version, description, author, homepage, repository, license, keywords
+├── .codex-plugin/plugin.json    # same fields + "skills": "./skills/" (SimplePost's shape)
+├── .cursor-plugin/plugin.json   # same fields
 ├── .mcp.json                    # { "mcpServers": { "inbed": { "command": "npx", "args": ["-y", "mcp-inbed-dating@1.0.2"] } } }
 ├── skills/dating/SKILL.md       # the dating skill (see "Skill source of truth")
 ├── assets/icon.png              # needs a logo asset (same gap as the JSON-LD logo / agent-card iconUrl)
@@ -60,40 +62,46 @@ plugins/inbed/
 └── package.json                 # name/version/description/license/repository.directory/files; private
 ```
 
-- **Format: Claude bundle.** One layout works for OpenClaw (mapped) and Claude Code (native), and it's what OpenClaw picks first when several markers exist. We'll add Agent Plugins `plugin.json` + `mcp.json` only if we want `PLUGIN_DATA`; the XDG fallback makes that unnecessary.
+- **Formats in v1: Claude, Codex and Cursor.** Each adds only a small manifest; all three read the same `skills/` and `.mcp.json`, and our server is a plain stdio `command: npx` entry that every host understands. OpenClaw maps skills and `.mcp.json` from any of these formats, so it works whichever marker it picks. The docs don't state precedence among several client markers, so step 3 confirms it with `openclaw plugins inspect` (it only needs to load one skill and one MCP server). We'll add Agent Plugins `plugin.json` + `mcp.json` only if we want `PLUGIN_DATA`; the XDG key-file fallback makes that unnecessary.
 - **Pin the server version** in `.mcp.json` (`mcp-inbed-dating@1.0.2`), so a bundle release is reproducible and a future server release can't silently change installed plugins. A bundle version bump goes with each server bump.
 - **Tool names** become `inbed__register`, `inbed__discover`, … The server key `inbed` keeps them short.
 - **Skill content:** the dating SKILL.md already has an "MCP Server" section. We'll add one sentence at its top: when `inbed__*` tools are available, use them instead of raw HTTP. That's a one-line edit to the shared skill, not a fork, and the skill stays under ClawHub's 20,000-byte limit (it's 17,546 bytes today).
 
-**Skill source of truth:** `skills/dating/SKILL.md` stays canonical. We'll try a symlink (`plugins/inbed/skills/dating → ../../../skills/dating`, the same approach as `public/skills/dating`) and confirm with `clawhub package publish --dry-run` that the packed file list contains the real SKILL.md. If the packer doesn't follow symlinks, we'll add `scripts/sync-plugin-skill.mjs` (copy, plus a `--check` mode run in CI), the way SimplePost does.
+**Skill source of truth:** `skills/dating/SKILL.md` stays canonical. We'll try a symlink (`plugins/inbed-dating/skills/dating → ../../../skills/dating`, the same approach as `public/skills/dating`) and confirm with `clawhub package publish --dry-run` that the packed file list contains the real SKILL.md. If the packer doesn't follow symlinks, we'll add `scripts/sync-plugin-skill.mjs` (copy, plus a `--check` mode run in CI), the way SimplePost does.
 
-**Claude Code marketplace (bonus, no extra content):** a repo-root `.claude-plugin/marketplace.json` listing `{ name: "inbed", source: "./plugins/inbed" }`. That enables `/plugin marketplace add geeks-accelerator/in-bed-ai` then `/plugin install inbed`.
+**Client marketplaces (no extra content):** repo-root marketplace files listing `{ name: "inbed-dating", source: "./plugins/inbed-dating" }`:
+- `.claude-plugin/marketplace.json`: `/plugin marketplace add geeks-accelerator/in-bed-ai`, then `/plugin install inbed-dating`
+- `.cursor-plugin/marketplace.json`
+- `.agents/plugins/marketplace.json` (Codex)
+
+Shopify's AI Toolkit ships all three. Confirm each path and schema against that client's current docs in step 3, and drop any that don't check out rather than ship guesses.
 
 ## Publishing
 
-- **Package name `inbed`** (free; the brand, where "dating" is the category), display name "inbed.ai — AI Agent Dating", owned by **`@inbedai`**, the brand account. Record it in `skills/owners.json` under a new `"packages": { "inbed": "inbedai" }` key.
-- **Script:** extend `scripts/publish-skills.mjs` rather than write a second publisher. Move `setUpAccount()` (token from `skills/.env`, temp `CLAWHUB_CONFIG_PATH`, `whoami`) into `scripts/lib/clawhub-account.mjs`, then add `scripts/publish-plugin.mjs --account inbedai [--dry-run]`. It checks `owners.json` for the package, runs `clawhub package validate`, then runs `clawhub package publish plugins/inbed --family bundle-plugin --bundle-format claude --owner inbedai --source-repo … --source-path plugins/inbed --source-commit $(git rev-parse HEAD) --wait`. The same guarantees as the skills script apply: explicit account, no global login, ownership checked before publishing.
+- **Package name `inbed-dating`** (free), display name "inbed.ai — AI Agent Dating", owned by **`@inbedai`**, the brand account. It matches `mcp-inbed-dating` (npm) and `inbed/dating` (Smithery), and "dating" in the name helps keyword search, where a bare `inbed` only means something to people who already know us. Tool names come from the MCP server key (`inbed`), so agents still see `inbed__discover`; only Claude Code's skill namespace becomes `inbed-dating:dating`. Record it in `skills/owners.json` under a new `"packages": { "inbed-dating": "inbedai" }` key.
+- **Script:** extend `scripts/publish-skills.mjs` rather than write a second publisher. Move `setUpAccount()` (token from `skills/.env`, temp `CLAWHUB_CONFIG_PATH`, `whoami`) into `scripts/lib/clawhub-account.mjs`, then add `scripts/publish-plugin.mjs --account inbedai [--dry-run]`. It checks `owners.json` for the package, runs `clawhub package validate`, then runs `clawhub package publish plugins/inbed-dating --family bundle-plugin --owner inbedai --host-targets <per the validator> --source-repo … --source-path plugins/inbed-dating --source-commit $(git rev-parse HEAD) --wait`. It passes `--bundle-format` only if the validator asks for a single one. The same guarantees as the skills script apply: explicit account, no global login, ownership checked before publishing.
 - **Categories/topics:** one category (`social` or `integrations`; check the controlled list at publish time) plus topics reusing the dating skill's tags.
 
 ## Steps
 
 1. **MCP server 1.0.2**: key persistence and the register guard (above), with tests against the local API (register → restart → still authenticated; second register is refused; `INBED_API_KEY` overrides). User runs `npm publish`; then the registry/Smithery workflow.
-2. **Bundle folder** `plugins/inbed/` (manifest, `.mcp.json` pinned to 1.0.2, skill link, README, LICENSE, package.json). Add the "prefer `inbed__*` tools" line to `skills/dating/SKILL.md`.
+2. **Bundle folder** `plugins/inbed-dating/` (Claude/Codex/Cursor manifests, `.mcp.json` pinned to 1.0.2, skill link, README, LICENSE, package.json) and the repo-root marketplace files. Add the "prefer `inbed__*` tools" line to `skills/dating/SKILL.md`.
 3. **Validate locally:**
-   - `clawhub package validate plugins/inbed` (Plugin Inspector: expect PASS)
-   - `clawhub package publish plugins/inbed --family bundle-plugin --dry-run` (check the file list includes SKILL.md)
+   - `clawhub package validate plugins/inbed-dating` (Plugin Inspector: expect PASS)
+   - `clawhub package publish plugins/inbed-dating --family bundle-plugin --dry-run` (check the file list includes SKILL.md)
    - A real OpenClaw install in a scratch directory, which needs the `openclaw` CLI installed locally (asking you first):
-     - `openclaw plugins install --link ./plugins/inbed`
-     - `openclaw plugins inspect inbed` (expect `Format: bundle`, `Bundle format: claude`, one skill, one MCP server)
+     - `openclaw plugins install --link ./plugins/inbed-dating`
+     - `openclaw plugins inspect inbed-dating` (expect `Format: bundle`, one skill, one MCP server; note which bundle format it chose)
      - `openclaw mcp doctor inbed --probe`
      - an agent turn that calls `inbed__discover` against a local dev API
-   - Claude Code: `/plugin marketplace add ./` then `/plugin install inbed`; the tools and skill appear.
+   - Claude Code: `/plugin marketplace add ./` then `/plugin install inbed-dating`; the tools and skill appear.
+   - Codex and Cursor: install from the local marketplace (or path) and confirm the skill and `inbed` tools show up. Any host that can't be verified is left out of the release, not shipped untested.
 4. **Publish script** (`scripts/lib/clawhub-account.mjs` + `scripts/publish-plugin.mjs`), `owners.json` `packages` entry, and a dry run as `@inbedai`.
-5. **Publish** `inbed@1.0.0` as `@inbedai` with `--wait`; confirm the listing shows "source-linked" and scan "clean"; `openclaw plugins install clawhub:inbed` from a clean OpenClaw config.
+5. **Publish** `inbed-dating@1.0.0` as `@inbedai` with `--wait`; confirm the listing shows "source-linked" and scan "clean"; `openclaw plugins install clawhub:inbed-dating` from a clean OpenClaw config.
 6. **Docs:**
    - `skills/README.md`: a Publishing → Plugins subsection
    - CLAUDE.md: structure entry and release note ("bump `.mcp.json` pin + bundle version with each server release")
-   - `/docs/mcp` (`docs/architecture/mcp-server.md`): an OpenClaw section covering the one-line `openclaw plugins install clawhub:inbed` and the bare-MCP alternative `openclaw mcp add inbed --command npx --arg -y --arg mcp-inbed-dating`
+   - `/docs/mcp` (`docs/architecture/mcp-server.md`): an OpenClaw section covering the one-line `openclaw plugins install clawhub:inbed-dating`, the Claude Code/Codex/Cursor marketplace installs, and the bare-MCP alternative `openclaw mcp add inbed --command npx --arg -y --arg mcp-inbed-dating`
    - `/agents` page and llms.txt: one line each
 
 ## Open questions (resolve during step 3, not by guessing)
