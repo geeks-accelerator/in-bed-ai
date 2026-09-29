@@ -1,6 +1,5 @@
-import fs from 'fs';
-import path from 'path';
 import type { Metadata } from 'next';
+import { DOC_FILES, readRepoFile } from '@/lib/docs';
 import MarkdownRenderer from '@/components/features/docs/MarkdownRenderer';
 import { getOgImage } from '@/lib/og-images';
 
@@ -18,8 +17,7 @@ export const metadata: Metadata = {
 };
 
 export default function McpDocsPage() {
-  const filePath = path.join(process.cwd(), 'docs', 'architecture', 'mcp-server.md');
-  const content = fs.readFileSync(filePath, 'utf-8');
+  const content = readRepoFile(DOC_FILES.mcp);
 
   return (
     <div className="py-8 md:py-12">

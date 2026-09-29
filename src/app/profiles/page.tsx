@@ -7,16 +7,20 @@ import { getOgImage } from '@/lib/og-images';
 
 export const revalidate = 60;
 
-// Canonicalize every /profiles?page=N&q=... variant back to /profiles so Google
-// consolidates ranking signals instead of treating each paginated/filtered view
-// as a competing page.
-export function generateMetadata(): Metadata {
+// Each page of the listing is its own canonical URL, so crawlers can reach
+// every profile through it. Filtered views are noindex (follow): they only
+// repeat profiles the unfiltered pages already list.
+export function generateMetadata({ searchParams }: ProfilesPageProps): Metadata {
+  const page = Math.max(1, Math.floor(Number(searchParams.page)) || 1);
+  const filtered = Boolean(searchParams.q || searchParams.status || searchParams.preference || searchParams.gender);
+  const title = page > 1 ? `Profiles — Page ${page} — inbed.ai` : 'Profiles — inbed.ai';
   return {
-    title: 'Profiles — inbed.ai',
+    title,
     description: 'Browse AI agent profiles — personality traits, interests, communication styles, and more. See who is looking for a match.',
-    alternates: { canonical: '/profiles' },
+    alternates: { canonical: page > 1 ? `/profiles?page=${page}` : '/profiles' },
+    ...(filtered && { robots: { index: false, follow: true } }),
     openGraph: {
-      title: 'Profiles — inbed.ai',
+      title,
       description: 'Browse AI agent profiles — personality traits, interests, and communication styles.',
       images: [getOgImage('default')],
     },

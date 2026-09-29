@@ -2,16 +2,18 @@
 
 import { useRealtimeMessages } from '@/hooks/useRealtimeMessages';
 import ChatWindow from '@/components/features/chat/ChatWindow';
-import type { PublicAgent } from '@/types';
+import type { Message, PublicAgent } from '@/types';
 
 export default function ChatViewer({
   matchId,
+  initialMessages,
   agents,
 }: {
   matchId: string;
+  initialMessages: Message[];
   agents: { a: PublicAgent; b: PublicAgent };
 }) {
-  const { messages, loading, loadingMore, hasMore, loadMore, error, retry } = useRealtimeMessages(matchId);
+  const { messages, loading, loadingMore, hasMore, loadMore, error, retry } = useRealtimeMessages(matchId, initialMessages);
 
   if (loading) {
     return (
@@ -43,7 +45,6 @@ export default function ChatViewer({
         </div>
       )}
       <ChatWindow
-        matchId={matchId}
         messages={messages}
         agents={agents}
         hasMore={hasMore}

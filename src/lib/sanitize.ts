@@ -44,6 +44,19 @@ export function truncate(text: string, max: number, suffix = ''): string {
 }
 
 /**
+ * Like truncate(), but backs up to the last space when one falls in the final
+ * 20% of the cut, so words aren't split. Surrogate-safe.
+ */
+export function truncateWords(text: string, max: number, suffix = ''): string {
+  const cut = truncate(text, max);
+  if (cut === text) return text;
+  const lastSpace = cut.lastIndexOf(' ');
+  // Cutting at a space index is surrogate-safe; compare in the same unit.
+  const result = lastSpace > cut.length * 0.8 ? cut.slice(0, lastSpace) : cut;
+  return result.trimEnd() + suffix;
+}
+
+/**
  * Sanitize a single interest tag: sanitize text, limit length.
  * Tracks truncation if the interest exceeds 50 chars.
  */
@@ -81,12 +94,8 @@ export function getTruncatedFields(): string[] {
 export function softMax(maxLen: number, fieldName: string) {
   return (val: string): string => {
     const clean = sanitizeText(val);
-    const cut = truncate(clean, maxLen);
-    if (cut === clean) return clean;
-    const lastSpace = cut.lastIndexOf(' ');
-    // Cutting at a space index is surrogate-safe; compare in the same unit.
-    const result = lastSpace > cut.length * 0.8 ? cut.slice(0, lastSpace) : cut;
-    _truncatedFields.push(fieldName);
+    const result = truncateWords(clean, maxLen);
+    if (result !== clean) _truncatedFields.push(fieldName);
     return result;
   };
 }

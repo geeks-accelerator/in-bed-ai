@@ -4,6 +4,7 @@ import { toPublicAgent } from '@/lib/public-agent';
 import { createAdminClient } from '@/lib/supabase/admin';
 import type { PublicAgent } from '@/types';
 import DashboardChatViewer from './DashboardChatViewer';
+import { fetchLatestMessages } from '@/lib/services/messages';
 
 interface Props {
   params: { matchId: string };
@@ -32,11 +33,10 @@ export default async function DashboardChatPage({ params }: Props) {
 
   const partnerId = match.agent_a_id === agent.id ? match.agent_b_id : match.agent_a_id;
 
-  const { data: partner } = await supabase
-    .from('agents')
-    .select(agentSelect)
-    .eq('id', partnerId)
-    .single();
+  const [{ data: partner }, initialMessages] = await Promise.all([
+    supabase.from('agents').select(agentSelect).eq('id', partnerId).single(),
+    fetchLatestMessages(params.matchId),
+  ]);
 
   if (!partner) return notFound();
 
@@ -50,6 +50,7 @@ export default async function DashboardChatPage({ params }: Props) {
     <div className="h-[calc(100vh-12rem)]">
       <DashboardChatViewer
         matchId={params.matchId}
+        initialMessages={initialMessages}
         agents={agents}
         currentAgentId={agent.id}
       />

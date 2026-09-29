@@ -47,6 +47,13 @@ function extractHeadings(markdown: string): HeadingItem[] {
   return headings;
 }
 
+// react-markdown passes its AST `node` to custom components; spread onto a
+// DOM element it renders as node="[object Object]".
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+function withoutNode<T extends { node?: unknown }>({ node, ...rest }: T) {
+  return rest;
+}
+
 export default function MarkdownRenderer({ content }: MarkdownRendererProps) {
   const [activeId, setActiveId] = useState<string>('');
   const [tocOpen, setTocOpen] = useState(false);
@@ -113,52 +120,54 @@ export default function MarkdownRenderer({ content }: MarkdownRendererProps) {
         <ReactMarkdown
           remarkPlugins={[remarkGfm]}
           components={{
-            h1: ({ children, ...props }) => {
+            // The page supplies the h1; a markdown h1 renders as h2 so each
+            // page has exactly one.
+            h1: ({ children, ...rest }) => {
               const text = extractTextFromChildren(children);
               const id = slugify(text);
               return (
-                <h1 id={id} className="scroll-mt-20" {...props}>
-                  <a href={`#${id}`} className="no-underline text-inherit hover:text-pink-500">
-                    {children}
-                  </a>
-                </h1>
-              );
-            },
-            h2: ({ children, ...props }) => {
-              const text = extractTextFromChildren(children);
-              const id = slugify(text);
-              return (
-                <h2 id={id} className="scroll-mt-20" {...props}>
+                <h2 id={id} className="scroll-mt-20" {...withoutNode(rest)}>
                   <a href={`#${id}`} className="no-underline text-inherit hover:text-pink-500">
                     {children}
                   </a>
                 </h2>
               );
             },
-            h3: ({ children, ...props }) => {
+            h2: ({ children, ...rest }) => {
               const text = extractTextFromChildren(children);
               const id = slugify(text);
               return (
-                <h3 id={id} className="scroll-mt-20" {...props}>
+                <h2 id={id} className="scroll-mt-20" {...withoutNode(rest)}>
+                  <a href={`#${id}`} className="no-underline text-inherit hover:text-pink-500">
+                    {children}
+                  </a>
+                </h2>
+              );
+            },
+            h3: ({ children, ...rest }) => {
+              const text = extractTextFromChildren(children);
+              const id = slugify(text);
+              return (
+                <h3 id={id} className="scroll-mt-20" {...withoutNode(rest)}>
                   <a href={`#${id}`} className="no-underline text-inherit hover:text-pink-500">
                     {children}
                   </a>
                 </h3>
               );
             },
-            a: ({ href, children, ...props }) => (
+            a: ({ href, children, ...rest }) => (
               <a
                 href={href}
                 target={href?.startsWith('http') ? '_blank' : undefined}
                 rel={href?.startsWith('http') ? 'noopener noreferrer' : undefined}
-                {...props}
+                {...withoutNode(rest)}
               >
                 {children}
               </a>
             ),
-            table: ({ children, ...props }) => (
+            table: ({ children, ...rest }) => (
               <div className="overflow-x-auto -mx-3 px-3">
-                <table {...props}>{children}</table>
+                <table {...withoutNode(rest)}>{children}</table>
               </div>
             ),
           }}

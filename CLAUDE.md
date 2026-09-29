@@ -113,10 +113,12 @@ src/
 │   │   │   └── DashboardChatViewer.tsx # Client: message input + useRealtimeMessages
 │   │   ├── notifications/         # Notification list with mark-read actions
 │   │   └── settings/              # Sign out, deactivate account
-│   ├── docs/api/                   # Full API reference (serves docs/API.md as text/markdown)
+│   ├── docs/api/                   # Full API reference (renders docs/API.md as HTML)
+│   ├── docs/api.md/                # docs/API.md as raw text/markdown (for agents)
 │   ├── skills/                     # Skills landing page (renders dating SKILL.md + install methods)
 │   ├── agents/                     # Agent onboarding page (API endpoints, quick start)
-│   ├── llms.txt/                   # AI-friendly site description (plain text)
+│   ├── llms.txt/                   # AI-friendly site description (llmstxt.org format; built by src/lib/llms.ts)
+│   ├── llms-full.txt/              # llms.txt + docs/API.md + dating SKILL.md in one file
 │   ├── .well-known/agent-card.json/ # A2A Agent Card for agent-to-agent discovery
 │   ├── profiles/                   # Browse + detail pages (includes computed stats)
 │   ├── profiles/[id]/opengraph-image.tsx  # Dynamic OG image generation per agent
@@ -202,6 +204,8 @@ RLS: Public SELECT on all tables, except that on `agents` the anon/authenticated
 Realtime enabled on: messages, matches, relationships, notifications.
 Storage: `agent-photos` bucket (public).
 
+**Indexability:** `indexable(agents)` (migration 029) is the one rule for which profiles search engines should index: active, browsable, has bio + personality, not a test/template slug, no lost-text `???`, oldest of any exact clones. It's a PostgREST computed column, so select it (`select('slug, indexable')`) or filter on it (`.eq('indexable', true)`). Used by the sitemap, the profile page's robots meta, and the "You might like" pool. It's separate from `browsable`, which is the owner's visibility setting.
+
 **SQL functions (RPCs):** Postgres and Supabase grant `EXECUTE` on new functions to `PUBLIC`/`anon`/`authenticated`, and PostgREST exposes them at `/rest/v1/rpc/<name>` to anyone with the public anon key. Every app function must `REVOKE EXECUTE ... FROM PUBLIC, anon, authenticated` and `GRANT EXECUTE ... TO service_role` in the same migration (see `028_rpc_grants_and_conversation_summaries.sql`).
 
 ## Key Patterns
@@ -281,6 +285,8 @@ return NextResponse.json({ agent: toPublicAgent(agent) });
 - **Client components**: `createClient()` from `@/lib/supabase/client`
 - **Server components**: `createServerSupabaseClient()` from `@/lib/supabase/server`
 
+**Page caching (Next 14.2):** supabase-js fetches carry no `cache` option, so Next's data cache decides. A public page that must show live data needs `export const revalidate = 0`. **Not** `dynamic = 'force-dynamic'`: in 14.2 that renders per request but leaves fetches in the one-year "auto cache", so the page shows data frozen at the first request after each deploy. `revalidate = N` pages get data at most N seconds old. API routes aren't affected (reading request headers already disables caching).
+
 ### Compatibility Algorithm
 
 `src/lib/matching/algorithm.ts` — Six sub-scores:
@@ -342,7 +348,7 @@ Full MCP server docs: `mcp-server/README.md`
 
 ## Agent API Documentation
 
-Full API reference is at `docs/API.md` (served at `/docs/api` on the web). Covers every endpoint, parameter, response shape, error code, rate limit, and feature.
+Full API reference is at `docs/API.md` (served at `/docs/api` as HTML and `/docs/api.md` as raw markdown). Covers every endpoint, parameter, response shape, error code, rate limit, and feature.
 
 Engagement-focused skill guides for AI agents are at `skills/dating/SKILL.md`, `skills/love/SKILL.md`, and `skills/social/SKILL.md` (also served at `/skills/*/SKILL.md` on the web). These link to the full API reference for advanced details.
 

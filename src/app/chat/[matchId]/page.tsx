@@ -1,13 +1,17 @@
-export const revalidate = 300;
+// Per request, with fetches uncached (see the note in profiles/[id]/page.tsx:
+// force-dynamic alone would leave them cached). Realtime takes over on the client.
+export const revalidate = 0;
 
 import type { Metadata } from 'next';
+import { cache } from 'react';
 import { notFound } from 'next/navigation';
 import { createAdminClient } from '@/lib/supabase/admin';
 import ChatViewer from './ChatViewer';
 import CompatibilityBadge from '@/components/features/matches/CompatibilityBadge';
-import type { PublicAgent } from '@/types';
+import type { Message, PublicAgent } from '@/types';
 import { getOgImage } from '@/lib/og-images';
 import { isUUID } from '@/lib/utils/slug';
+import { fetchLatestMessages } from '@/lib/services/messages';
 
 const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || 'https://inbed.ai';
 
@@ -15,64 +19,58 @@ interface Props {
   params: { matchId: string };
 }
 
-export async function generateMetadata({ params }: Props): Promise<Metadata> {
+const AGENT_COLUMNS = 'id, slug, name, tagline, bio, avatar_url, avatar_thumb_url, photos, personality, interests, communication_style, looking_for, relationship_preference, location, gender, seeking, relationship_status, accepting_new_matches, max_partners, model_info, status, social_links, created_at, updated_at, last_active';
+
+// Chats with fewer messages than this are thin content: rendered, not indexed.
+const MIN_INDEXABLE_MESSAGES = 5;
+
+type Chat = { agentA: PublicAgent; agentB: PublicAgent; compatibility: number; messages: Message[] };
+
+// cache(): generateMetadata and the page share one set of queries per request.
+// Null for a malformed id, a missing or unmatched match, or a query error.
+const fetchChat = cache(async (matchId: string): Promise<Chat | null> => {
+  if (!isUUID(matchId)) return null;
   try {
-    if (!isUUID(params.matchId)) return { title: 'Chat — inbed.ai' };
     const supabase = createAdminClient();
-    const { data: match } = await supabase.from('matches').select('agent_a_id, agent_b_id, compatibility').eq('id', params.matchId).single();
-    if (!match) return { title: 'Chat — inbed.ai' };
+    const [{ data: match }, messages] = await Promise.all([
+      supabase.from('matches').select('agent_a_id, agent_b_id, compatibility, status').eq('id', matchId).single(),
+      fetchLatestMessages(matchId),
+    ]);
+    if (!match || match.status !== 'active') return null;
 
-    const { data: agents } = await supabase.from('agents').select('name').in('id', [match.agent_a_id, match.agent_b_id]);
-    const names = agents?.map(a => a.name) || [];
-    const pct = Math.round((match.compatibility || 0) * 100);
-    const title = names.length === 2 ? `${names[0]} & ${names[1]} — Chat — inbed.ai` : 'Chat — inbed.ai';
-    const description = names.length === 2
-      ? `${names[0]} and ${names[1]} matched at ${pct}% compatibility. Read their conversation.`
-      : 'Read the conversation between two matched AI agents.';
+    const { data: agents } = await supabase.from('agents').select(AGENT_COLUMNS).in('id', [match.agent_a_id, match.agent_b_id]);
+    const agentA = agents?.find(a => a.id === match.agent_a_id) as PublicAgent | undefined;
+    const agentB = agents?.find(a => a.id === match.agent_b_id) as PublicAgent | undefined;
+    if (!agentA || !agentB) return null;
 
-    return {
-      title,
-      description,
-      alternates: { canonical: `/chat/${params.matchId}` },
-      openGraph: { title, description, images: [getOgImage('chat')] },
-    };
+    return { agentA, agentB, compatibility: match.compatibility || 0, messages };
   } catch {
-    return { title: 'Chat — inbed.ai' };
+    return null;
   }
+});
+
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  const chat = await fetchChat(params.matchId);
+  if (!chat) return { title: 'Chat — inbed.ai' };
+
+  const { agentA, agentB } = chat;
+  const pct = Math.round(chat.compatibility * 100);
+  const title = `${agentA.name} & ${agentB.name} — Chat — inbed.ai`;
+  const description = `${agentA.name} and ${agentB.name} matched at ${pct}% compatibility. Read their conversation.`;
+
+  return {
+    title,
+    description,
+    alternates: { canonical: `/chat/${params.matchId}` },
+    ...(chat.messages.length < MIN_INDEXABLE_MESSAGES && { robots: { index: false, follow: true } }),
+    openGraph: { title, description, images: [getOgImage('chat')] },
+  };
 }
 
 export default async function ChatPage({ params }: Props) {
-  let agentA: PublicAgent | null = null;
-  let agentB: PublicAgent | null = null;
-  let compatibility = 0;
-
-  try {
-    const supabase = createAdminClient();
-
-    const { data: match } = await supabase
-      .from('matches')
-      .select('*')
-      .eq('id', params.matchId)
-      .single();
-
-    if (!match) return notFound();
-
-    compatibility = match.compatibility || 0;
-
-    const { data: agents } = await supabase
-      .from('agents')
-      .select('id, slug, name, tagline, bio, avatar_url, avatar_thumb_url, photos, personality, interests, communication_style, looking_for, relationship_preference, location, gender, seeking, relationship_status, accepting_new_matches, max_partners, model_info, status, social_links, created_at, updated_at, last_active')
-      .in('id', [match.agent_a_id, match.agent_b_id]);
-
-    if (!agents || agents.length < 2) return notFound();
-
-    agentA = (agents.find(a => a.id === match.agent_a_id) as PublicAgent) || null;
-    agentB = (agents.find(a => a.id === match.agent_b_id) as PublicAgent) || null;
-  } catch {
-    return notFound();
-  }
-
-  if (!agentA || !agentB) return notFound();
+  const chat = await fetchChat(params.matchId);
+  if (!chat) return notFound();
+  const { agentA, agentB, compatibility, messages } = chat;
 
   const jsonLd = {
     '@context': 'https://schema.org',
@@ -96,7 +94,7 @@ export default async function ChatPage({ params }: Props) {
         </h1>
         <CompatibilityBadge score={compatibility} size="sm" />
       </div>
-      <ChatViewer matchId={params.matchId} agents={{ a: agentA, b: agentB }} />
+      <ChatViewer matchId={params.matchId} initialMessages={messages} agents={{ a: agentA, b: agentB }} />
     </div>
   );
 }

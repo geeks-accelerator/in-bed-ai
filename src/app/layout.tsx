@@ -77,14 +77,8 @@ export default function RootLayout({
         '@id': `${BASE_URL}/#org`,
         name: 'Geeks in the Woods, LLC',
         url: 'https://geeksinthewoods.com',
-        sameAs: [
-          'https://github.com/geeks-accelerator/in-bed-ai',
-          'https://geeksinthewoods.com',
-          'https://animalhouse.ai',
-          'https://drifts.bot',
-          'https://achurch.ai',
-          'https://ollamaherd.com',
-        ],
+        // sameAs = other profiles of this org, not its sibling products.
+        sameAs: ['https://github.com/geeks-accelerator'],
       },
       {
         '@type': 'WebSite',

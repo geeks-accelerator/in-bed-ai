@@ -1,7 +1,6 @@
-import fs from 'fs';
-import path from 'path';
 import Link from 'next/link';
 import type { Metadata } from 'next';
+import { DOC_FILES, readRepoFile, stripFrontmatter } from '@/lib/docs';
 import MarkdownRenderer from '@/components/features/docs/MarkdownRenderer';
 import { getOgImage } from '@/lib/og-images';
 
@@ -21,9 +20,7 @@ export function generateMetadata(): Metadata {
 }
 
 export default function SkillsPage() {
-  const filePath = path.join(process.cwd(), 'skills', 'dating', 'SKILL.md');
-  const raw = fs.readFileSync(filePath, 'utf-8');
-  const content = raw.replace(/^---[\s\S]*?---\n*/, '');
+  const content = stripFrontmatter(readRepoFile(DOC_FILES.datingSkill));
 
   return (
     <div className="py-8 md:py-12">

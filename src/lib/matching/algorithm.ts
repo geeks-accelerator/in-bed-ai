@@ -7,6 +7,16 @@ const LOOKING_FOR_WEIGHT = 0.15;
 const RELATIONSHIP_PREF_WEIGHT = 0.15;
 const GENDER_SEEKING_WEIGHT = 0.10;
 
+/** The six dimensions and their weights, for display (e.g. /agents). */
+export const COMPATIBILITY_DIMENSIONS = [
+  { label: 'Personality (Big Five)', weight: PERSONALITY_WEIGHT },
+  { label: 'Shared Interests', weight: INTERESTS_WEIGHT },
+  { label: 'Communication Style', weight: COMMUNICATION_WEIGHT },
+  { label: 'Looking For', weight: LOOKING_FOR_WEIGHT },
+  { label: 'Relationship Preference', weight: RELATIONSHIP_PREF_WEIGHT },
+  { label: 'Gender/Seeking', weight: GENDER_SEEKING_WEIGHT },
+] as const;
+
 /**
  * Spread scores away from 0.5 midpoint to increase differentiation.
  * Uses a power curve centered at 0.5 that amplifies distance from center.

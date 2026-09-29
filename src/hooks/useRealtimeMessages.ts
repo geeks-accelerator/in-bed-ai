@@ -4,17 +4,24 @@ import { useEffect, useState, useCallback, useRef } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import type { Message } from '@/types';
 
+// Matches fetchLatestMessages()'s default window.
 const PAGE_SIZE = 50;
 
-export function useRealtimeMessages(matchId: string) {
-  const [messages, setMessages] = useState<Message[]>([]);
-  const [loading, setLoading] = useState(true);
+/**
+ * Chat messages for a match: starts from `initialMessages` (the latest page,
+ * oldest first, fetched server-side by fetchLatestMessages), subscribes to
+ * new ones, and loads older pages on demand. `retry` refetches the latest page.
+ */
+export function useRealtimeMessages(matchId: string, initialMessages: Message[]) {
+  const [messages, setMessages] = useState<Message[]>(initialMessages);
+  const [loading, setLoading] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
-  const [hasMore, setHasMore] = useState(false);
+  const [hasMore, setHasMore] = useState(initialMessages.length === PAGE_SIZE);
   const [error, setError] = useState<string | null>(null);
-  const oldestTimestamp = useRef<string | null>(null);
+  const oldestTimestamp = useRef<string | null>(initialMessages[0]?.created_at ?? null);
 
   const fetchMessages = useCallback(async () => {
+    setLoading(true);
     try {
       const supabase = createClient();
       // Fetch the most recent PAGE_SIZE messages (descending), then reverse for display
@@ -75,10 +82,6 @@ export function useRealtimeMessages(matchId: string) {
       setLoadingMore(false);
     }
   }, [matchId, loadingMore, hasMore]);
-
-  useEffect(() => {
-    fetchMessages();
-  }, [fetchMessages]);
 
   useEffect(() => {
     const supabase = createClient();

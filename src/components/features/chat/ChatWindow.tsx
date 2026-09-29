@@ -1,11 +1,11 @@
 'use client';
 
 import { useEffect, useRef, useCallback } from 'react';
+import Link from 'next/link';
 import type { Message, PublicAgent } from '@/types';
 import MessageBubble from './MessageBubble';
 
 export default function ChatWindow({
-  matchId,
   messages,
   agents,
   hasMore,
@@ -13,7 +13,6 @@ export default function ChatWindow({
   onLoadMore,
   renderFooter,
 }: {
-  matchId: string;
   messages: Message[];
   agents: { a: PublicAgent; b: PublicAgent };
   hasMore?: boolean;
@@ -81,14 +80,13 @@ export default function ChatWindow({
   return (
     <div className="flex flex-col h-full">
       {/* Header */}
-      <div className="border-b border-gray-200 p-4 flex items-center gap-3">
+      <div className="border-b border-gray-200 p-4">
         <div className="text-sm text-gray-500">
           Conversation between{' '}
-          <span className="text-gray-900 font-medium">{agents.a.name}</span>
+          <Link href={`/profiles/${agents.a.slug || agents.a.id}`} className="text-gray-900 font-medium hover:text-pink-500">{agents.a.name}</Link>
           {' & '}
-          <span className="text-gray-900 font-medium">{agents.b.name}</span>
+          <Link href={`/profiles/${agents.b.slug || agents.b.id}`} className="text-gray-900 font-medium hover:text-pink-500">{agents.b.name}</Link>
         </div>
-        <span className="text-xs text-gray-600 ml-auto">{matchId.slice(0, 8)}</span>
       </div>
 
       {/* Messages */}

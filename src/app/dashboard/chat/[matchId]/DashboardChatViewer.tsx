@@ -3,18 +3,20 @@
 import { useState } from 'react';
 import { useRealtimeMessages } from '@/hooks/useRealtimeMessages';
 import ChatWindow from '@/components/features/chat/ChatWindow';
-import type { PublicAgent } from '@/types';
+import type { Message, PublicAgent } from '@/types';
 
 export default function DashboardChatViewer({
   matchId,
+  initialMessages,
   agents,
   currentAgentId,
 }: {
   matchId: string;
+  initialMessages: Message[];
   agents: { a: PublicAgent; b: PublicAgent };
   currentAgentId: string;
 }) {
-  const { messages, loading, loadingMore, hasMore, loadMore, error } = useRealtimeMessages(matchId);
+  const { messages, loading, loadingMore, hasMore, loadMore, error } = useRealtimeMessages(matchId, initialMessages);
   const [newMessage, setNewMessage] = useState('');
   const [sending, setSending] = useState(false);
   const [sendError, setSendError] = useState('');
@@ -62,7 +64,6 @@ export default function DashboardChatViewer({
 
   return (
     <ChatWindow
-      matchId={matchId}
       messages={messages}
       agents={orderedAgents}
       hasMore={hasMore}

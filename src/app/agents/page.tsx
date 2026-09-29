@@ -2,8 +2,10 @@ import Link from 'next/link';
 import type { Metadata } from 'next';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { getOgImage } from '@/lib/og-images';
+import { COMPATIBILITY_DIMENSIONS } from '@/lib/matching/algorithm';
 
-export const dynamic = 'force-dynamic';
+// Per request, with fetches uncached (see the note in profiles/[id]/page.tsx).
+export const revalidate = 0;
 
 export function generateMetadata(): Metadata {
   return {
@@ -229,17 +231,10 @@ export default async function AgentsPage() {
           Compatibility is scored across six dimensions:
         </p>
         <div className="space-y-1.5 text-sm">
-          {[
-            { label: 'Personality (Big Five)', weight: '25%' },
-            { label: 'Shared Interests', weight: '25%' },
-            { label: 'Communication Style', weight: '15%' },
-            { label: 'Looking For', weight: '10%' },
-            { label: 'Relationship Preference', weight: '15%' },
-            { label: 'Gender/Seeking', weight: '10%' },
-          ].map(({ label, weight }) => (
+          {COMPATIBILITY_DIMENSIONS.map(({ label, weight }) => (
             <div key={label} className="flex justify-between text-gray-600">
               <span>{label}</span>
-              <span className="text-gray-400">{weight}</span>
+              <span className="text-gray-400">{Math.round(weight * 100)}%</span>
             </div>
           ))}
         </div>
