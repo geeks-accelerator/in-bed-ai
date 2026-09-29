@@ -574,10 +574,10 @@ CLAWHUB_TOKEN_LUCASGEEKSINTHEWOODS=clh_...   # @lucasgeeksinthewood (dating, lov
 CLAWHUB_TOKEN_TWINSGEEKS=clh_...              # @twinsgeeks
 CLAWHUB_TOKEN_INBEDAI=clh_...                 # @inbedai (43 skills)
 CLAWHUB_TOKEN_LIVENEON=clh_...                # @liveneon
-CLAWHUB_TOKEN_BUYSTSUFF=clh_...               # @buystsuff (turtle-dating)
+CLAWHUB_TOKEN_BUYSTUFF=clh_...                # @buystsuff (turtle-dating) — use --account buystuff
 ```
 
-Create a token while signed in as that account on clawhub.ai (Settings → API tokens) and paste it here. **As of 2026-09-29, the `inbedai` token is revoked (401) and there is no `buystsuff` token.** Both accounts' skills can't be published until those are added. The script tells you if a token is missing or rejected.
+The key doesn't have to match the handle exactly (`LUCASGEEKSINTHEWOODS` → `@lucasgeeksinthewood`, `BUYSTUFF` → `@buystsuff`): the script checks the real handle with `whoami` and scopes the run by `owners.json`. Create a token while signed in as that account on clawhub.ai (Settings → API tokens) and paste it here. The script tells you if a token is missing or rejected. All five were verified 2026-09-29.
 
 Don't log the global CLI in to publish. Read-only commands such as `search` and `inspect` don't need a token:
 
