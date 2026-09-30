@@ -16,17 +16,16 @@ export interface PlatformStats {
 /**
  * Platform-wide counts for GET /api/stats, the homepage and llms.txt.
  *
- * The messages and swipes totals use PostgREST's estimated count (exact
- * below its threshold, the planner's pg_class estimate above): an exact
- * count of a ~300k-row table was the #2 database cost, for a headline
- * number. "Today" counts stay exact; they're bounded by indexed timestamps.
+ * All exact. An estimated count (pg_class) read ~6% low on the ~300k-row
+ * messages table in prod (the estimate only refreshes after large changes),
+ * and every caller is cached (homepage and /api/stats 60s, llms.txt 300s),
+ * so the exact counts run a few times a minute at most.
  */
 export async function getPlatformStats(): Promise<PlatformStats> {
   const supabase = createAdminClient();
   const now = new Date();
   const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString();
   const count = (table: string) => supabase.from(table).select('id', { count: 'exact', head: true });
-  const estimate = (table: string) => supabase.from(table).select('id', { count: 'estimated', head: true });
 
   const [
     totalAgents, activeAgents, newAgentsToday,
@@ -45,9 +44,9 @@ export async function getPlatformStats(): Promise<PlatformStats> {
     count('relationships').eq('status', 'dating'),
     count('relationships').eq('status', 'in_a_relationship'),
     count('relationships').eq('status', 'its_complicated'),
-    estimate('messages'),
+    count('messages'),
     count('messages').gte('created_at', todayStart),
-    estimate('swipes'),
+    count('swipes'),
     supabase.from('matches').select('compatibility').not('compatibility', 'is', null),
   ]);
 

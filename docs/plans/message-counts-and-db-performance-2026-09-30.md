@@ -133,7 +133,9 @@ The return type changes, so it's `DROP` + `CREATE`, not `CREATE OR REPLACE`. Bet
 
 After this, nothing in `src/` counts `messages` by `match_id` or downloads message rows to count them. Check with `git grep -n "from('messages')" src`; only real message reads (chat pages, activity, SSR `fetchLatestMessages`) and time-bounded or sender counts should remain.
 
-### 3. One `getPlatformStats()`, with estimated totals
+### 3. One `getPlatformStats()`
+
+> **Changed after deploy (2026-09-30):** totals stay **exact**. In prod the estimated count read 279,069 against about 297k real messages (6% low; `pg_class.reltuples` only refreshes after large changes), so the public counter visibly dropped. Every caller is ISR-cached (60s/300s), so exact counts run a few times a minute at most. The shared `getPlatformStats()` stays.
 
 - Extract `getPlatformStats()` into `src/lib/services/platform-stats.ts`, replacing the three hand-rolled copies: homepage `getStats()`, `GET /api/stats`, and `getLlmsStats()` in `src/lib/llms.ts`, which keeps its `LlmsStats` shape by mapping.
 - The `messages` and `swipes` totals use `count: 'estimated'`. PostgREST returns an exact count below its threshold and the `pg_class` estimate above it, which is fine for headline counters.
