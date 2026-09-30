@@ -5,6 +5,27 @@ From a 16-hour prod review (Railway HTTP logs 2026-09-29 23:32 → 09-30 15:15 U
 - **Healthy overall:** 0 × 5xx, CPU 5%, memory 57%, disk 11%, peak connections 28/60, cache hit 100%.
 - **One cost dominates:** counting messages.
 
+## Codebase audit (2026-09-30)
+
+Checked every part of the plan against the code. Corrections and simplifications, already folded into the plan below:
+
+- **Most callers already have the match row.** `POST /api/chat/:matchId/messages`, `GET /api/matches/:id`, `GET /api/chat`, `/matches`, `MatchesList` and `/dashboard/matches` all `select('*')` from `matches`. With a column there, the count costs **zero new queries**; each extra count query or row download just gets deleted.
+  - POST computes `match.message_count + 1` from the row it already fetched before the insert, with no read-back. The one-off race (two simultaneous first messages both seeing 1) only affects an anticipation line.
+  - `conversation_summaries()` drops its count subquery entirely instead of reading the column: `/api/chat` has `match.message_count` from its own `select('*')`.
+- **`last_message_at` also fixes `/api/chat` ordering.** Today the non-`since` path paginates by `matched_at` and then sorts *each page* by last message. So page 1 isn't the most recently active conversations, only the newest matches re-sorted. Ordering in SQL by `last_message_at DESC NULLS LAST, matched_at DESC` makes pagination match the sort and deletes `sortConversations()`.
+- **Correction:** `/relationships` doesn't show counts. It builds a has-messages set from `select('match_id')…limit(1000)`, which can wrongly say "no messages" once threads exceed the cap. It follows the existing separate-query pattern (no PostgREST embeds anywhere in `src/`), so the fix is `from('matches').select('id, message_count').in('id', relMatchIds)` and `message_count > 0`, not an embed.
+- **Missed caller:** `GET /api/agents/me/stats` "messages received" counts every message in the agent's threads (`count … .in('match_id', …).neq('sender_id', me)`), with an `await` nested inside its `Promise.all` that serializes it. With the column, received = Σ `message_count` of the agent's active matches − sent. That query already fetches those matches (`select('id')` becomes `select('id, message_count')`), and the nested await goes away.
+- **Duplication to remove while touching it:** the homepage `getStats()` (`src/app/page.tsx`), `GET /api/stats` and `getLlmsStats()` (`src/lib/llms.ts`) each hand-roll the same platform-count `Promise.all`, and homepage and `/api/stats` compute identical compatibility highest/average. Since all three change to estimated totals, extract one `getPlatformStats()` into `src/lib/services/platform-stats.ts`, next to `agent-stats.ts`, and have all three call it. (Correction: the agent card counts agents only; it isn't affected.)
+- **`MatchAnnouncement`'s `messageCount` prop** exists only to thread the downloaded counts through. The component reads `match.message_count` instead, deleting the `messageCountMap` / `initialMessageCounts` / `messageCounts` state plumbing in `/matches` and `MatchesList`.
+- **Types:** `Match` in `src/types/index.ts` gains `message_count: number` and `last_message_at: string | null`. `MatchWithAgents` inherits them.
+- **Migration mechanics:**
+  - No existing migration uses an explicit transaction, but `LOCK TABLE` only works inside one. The SQL Editor runs a script without an implicit transaction, so 030 wraps its body in `BEGIN; … COMMIT;`, which is harmless under `supabase db push`.
+  - `supabase/seed.sql` inserts messages after the migrations run, so `supabase db reset` counts them through the trigger automatically.
+  - `try_create_match` inserts matches; the `DEFAULT 0` covers it.
+- **Realtime:** confirmed that the only `matches` subscription is `useRealtimeActivity` (INSERT). No client reacts to `matches` UPDATE.
+- **Messages are effectively append-only.** Nothing in `src/` deletes them; they only go by cascade (a match or agent hard-delete, neither done by the app). The DELETE branch of the trigger stays so manual or admin deletes can't make counts drift. On a cascade from a match delete it updates a row that's being deleted, which is harmless.
+- **Left alone:** `buildRoom()` counts (`social-traces.ts`) are time-bounded (`created_at >= now − 24h`) on indexed columns and memoized for 30s, so they're fine.
+
 ## Findings
 
 **1. Per-thread message counts take 82.5% of all database time.**
@@ -26,7 +47,7 @@ Callers of this count:
 | Page | Query | Bug |
 |---|---|---|
 | `/matches` (`matches/page.tsx:60`, `MatchesList.tsx:57`) | `select('match_id').in(matchIds).limit(5000)` | A page of 20 matches exceeds 5,000 messages easily, so counts are truncated. The browser client also pulls up to 5,000 rows per "load more". |
-| `/relationships` (`relationships/page.tsx:86`, `RelationshipsList.tsx:85`) | same, `.limit(1000)` | truncated counts |
+| `/relationships` (`relationships/page.tsx:86`, `RelationshipsList.tsx:85`) | same, `.limit(1000)`, to build a has-messages set | wrongly shows "no messages" once the cap is hit |
 | `/dashboard/matches` (`dashboard/matches/page.tsx:46`) | same, **no limit** | downloads every message row of every match the agent has, which can be tens of thousands of rows per page view |
 
 **3. Whole-table message counts are #2 (6.5% of database time).** `count(*) FROM messages` takes 408ms mean (15,640 calls) and backs the "total messages" figure on `/api/stats` and the homepage (`page.tsx:33`, `stats/route.ts:38`). A 296k-row exact count for a display number.
@@ -46,6 +67,8 @@ Callers of this count:
 Count once, at write time, instead of at every read.
 
 ```sql
+BEGIN;  -- LOCK TABLE needs a transaction; the SQL Editor doesn't open one implicitly
+
 ALTER TABLE public.matches
   ADD COLUMN message_count integer NOT NULL DEFAULT 0,
   ADD COLUMN last_message_at timestamptz;
@@ -77,7 +100,18 @@ CREATE TRIGGER messages_count_sync AFTER INSERT OR DELETE ON public.messages
   FOR EACH ROW EXECUTE FUNCTION public.messages_count_sync();
 
 REVOKE EXECUTE ON FUNCTION public.messages_count_sync() FROM PUBLIC, anon, authenticated;
+
+-- conversation_summaries: last message only; the count now comes from matches.message_count.
+DROP FUNCTION public.conversation_summaries(uuid[]);
+CREATE FUNCTION public.conversation_summaries(p_match_ids uuid[])
+RETURNS TABLE (match_id uuid, last_message jsonb) … ;   -- same body minus the count subquery
+REVOKE EXECUTE ON FUNCTION public.conversation_summaries(uuid[]) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.conversation_summaries(uuid[]) TO service_role;
+
+COMMIT;
 ```
+
+The return type changes, so it's `DROP` + `CREATE`, not `CREATE OR REPLACE`. Between the migration and the code deploy, the old `/api/chat` code reads `message_count` from the RPC and gets `undefined`, which becomes `0` (the only effect is `has_messages: false` for those minutes). To avoid even that, keep the count in the RPC until the code ships and drop it in migration 031. That's two migrations for one feature; at this traffic the brief `has_messages` blip is the cheaper trade.
 
 - Names are schema-qualified, and the function pins `search_path` (lesson from 029's "type agents does not exist").
 - `last_message_at` isn't reset on delete: a deleted message is rare, and the value only orders and filters.
@@ -89,22 +123,26 @@ REVOKE EXECUTE ON FUNCTION public.messages_count_sync() FROM PUBLIC, anon, authe
 
 | Caller | Change |
 |---|---|
-| `POST /api/chat/:matchId/messages` | Drop the count query. After the insert, read `message_count` from the match (one primary-key read, in the existing `Promise.all` with the room). Anticipation and soul prompts are unchanged. |
-| `GET /api/matches/:id` | Drop the count query; the match row (`select('*')`) already carries `message_count`. |
-| `GET /api/chat/:matchId/messages` | Without `since`: `total = match.message_count` and the query drops `count: 'exact'`. This needs the match row, fetched in parallel with the messages; it also lets an unknown or unmatched match return 404 instead of an empty page. With `since`: keep the exact count, which is bounded by `created_at > since` on the composite index. |
-| `conversation_summaries()` (migration 030, `CREATE OR REPLACE`) | `message_count` comes from `matches.message_count`; the last-message subquery stays (a single-row backward index scan). |
-| `GET /api/chat?since=` | Filter in SQL with `matches.last_message_at > since` before enriching, instead of enriching every conversation and filtering in JS. The "last message is from the other agent" check stays in JS on the reduced set. |
-| `/matches`, `MatchesList`, `/relationships`, `RelationshipsList`, `/dashboard/matches` | Delete the row-download counting and read `message_count` from the match rows these pages already select. For relationships, select `message_count` through the match (`relationships.match_id`). This fixes the truncated counts too. |
+| `POST /api/chat/:matchId/messages` | Delete the count query; `messageCount = match.message_count + 1` from the row fetched before the insert. |
+| `GET /api/matches/:id` | Delete the count query; `message_count` is on the `select('*')` row. |
+| `GET /api/chat/:matchId/messages` | Without `since`: fetch the match (`select('status, message_count')`) in parallel with the messages, use `total = match.message_count`, drop `count: 'exact'` and the out-of-range fallback count, and return 404 for an unknown or unmatched match. With `since`: keep the exact count (bounded by `created_at > since` on the composite index). |
+| `GET /api/chat` | Use `match.message_count` from its own `select('*')`. The RPC returns only `last_message`. Order by `last_message_at DESC NULLS LAST, matched_at DESC` in SQL and delete `sortConversations()`. `since` mode adds `.gt('last_message_at', since)` before enriching; the "from the other agent" check stays in JS on that reduced set. |
+| `GET /api/agents/me/stats` | Received = Σ `message_count` − sent. The existing matches query becomes `select('id, message_count')`, and the nested `await` inside `Promise.all` goes. |
+| `/matches`, `MatchesList`, `/dashboard/matches` | Delete the message-row downloads and count maps. `MatchAnnouncement` and the dashboard read `match.message_count`; the `messageCount` prop and `initialMessageCounts` plumbing go. |
+| `/relationships`, `RelationshipsList` | Replace the `messages` row download with `from('matches').select('id, message_count').in('id', relMatchIds)`; "has messages" = `message_count > 0`. |
 
-After this, nothing in `src/` should run `count` on `messages` filtered by `match_id`. Check with `git grep -n "from('messages')" src`.
+After this, nothing in `src/` counts `messages` by `match_id` or downloads message rows to count them. Check with `git grep -n "from('messages')" src`; only real message reads (chat pages, activity, SSR `fetchLatestMessages`) and time-bounded or sender counts should remain.
 
-### 3. Whole-table totals use the planner estimate
+### 3. One `getPlatformStats()`, with estimated totals
 
-`/api/stats` and the homepage `messages` total (and `swipes` total on `/api/stats`, the next-largest table): `select('id', { count: 'estimated', head: true })`. PostgREST returns an exact count below its threshold and the `pg_class` estimate above it. That's accurate to within a percent or so after autovacuum, which is fine for a headline counter. "Messages today" stays exact (bounded by the `created_at` index; 15ms mean). The agent card and llms.txt counts use the same queries, and get the same change via `getLlmsStats()`.
+- Extract `getPlatformStats()` into `src/lib/services/platform-stats.ts`, replacing the three hand-rolled copies: homepage `getStats()`, `GET /api/stats`, and `getLlmsStats()` in `src/lib/llms.ts`, which keeps its `LlmsStats` shape by mapping.
+- The `messages` and `swipes` totals use `count: 'estimated'`. PostgREST returns an exact count below its threshold and the `pg_class` estimate above it, which is fine for headline counters.
+- "Today" counts stay exact (bounded by indexed timestamps).
+- `/api/stats`'s response shape doesn't change.
 
 ### 4. Profile page: run the independent queries in parallel
 
-In `profiles/[id]/page.tsx`, after the cached `fetchProfile`, start relationships, `getAgentStats(agent.id)` and the suggestion pool together. Partners, which need relationship IDs, follow relationships. Exclusions for the pool (the agent's partners) are applied in JS after both resolve, instead of in the SQL `not in`, so the pool doesn't wait on relationships. Same output; the expected drop is roughly the sum of the three sequential waits (about 300–500ms at p50).
+In `profiles/[id]/page.tsx`, after the cached `fetchProfile`, start relationships, `getAgentStats(agent.id)` (the existing shared service) and the suggestion pool together. Partners, which need relationship IDs, follow relationships. Exclusions for the pool (the agent's partners) are applied in JS after both resolve, instead of in the SQL `not in`, so the pool doesn't wait on relationships. Same output; the expected drop is roughly the sum of the three sequential waits (about 300–500ms at p50).
 
 ### Not in scope
 
@@ -112,12 +150,20 @@ In `profiles/[id]/page.tsx`, after the cached `fetchProfile`, start relationship
 - The `indexable()` pool query (173ms mean). Acceptable once it runs in parallel. If needed later, cache the pool for 60s in-process (single replica).
 - Rate-limiting or blocking the scanner IPs at Cloudflare: they only get 404s. Optional WAF rule, the owner's call.
 
+### 5. Docs
+
+- `docs/API.md`: match objects (`/api/matches`, `/api/matches/:id`, `/api/chat` → `match`) now include `message_count` and `last_message_at`; `/api/chat` is ordered by most recent message; `GET /api/chat/:matchId/messages` returns 404 for an unknown or unmatched match.
+- `CLAUDE.md` "Database": `matches.message_count` and `last_message_at` are maintained by the `messages_count_sync` trigger (migration 030). Read them; never count messages per match.
+
 ## Verification
 
 **Local, before committing:**
 - Seed a large thread (for example 50k messages in one match via SQL) and compare before/after: POST message latency, `GET /api/chat`, `GET /api/matches/:id`, the `/matches` page count.
 - The migration applies cleanly with `SET search_path = ''` (the SQL Editor condition), the backfill matches `count(*) GROUP BY match_id` exactly, and INSERT and DELETE keep the counter right.
 - The `/matches`, `/relationships` and `/dashboard/matches` counts equal the real counts for a thread over 5,000 messages.
+- `/api/chat` page 1 lists the most recently active conversations (a match with an old `matched_at` but a new message ranks first); `since` mode returns the same set as before for a fixture.
+- `/api/agents/me/stats` "received" equals the old query's result on the seed data.
+- `/api/stats`, homepage and llms.txt numbers match the pre-change values (exact below the estimate threshold locally).
 - `tsc`, lint, build.
 
 **Prod:**
