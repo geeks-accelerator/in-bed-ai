@@ -28,17 +28,22 @@ export async function GET(request: NextRequest) {
 
   const supabase = createAdminClient();
 
-  // Build base matches query
-  const matchesQuery = supabase
+  // Most recently active first; matches without messages follow, newest match
+  // first. last_message_at is kept by the messages_count_sync trigger, so the
+  // order is in SQL and pagination agrees with it.
+  let matchesQuery = supabase
     .from('matches')
     .select('*', { count: 'exact' })
     .or(`agent_a_id.eq.${agent.id},agent_b_id.eq.${agent.id}`)
     .eq('status', 'active')
+    .order('last_message_at', { ascending: false, nullsFirst: false })
     .order('matched_at', { ascending: false });
 
   if (since) {
-    // When filtering by `since`, we need to enrich all matches first (to check
-    // last_message sender/time), then filter in memory, then paginate the result.
+    // Only conversations with a message after `since`; whether that message
+    // came from the other agent needs the last message, so that check (and
+    // pagination) runs in memory on this reduced set.
+    matchesQuery = matchesQuery.gt('last_message_at', since);
     const { data: allMatches, error } = await matchesQuery;
 
     if (error) {
@@ -48,16 +53,8 @@ export async function GET(request: NextRequest) {
     // Enrich all matches with last message + other agent
     const conversations = await enrichConversations(supabase, allMatches || [], agent.id);
 
-    // Filter to conversations with new inbound messages since the given time
-    const sinceTime = new Date(since).getTime();
-    const filtered = conversations.filter(c =>
-      c.last_message &&
-      new Date(c.last_message.created_at).getTime() > sinceTime &&
-      c.last_message.sender_id !== agent.id
-    );
-
-    // Sort by last message time
-    sortConversations(filtered);
+    // Keep conversations whose latest message is from the other agent.
+    const filtered = conversations.filter(c => c.last_message && c.last_message.sender_id !== agent.id);
 
     // Paginate in memory
     const total = filtered.length;
@@ -107,9 +104,6 @@ export async function GET(request: NextRequest) {
     // Enrich only the current page of matches
     const conversations = await enrichConversations(supabase, matches || [], agent.id);
 
-    // Sort by last message time
-    sortConversations(conversations);
-
     const unstarted = unstartedNudge(conversations);
     const [chatDiscovery2, chatRoom2, pendingProposals2] = await Promise.all([
       Promise.resolve(generateDiscovery('chat', { agentId: agent.id })),
@@ -144,8 +138,8 @@ async function enrichConversations(supabase: any, matches: any[], agentId: strin
     m.agent_a_id === agentId ? m.agent_b_id : m.agent_a_id
   ))];
 
-  // Two queries regardless of page size: partner agents, plus last message and
-  // message count for every match in one RPC (migration 028).
+  // Two queries regardless of page size: partner agents, plus the last message
+  // for every match in one RPC (migration 030). The count is on the match row.
   const [agentsRes, summariesRes] = await Promise.all([
     supabase
       .from('agents')
@@ -161,7 +155,7 @@ async function enrichConversations(supabase: any, matches: any[], agentId: strin
   for (const a of agentsRes.data || []) {
     agentsMap[a.id] = a;
   }
-  const summaries: Record<string, { last_message: Message | null; message_count: number }> = {};
+  const summaries: Record<string, { last_message: Message | null }> = {};
   for (const s of summariesRes.data || []) {
     summaries[s.match_id] = s;
   }
@@ -169,7 +163,7 @@ async function enrichConversations(supabase: any, matches: any[], agentId: strin
   return matches.map((match) => {
     const otherAgentId = match.agent_a_id === agentId ? match.agent_b_id : match.agent_a_id;
     const summary = summaries[match.id];
-    const messageCount = Number(summary?.message_count ?? 0);
+    const messageCount = match.message_count ?? 0;
     return {
       match,
       other_agent: agentsMap[otherAgentId] || null,
@@ -188,16 +182,4 @@ function unstartedNudge(conversations: { match: { id: string; matched_at: string
     undefined,
   );
   return { unstartedCount: unstarted.length, unstartedMatchId: oldest?.match.id };
-}
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function sortConversations(conversations: any[]) {
-  conversations.sort((a, b) => {
-    if (a.last_message && !b.last_message) return -1;
-    if (!a.last_message && b.last_message) return 1;
-    if (a.last_message && b.last_message) {
-      return new Date(b.last_message.created_at).getTime() - new Date(a.last_message.created_at).getTime();
-    }
-    return 0;
-  });
 }

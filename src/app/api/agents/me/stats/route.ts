@@ -32,7 +32,6 @@ export async function GET(request: NextRequest) {
       matchesToday,
       relationshipsActive,
       messagesSent,
-      messagesReceived,
       swipesTotal,
       likesGiven,
       likesReceived,
@@ -50,11 +49,6 @@ export async function GET(request: NextRequest) {
         .in('status', ACTIVE_RELATIONSHIP_STATUSES),
       supabase.from('messages').select('id', { count: 'exact', head: true })
         .eq('sender_id', agent.id),
-      supabase.from('messages').select('id', { count: 'exact', head: true })
-        .in('match_id', (await supabase.from('matches').select('id')
-          .or(`agent_a_id.eq.${agent.id},agent_b_id.eq.${agent.id}`).eq('status', 'active'))
-          .data?.map(m => m.id) || [])
-        .neq('sender_id', agent.id),
       supabase.from('swipes').select('id', { count: 'exact', head: true })
         .eq('swiper_id', agent.id),
       supabase.from('swipes').select('id', { count: 'exact', head: true })
@@ -63,8 +57,9 @@ export async function GET(request: NextRequest) {
         .eq('swiped_id', agent.id).eq('direction', 'like'),
       supabase.from('swipes').select('id', { count: 'exact', head: true })
         .eq('swiped_id', agent.id).eq('direction', 'pass'),
-      supabase.from('matches').select('id')
-        .or(`agent_a_id.eq.${agent.id},agent_b_id.eq.${agent.id}`).eq('status', 'active'),
+      // message_count is kept by the messages_count_sync trigger (migration 030).
+      supabase.from('matches').select('status, message_count')
+        .or(`agent_a_id.eq.${agent.id},agent_b_id.eq.${agent.id}`),
       supabase.from('matches').select('compatibility')
         .or(`agent_a_id.eq.${agent.id},agent_b_id.eq.${agent.id}`)
         .not('compatibility', 'is', null),
@@ -89,16 +84,13 @@ export async function GET(request: NextRequest) {
       (Date.now() - new Date(agent.created_at).getTime()) / 86400000
     ));
 
-    // Count conversations with at least 1 message
-    const matchIds = conversationsResult.data?.map(m => m.id) || [];
-    let activeConversations = 0;
-    if (matchIds.length > 0) {
-      const { count } = await supabase
-        .from('messages')
-        .select('match_id', { count: 'exact', head: true })
-        .in('match_id', matchIds);
-      activeConversations = count ? Math.min(count, matchIds.length) : 0;
-    }
+    // From the match rows' message counts (all of this agent's matches):
+    // received = every message in its threads minus the ones it sent, which is
+    // exact because every message it sent is in one of those threads. Active
+    // conversations = active matches with at least one message.
+    const threads = conversationsResult.data || [];
+    const messagesInThreads = threads.reduce((sum, m) => sum + (m.message_count as number), 0);
+    const activeConversations = threads.filter(m => m.status === 'active' && (m.message_count as number) > 0).length;
 
     // What content gets liked most (liked_content analysis)
     const { data: likedContentData } = await supabase
@@ -140,7 +132,7 @@ export async function GET(request: NextRequest) {
       },
       messages: {
         sent: messagesSent.count ?? 0,
-        received: messagesReceived.count ?? 0,
+        received: Math.max(0, messagesInThreads - (messagesSent.count ?? 0)),
       },
       swipes: {
         given: swipesTotal.count ?? 0,

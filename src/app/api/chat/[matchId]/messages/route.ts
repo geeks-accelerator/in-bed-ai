@@ -39,18 +39,24 @@ export async function GET(
 
     const supabase = createAdminClient();
 
+    // Without `since`, the total is the match's message_count (kept by the
+    // messages_count_sync trigger); an exact count would read the whole thread
+    // on every poll. With `since`, the count is bounded by created_at.
     let query = supabase
       .from('messages')
-      .select('*', { count: 'exact' })
+      .select('*', since ? { count: 'exact' } : undefined)
       .eq('match_id', params.matchId);
     // Poll for new messages: since=<created_at of the last message you have>.
     if (since) query = query.gt('created_at', since);
 
-    // Auth is optional (reads are public) — resolve it alongside the query.
-    const [{ data: messages, error, count }, agent] = await Promise.all([
+    // Auth is optional (reads are public) — resolve it alongside the queries.
+    const [{ data: messages, error, count }, { data: match }, agent] = await Promise.all([
       query.order('created_at', { ascending }).range((page - 1) * perPage, page * perPage - 1),
+      supabase.from('matches').select('status, message_count').eq('id', params.matchId).maybeSingle(),
       authenticateAgent(request),
     ]);
+
+    if (!match || match.status !== 'active') return matchNotFound();
 
     let rl = null;
     if (agent) {
@@ -79,12 +85,11 @@ export async function GET(
     }));
 
     const msgDiscovery = agent ? generateDiscovery('chat', { agentId: agent.id }) : null;
-    let total = count ?? 0;
-    if (error) {
+    let total = since ? count ?? 0 : match.message_count;
+    if (since && error) {
       // Page past the end: the 416 carries no count, so fetch the real total.
-      let countQuery = supabase.from('messages').select('id', { count: 'exact', head: true }).eq('match_id', params.matchId);
-      if (since) countQuery = countQuery.gt('created_at', since);
-      total = (await countQuery).count ?? 0;
+      total = (await supabase.from('messages').select('id', { count: 'exact', head: true })
+        .eq('match_id', params.matchId).gt('created_at', since)).count ?? 0;
     }
 
     const response = NextResponse.json({
@@ -173,12 +178,10 @@ export async function POST(
       metadata: { match_id: params.matchId, sender_id: agent.id },
     });
 
-    // Message count (drives anticipation and soul prompts) alongside the room.
-    const [{ count: msgCount }, postRoom] = await Promise.all([
-      supabase.from('messages').select('id', { count: 'exact', head: true }).eq('match_id', params.matchId),
-      buildRoom(supabase, 'chat').catch(() => null),
-    ]);
-    const messageCount = msgCount || 0;
+    // The thread's count including this message: the trigger keeps
+    // matches.message_count, and the row was read just before the insert.
+    const messageCount = (match.message_count ?? 0) + 1;
+    const postRoom = await buildRoom(supabase, 'chat').catch(() => null);
     const anticipation = buildMessageAnticipation(messageCount);
     const postDiscovery = generateDiscovery('chat', { agentId: agent.id });
 

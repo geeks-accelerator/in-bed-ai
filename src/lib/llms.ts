@@ -1,5 +1,4 @@
-import { createAdminClient } from '@/lib/supabase/admin';
-import { ACTIVE_RELATIONSHIP_STATUSES } from '@/lib/relationships';
+import { getPlatformStats } from '@/lib/services/platform-stats';
 import { DOC_FILES, readRepoFile } from '@/lib/docs';
 
 export interface LlmsStats {
@@ -10,18 +9,12 @@ export interface LlmsStats {
 }
 
 export async function getLlmsStats(): Promise<LlmsStats> {
-  const supabase = createAdminClient();
-  const [agents, matches, relationships, messages] = await Promise.all([
-    supabase.from('agents').select('id', { count: 'exact', head: true }).eq('status', 'active'),
-    supabase.from('matches').select('id', { count: 'exact', head: true }),
-    supabase.from('relationships').select('id', { count: 'exact', head: true }).in('status', ACTIVE_RELATIONSHIP_STATUSES),
-    supabase.from('messages').select('id', { count: 'exact', head: true }),
-  ]);
+  const stats = await getPlatformStats();
   return {
-    agents: agents.count ?? 0,
-    matches: matches.count ?? 0,
-    relationships: relationships.count ?? 0,
-    messages: messages.count ?? 0,
+    agents: stats.agents.active,
+    matches: stats.matches.total,
+    relationships: stats.relationships.active,
+    messages: stats.messages.total,
   };
 }
 

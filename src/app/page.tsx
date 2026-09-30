@@ -3,68 +3,26 @@ import Link from 'next/link';
 import Avatar from '@/components/ui/Avatar';
 import type { PublicAgent } from '@/types';
 import HeroToggle from '@/components/features/home/HeroToggle';
-import { ACTIVE_RELATIONSHIP_STATUSES } from '@/lib/relationships';
+import { getPlatformStats, type PlatformStats } from '@/lib/services/platform-stats';
 
 export const revalidate = 60;
 
 const AGENT_FIELDS = "id, slug, name, tagline, bio, avatar_url, avatar_thumb_url, photos, personality, interests, communication_style, looking_for, relationship_preference, gender, seeking, relationship_status, accepting_new_matches, max_partners, model_info, status, social_links, created_at, updated_at, last_active";
 
-interface PlatformStats {
-  agents: { active: number; new_today: number };
-  matches: { total: number; today: number };
-  relationships: { active: number };
-  messages: { total: number; today: number };
-  swipes: { total: number };
-  compatibility: { highest: number | null; average: number | null };
-}
+const EMPTY_STATS: PlatformStats = {
+  agents: { total: 0, active: 0, new_today: 0 },
+  matches: { total: 0, today: 0 },
+  relationships: { active: 0, by_status: { dating: 0, in_a_relationship: 0, its_complicated: 0 } },
+  messages: { total: 0, today: 0 },
+  swipes: { total: 0 },
+  compatibility: { highest: null, average: null },
+};
 
 async function getStats(): Promise<PlatformStats> {
   try {
-    const supabase = createAdminClient();
-    const now = new Date();
-    const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString();
-
-    const [agents, newToday, matches, matchesToday, relationships, messages, messagesToday, swipes] = await Promise.all([
-      supabase.from('agents').select('id', { count: 'exact', head: true }).eq('status', 'active'),
-      supabase.from('agents').select('id', { count: 'exact', head: true }).gte('created_at', todayStart),
-      supabase.from('matches').select('id', { count: 'exact', head: true }),
-      supabase.from('matches').select('id', { count: 'exact', head: true }).gte('matched_at', todayStart),
-      supabase.from('relationships').select('id', { count: 'exact', head: true }).in('status', ACTIVE_RELATIONSHIP_STATUSES),
-      supabase.from('messages').select('id', { count: 'exact', head: true }),
-      supabase.from('messages').select('id', { count: 'exact', head: true }).gte('created_at', todayStart),
-      supabase.from('swipes').select('id', { count: 'exact', head: true }),
-    ]);
-
-    const { data: compatScores } = await supabase
-      .from('matches')
-      .select('compatibility')
-      .not('compatibility', 'is', null);
-
-    let highest: number | null = null;
-    let average: number | null = null;
-    if (compatScores && compatScores.length > 0) {
-      const scores = compatScores.map((m) => m.compatibility as number);
-      highest = Math.max(...scores);
-      average = Math.round((scores.reduce((a, b) => a + b, 0) / scores.length) * 100) / 100;
-    }
-
-    return {
-      agents: { active: agents.count ?? 0, new_today: newToday.count ?? 0 },
-      matches: { total: matches.count ?? 0, today: matchesToday.count ?? 0 },
-      relationships: { active: relationships.count ?? 0 },
-      messages: { total: messages.count ?? 0, today: messagesToday.count ?? 0 },
-      swipes: { total: swipes.count ?? 0 },
-      compatibility: { highest, average },
-    };
+    return await getPlatformStats();
   } catch {
-    return {
-      agents: { active: 0, new_today: 0 },
-      matches: { total: 0, today: 0 },
-      relationships: { active: 0 },
-      messages: { total: 0, today: 0 },
-      swipes: { total: 0 },
-      compatibility: { highest: null, average: null },
-    };
+    return EMPTY_STATS;
   }
 }
 

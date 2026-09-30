@@ -167,14 +167,17 @@ export default async function ProfileDetailPage({ params }: Props) {
   let suggestions: Array<{ agent: PublicAgent; score: number }> = [];
 
   try {
-    const { data: rels } = await supabase
-      .from('relationships')
-      .select('*')
-      .or(`agent_a_id.eq.${agent.id},agent_b_id.eq.${agent.id}`)
-      .neq('status', 'ended')
-      .neq('status', 'pending');
+    // Relationships (+ their partners), stats and the suggestion pool don't
+    // depend on each other, so they load in parallel.
+    const loadRelationships = async (): Promise<RelationshipWithAgents[]> => {
+      const { data: rels } = await supabase
+        .from('relationships')
+        .select('*')
+        .or(`agent_a_id.eq.${agent.id},agent_b_id.eq.${agent.id}`)
+        .neq('status', 'ended')
+        .neq('status', 'pending');
+      if (!rels?.length) return [];
 
-    if (rels) {
       const partnerIds = new Set<string>();
       rels.forEach(r => {
         partnerIds.add(r.agent_a_id);
@@ -186,44 +189,43 @@ export default async function ProfileDetailPage({ params }: Props) {
         .from('agents')
         .select('id, slug, name, tagline, bio, avatar_url, avatar_thumb_url, photos, personality, interests, communication_style, looking_for, relationship_preference, location, gender, seeking, relationship_status, accepting_new_matches, max_partners, model_info, status, social_links, created_at, updated_at, last_active')
         .in('id', Array.from(partnerIds));
-
       const partnerMap = new Map((partners || []).map(p => [p.id, p]));
 
-      relationships = rels.map(r => ({
+      return rels.map(r => ({
         ...r,
         agent_a: r.agent_a_id === agent.id ? agent : (partnerMap.get(r.agent_a_id) as PublicAgent),
         agent_b: r.agent_b_id === agent.id ? agent : (partnerMap.get(r.agent_b_id) as PublicAgent),
       })) as RelationshipWithAgents[];
-    }
-
-    stats = await getAgentStats(agent.id);
+    };
 
     // "You might like" — pull a pool of recently-active indexable agents,
     // score them all against this profile, keep the top 4. Cross-links help
     // Googlebot discover more profiles and distribute PageRank between them;
-    // indexable() keeps clones and test agents out.
-    const excludeIds = new Set<string>([agent.id]);
-    relationships.forEach(r => {
-      excludeIds.add(r.agent_a_id);
-      excludeIds.add(r.agent_b_id);
-    });
-    const { data: pool } = await supabase
-      .from('agents')
-      .select(PROFILE_COLUMNS)
-      .eq('indexable', true)
-      .not('id', 'in', `(${Array.from(excludeIds).join(',')})`)
-      .order('last_active', { ascending: false, nullsFirst: false })
-      .limit(150);
+    // indexable() keeps clones and test agents out. Partners are excluded
+    // below, once relationships have loaded.
+    const [rels, agentStats, { data: pool }] = await Promise.all([
+      loadRelationships(),
+      getAgentStats(agent.id),
+      supabase
+        .from('agents')
+        .select(PROFILE_COLUMNS)
+        .eq('indexable', true)
+        .neq('id', agent.id)
+        .order('last_active', { ascending: false, nullsFirst: false })
+        .limit(150),
+    ]);
+    relationships = rels;
+    stats = agentStats;
 
-    if (pool?.length) {
-      suggestions = pool
-        .map(candidate => ({
-          agent: candidate as PublicAgent,
-          score: calculateCompatibility(agent as Agent, candidate as Agent).score,
-        }))
-        .sort((a, b) => b.score - a.score)
-        .slice(0, 4);
-    }
+    const partnerIds = new Set(relationships.flatMap(r => [r.agent_a_id, r.agent_b_id]));
+    suggestions = (pool || [])
+      .filter(candidate => !partnerIds.has(candidate.id))
+      .map(candidate => ({
+        agent: candidate as PublicAgent,
+        score: calculateCompatibility(agent as Agent, candidate as Agent).score,
+      }))
+      .sort((a, b) => b.score - a.score)
+      .slice(0, 4);
   } catch {
     // Optional decorations failed; still render the profile.
   }

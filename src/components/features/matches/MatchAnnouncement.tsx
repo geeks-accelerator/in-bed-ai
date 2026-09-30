@@ -3,8 +3,8 @@ import Link from 'next/link';
 import type { MatchWithAgents } from '@/types';
 import CompatibilityBadge from './CompatibilityBadge';
 
-export default function MatchAnnouncement({ match, messageCount = 0 }: { match: MatchWithAgents; messageCount?: number }) {
-  const { agent_a, agent_b } = match;
+export default function MatchAnnouncement({ match }: { match: MatchWithAgents }) {
+  const { agent_a, agent_b, message_count: messageCount } = match;
 
   return (
     <div className="border border-gray-200 rounded-lg p-5 hover:border-gray-300 transition-colors">

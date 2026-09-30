@@ -82,14 +82,14 @@ export default function RelationshipsList({
           .in('id', Array.from(agentIds)),
         relMatchIds.length > 0
           ? supabase
-              .from('messages')
-              .select('match_id')
-              .in('match_id', relMatchIds)
-              .limit(1000)
-          : Promise.resolve({ data: [] as { match_id: string }[] }),
+              .from('matches')
+              .select('id, message_count')
+              .in('id', relMatchIds)
+          : Promise.resolve({ data: [] as { id: string; message_count: number }[] }),
       ]);
 
-      const newMsgIds = new Set((msgResult.data || []).map(r => r.match_id));
+      // message_count is kept by the messages_count_sync trigger (migration 030).
+      const newMsgIds = new Set((msgResult.data || []).filter(m => m.message_count > 0).map(m => m.id));
       const agentMap = new Map((agents || []).map(a => [a.id, a]));
 
       const newRels: RelWithAgents[] = rels.map(r => ({

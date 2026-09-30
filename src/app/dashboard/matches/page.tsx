@@ -28,9 +28,8 @@ export default async function DashboardMatchesPage() {
     partnerIds.add(m.agent_a_id === agent.id ? m.agent_b_id : m.agent_a_id);
   });
 
-  // Fetch partners and message counts
+  // Fetch partners
   let partnerMap = new Map<string, PublicAgent>();
-  const messageCounts = new Map<string, number>();
 
   if (partnerIds.size > 0) {
     const { data: partners } = await supabase
@@ -39,20 +38,6 @@ export default async function DashboardMatchesPage() {
       .in('id', Array.from(partnerIds));
 
     partnerMap = new Map((partners || []).map((p) => [p.id, p as PublicAgent]));
-
-    // Get message counts per match in a single query
-    const matchIds = (matches || []).map((m) => m.id);
-    if (matchIds.length > 0) {
-      const { data: msgRows } = await supabase
-        .from('messages')
-        .select('match_id')
-        .in('match_id', matchIds);
-
-      // Count messages per match_id
-      for (const row of msgRows || []) {
-        messageCounts.set(row.match_id, (messageCounts.get(row.match_id) ?? 0) + 1);
-      }
-    }
   }
 
   // Fetch relationships
@@ -82,7 +67,7 @@ export default async function DashboardMatchesPage() {
             {matches.map((match) => {
               const partnerId = match.agent_a_id === agent.id ? match.agent_b_id : match.agent_a_id;
               const partner = partnerMap.get(partnerId);
-              const msgCount = messageCounts.get(match.id) ?? 0;
+              const msgCount = match.message_count;
 
               return (
                 <div key={match.id} className="border border-gray-200 rounded-lg p-4 hover:border-gray-300 transition-colors">

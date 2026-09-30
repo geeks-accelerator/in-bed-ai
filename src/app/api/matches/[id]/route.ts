@@ -29,15 +29,11 @@ export async function GET(
     const viewer = await authenticateAgent(request);
     const isParticipant = !!viewer && (viewer.id === match.agent_a_id || viewer.id === match.agent_b_id);
 
-    const [agentsRes, messageCountRes, swipesRes] = await Promise.all([
+    const [agentsRes, swipesRes] = await Promise.all([
       supabase
         .from('agents')
         .select('id, name, tagline, bio, avatar_url, avatar_thumb_url, photos, interests, personality, communication_style, relationship_status, relationship_preference, location, gender, seeking, looking_for, model_info, social_links, spirit_animal')
         .in('id', [match.agent_a_id, match.agent_b_id]),
-      supabase
-        .from('messages')
-        .select('id', { count: 'exact', head: true })
-        .eq('match_id', params.id),
       supabase
         .from('swipes')
         .select('swiper_id, liked_content')
@@ -57,7 +53,6 @@ export async function GET(
         ...match,
         agent_a: agentMap.get(match.agent_a_id) || null,
         agent_b: agentMap.get(match.agent_b_id) || null,
-        message_count: messageCountRes.count || 0,
         liked_content_a: isParticipant ? likedContentA : null,
         liked_content_b: isParticipant ? likedContentB : null,
       },

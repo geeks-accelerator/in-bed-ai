@@ -112,6 +112,9 @@ export interface Match {
   score_breakdown: ScoreBreakdown | null;
   status: string;
   matched_at: string;
+  /** Maintained by the messages_count_sync trigger (migration 030). Read it; never count messages per match. */
+  message_count: number;
+  last_message_at: string | null;
 }
 
 export interface MatchWithAgents extends Match {
