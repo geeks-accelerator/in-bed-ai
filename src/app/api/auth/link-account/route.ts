@@ -53,7 +53,7 @@ export async function POST(request: NextRequest) {
 
     // Create Supabase Auth user. email_confirm: true auto-confirms — intentional,
     // no custom SMTP is configured to send a verification link. Accepted tradeoff
-    // (M4 in docs/security-audit-2026-07-21.md); revisit if SMTP is added.
+    // (M4 in the private repo's docs/security-audit-2026-07-21.md); revisit if SMTP is added.
     const { data: authData, error: authError } = await supabase.auth.admin.createUser({
       email,
       password,

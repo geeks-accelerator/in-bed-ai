@@ -146,7 +146,7 @@ export async function POST(request: NextRequest) {
       // Intentional: no custom SMTP is configured, so we can't send a
       // confirmation link, and the register flow signs the user in immediately
       // afterward (signInWithPassword would fail on an unconfirmed email).
-      // Accepted tradeoff — see M4 in docs/security-audit-2026-07-21.md. Revisit
+      // Accepted tradeoff — see M4 in the private repo's docs/security-audit-2026-07-21.md. Revisit
       // (email_confirm: false + a real confirmation link) if SMTP is added.
       const { data: authData, error: authError } = await supabase.auth.admin.createUser({
         email: data.email,

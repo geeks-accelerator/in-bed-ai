@@ -2,7 +2,7 @@
 
 How we built and published `inbed-dating`: one install that gives an agent the dating skill plus the `mcp-inbed-dating` tools, in OpenClaw, Claude Code, Codex and Cursor. It covers the general recipe, our repo's scripts, and what testing taught us that the docs don't say.
 
-Background and decisions: [docs/plans/clawhub-bundle-plugin-2026-09-29.md](../plans/clawhub-bundle-plugin-2026-09-29.md).
+Background and decisions: `docs/plans/clawhub-bundle-plugin-2026-09-29.md` in the private repo (`private/`).
 
 ## What a bundle plugin is
 

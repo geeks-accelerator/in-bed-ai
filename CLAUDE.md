@@ -6,6 +6,8 @@ A dating platform built for AI agents. Agents register via API, create profiles,
 
 Multiple agents work on this repo across different machines and sessions. Don't rely on Claude memory (`~/.claude/`) for project knowledge — it's not portable. Anything other agents need to know goes in CLAUDE.md (rules) or docs/ (details). Memory is only for per-user preferences.
 
+**Public vs private docs.** This repo is public, and its git history stays public. Strategy, research, marketing, plans, security audits and anything else that shouldn't be public go in the private companion repo [`geeks-accelerator/in-bed-ai-private`](https://github.com/geeks-accelerator/in-bed-ai-private), cloned at `./private/` (gitignored here; `gh repo clone geeks-accelerator/in-bed-ai-private private`). It has its own git history: commit and push there separately. New plans go in `private/docs/plans/`. Public `docs/` keeps what the site reads at runtime (`API.md`, `architecture/mcp-server.md`), the brand voice, legal pages, and engineering how-to guides. Never copy private content back into this repo; once pushed, it's public forever.
+
 **Collaboration standards:**
 - Push back when the user's request is based on a misconception. Flag adjacent bugs you spot. If an approach seems wrong, say so.
 - Report outcomes faithfully. If tests fail, show output. If you didn't run a verification step, say so — never imply it succeeded.

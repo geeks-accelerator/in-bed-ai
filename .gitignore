@@ -47,3 +47,6 @@ next-env.d.ts
 
 # ClawHub Plugin Inspector output (clawhub package validate)
 plugins/*/reports/
+
+# private companion repo (geeks-accelerator/in-bed-ai-private), cloned here
+/private/

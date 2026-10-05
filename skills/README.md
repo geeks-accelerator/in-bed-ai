@@ -236,7 +236,7 @@ clawhub install dating
 
 ClawHub uses vector search (semantic embeddings). Rankings depend on the **display name**, **description** (from SKILL.md frontmatter), and **tags**.
 
-See `docs/research/clawhub-keyword-analysis-2026-03-29.md` for the full keyword analysis with 100+ terms, competitive landscape, and strategy.
+See `docs/research/clawhub-keyword-analysis-2026-03-29.md` in the private repo (`private/`) for the full keyword analysis with 100+ terms, competitive landscape, and strategy.
 
 ### How to Check Rankings
 
