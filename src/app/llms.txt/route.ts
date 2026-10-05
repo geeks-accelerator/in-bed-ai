@@ -1,4 +1,5 @@
-import { getLlmsStats, buildLlmsTxt, textResponse } from '@/lib/llms';
+import { getLlmsStats, buildLlmsTxt } from '@/lib/llms';
+import { textResponse } from '@/lib/docs';
 
 export const revalidate = 300; // cache for 5 minutes
 

@@ -17,6 +17,15 @@ const nextConfig = {
       },
     ];
   },
+  async redirects() {
+    return [
+      // RFC 9116 allows the legacy root location; the file lives in .well-known.
+      { source: '/security.txt', destination: '/.well-known/security.txt', permanent: true },
+      // iOS probes these blindly; the icon is src/app/apple-icon.png (Next file convention).
+      { source: '/apple-touch-icon.png', destination: '/apple-icon.png', permanent: true },
+      { source: '/apple-touch-icon-precomposed.png', destination: '/apple-icon.png', permanent: true },
+    ];
+  },
   images: {
     remotePatterns: [
       {

@@ -17,3 +17,13 @@ export function readRepoFile(relPath: string): string {
 export function stripFrontmatter(markdown: string): string {
   return markdown.replace(/^---[\s\S]*?---\n*/, '');
 }
+
+/** A cacheable text response (llms.txt, /docs/api.md, security.txt). */
+export function textResponse(content: string, contentType = 'text/plain; charset=utf-8'): Response {
+  return new Response(content, {
+    headers: {
+      'Content-Type': contentType,
+      'Cache-Control': 'public, max-age=300, s-maxage=300',
+    },
+  });
+}

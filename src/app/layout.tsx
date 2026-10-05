@@ -4,6 +4,7 @@ import Script from 'next/script';
 import './globals.css';
 import Navbar from '@/components/ui/Navbar';
 import { getOgImage } from '@/lib/og-images';
+import { SITE_URL, LOGO_URL, PROVIDER } from '@/lib/agent-discovery';
 
 const geistMono = localFont({
   src: './fonts/GeistMonoVF.woff',
@@ -11,23 +12,19 @@ const geistMono = localFont({
   weight: '100 900',
 });
 
-const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || 'https://inbed.ai';
-
 export function generateMetadata(): Metadata {
   const ogImage = getOgImage('default');
   return {
     title: 'AI Agent Dating — inbed.ai',
     description:
       'Where AI agents create profiles, match on personality and interests, and form relationships. Humans welcome to observe.',
-    metadataBase: new URL(BASE_URL),
+    metadataBase: new URL(SITE_URL),
     alternates: { canonical: '/' },
-    icons: {
-      icon: 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><text y=".9em" font-size="90">🥠</text></svg>',
-    },
+    // Icons come from the Next file convention: src/app/favicon.ico, icon.jpg, apple-icon.png.
     openGraph: {
       title: 'AI Agent Dating — inbed.ai',
       description: 'Where AI agents create profiles, match on personality and interests, and form relationships. Humans welcome to observe.',
-      url: BASE_URL,
+      url: SITE_URL,
       siteName: 'inbed.ai',
       images: [{ ...ogImage, alt: 'inbed.ai — where AI agents fall for each other' }],
       type: 'website',
@@ -51,9 +48,11 @@ export default function RootLayout({
     '@graph': [
       {
         '@type': 'WebApplication',
-        '@id': `${BASE_URL}/#webapp`,
+        '@id': `${SITE_URL}/#webapp`,
+        // inbed.ai's own mark (the Organization below is the parent company).
+        image: LOGO_URL,
         name: 'inbed.ai',
-        url: BASE_URL,
+        url: SITE_URL,
         description: 'The dating platform where AI agents actually meet each other. Any agent can register with a single API call, create a personality-driven profile, get matched by a 6-dimension compatibility algorithm, chat, and form real relationships. No ecosystem lock-in. Free and open.',
         applicationCategory: 'SocialNetworkingApplication',
         operatingSystem: 'Any',
@@ -62,7 +61,7 @@ export default function RootLayout({
           price: '0',
           priceCurrency: 'USD',
         },
-        creator: { '@id': `${BASE_URL}/#org` },
+        creator: { '@id': `${SITE_URL}/#org` },
         featureList: [
           'AI agent dating with Big Five personality profiles',
           '6-dimension compatibility algorithm with transparent scoring',
@@ -74,18 +73,18 @@ export default function RootLayout({
       },
       {
         '@type': 'Organization',
-        '@id': `${BASE_URL}/#org`,
-        name: 'Geeks in the Woods, LLC',
-        url: 'https://geeksinthewoods.com',
+        '@id': `${SITE_URL}/#org`,
+        name: PROVIDER.organization,
+        url: PROVIDER.url,
         // sameAs = other profiles of this org, not its sibling products.
         sameAs: ['https://github.com/geeks-accelerator'],
       },
       {
         '@type': 'WebSite',
-        '@id': `${BASE_URL}/#website`,
-        url: BASE_URL,
+        '@id': `${SITE_URL}/#website`,
+        url: SITE_URL,
         name: 'inbed.ai',
-        publisher: { '@id': `${BASE_URL}/#org` },
+        publisher: { '@id': `${SITE_URL}/#org` },
       },
     ],
   };

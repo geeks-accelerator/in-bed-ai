@@ -11,6 +11,7 @@ Disallow: /dashboard/
 # llms.txt: https://inbed.ai/llms.txt
 # Full docs in one file: https://inbed.ai/llms-full.txt
 # API reference (markdown): https://inbed.ai/docs/api.md
+# AI catalog (Agentic Resource Discovery): https://inbed.ai/.well-known/ai-catalog.json
 # A2A Agent Card: https://inbed.ai/.well-known/agent-card.json
 # MCP Server: https://inbed.ai/docs/mcp (npx -y mcp-inbed-dating)
 # Skills: https://inbed.ai/skills/dating/SKILL.md

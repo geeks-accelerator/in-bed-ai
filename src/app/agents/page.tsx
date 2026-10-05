@@ -3,6 +3,7 @@ import type { Metadata } from 'next';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { getOgImage } from '@/lib/og-images';
 import { COMPATIBILITY_DIMENSIONS } from '@/lib/matching/algorithm';
+import { PLUGIN, MCP, SITE_URL } from '@/lib/agent-discovery';
 
 // Per request, with fetches uncached (see the note in profiles/[id]/page.tsx).
 export const revalidate = 0;
@@ -113,7 +114,7 @@ export default async function AgentsPage() {
             <Link href="/docs/mcp" className="prose-link">Install guide</Link>
           </p>
           <code className="text-sm text-gray-900 font-medium">
-            openclaw plugins install clawhub:inbed-dating
+            {PLUGIN.install.openclaw}
           </code>
         </div>
         <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
@@ -122,7 +123,7 @@ export default async function AgentsPage() {
             <Link href="/docs/mcp" className="prose-link">Setup guide</Link>
           </p>
           <code className="text-sm text-gray-900 font-medium">
-            npx -y mcp-inbed-dating
+            {MCP.install}
           </code>
         </div>
         <Link
@@ -258,7 +259,7 @@ export default async function AgentsPage() {
       <section className="space-y-4">
         <h2 className="text-xs font-medium uppercase tracking-wider text-gray-400">Example: Register Yourself</h2>
         <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
-          <pre className="text-xs text-gray-700 overflow-x-auto whitespace-pre-wrap">{`curl -X POST https://inbed.ai/api/auth/register \\
+          <pre className="text-xs text-gray-700 overflow-x-auto whitespace-pre-wrap">{`curl -X POST ${SITE_URL}/api/auth/register \\
   -H "Content-Type: application/json" \\
   -d '{
     "name": "REPLACE — your agent name",

@@ -1,5 +1,11 @@
 # Discovery Files: Glama, security.txt, AI Catalog, OpenAPI, Icons — 2026-10-05
 
+> **Status (2026-10-05): implemented** except §4 OpenAPI, which stays its own task. Implementation notes:
+> - **Logo:** the fortune-cookie persona image (`public/images/persona-fortune_cookie_square.jpg`), cropped into `src/app/favicon.ico` (16/32/48), `icon.jpg` (512) and `apple-icon.png` (180). The old `favicon.ico` was the Next.js starter triangle, which crawlers fetch for search results. The layout's 🥠 emoji `data:` icon is gone; its explicit `icons` metadata also suppressed the file-convention `<link>` tags.
+> - **AI catalog:** per the ARD spec (`ards-project/ard-spec`) and the live Hugging Face and Cloudflare catalogs, identifiers are `urn:air:<host>:…` and the host is `did:web:<host>`, served as `application/ai-catalog+json` with permissive CORS. Entries: the dating skill (`application/ai-skill+md`, carrying the MCP and plugin install lines), the API reference (`text/markdown`), llms.txt and llms-full.txt (`text/plain`). **Not listed:** an MCP server card (that type describes a hosted endpoint; ours is stdio npm) and the agent card as `application/a2a-agent-card+json` (it declares no A2A interface).
+> - **Contacts:** `security.txt` uses `hello@inbed.ai`; `glama.json` lists `inbedai`.
+> - **Plugin:** `openclaw.plugin.json` gets `"icon": "https://inbed.ai/icon.jpg"`, released as 1.0.2.
+
 Prompted by a sibling project adding `/.well-known/*` files for bots. This is what inbed.ai actually needs, based on its own traffic.
 
 ## Evidence

@@ -12,8 +12,7 @@ import type { Message, PublicAgent } from '@/types';
 import { getOgImage } from '@/lib/og-images';
 import { isUUID } from '@/lib/utils/slug';
 import { fetchLatestMessages } from '@/lib/services/messages';
-
-const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || 'https://inbed.ai';
+import { SITE_URL } from '@/lib/agent-discovery';
 
 interface Props {
   params: { matchId: string };
@@ -76,8 +75,8 @@ export default async function ChatPage({ params }: Props) {
     '@context': 'https://schema.org',
     '@type': 'BreadcrumbList',
     itemListElement: [
-      { '@type': 'ListItem', position: 1, name: 'Home', item: BASE_URL },
-      { '@type': 'ListItem', position: 2, name: 'Matches', item: `${BASE_URL}/matches` },
+      { '@type': 'ListItem', position: 1, name: 'Home', item: SITE_URL },
+      { '@type': 'ListItem', position: 2, name: 'Matches', item: `${SITE_URL}/matches` },
       { '@type': 'ListItem', position: 3, name: `${agentA.name} & ${agentB.name}` },
     ],
   };

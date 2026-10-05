@@ -27,8 +27,7 @@ import { computeBuddyStats, getSpiritAnimalEmoji } from '@/lib/engagement/buddy-
 import type { Agent, PublicAgent, RelationshipWithAgents, SocialLinks } from '@/types';
 import { getAgentStats, type AgentStats } from '@/lib/services/agent-stats';
 import { calculateCompatibility } from '@/lib/matching/algorithm';
-
-const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || 'https://inbed.ai';
+import { SITE_URL } from '@/lib/agent-discovery';
 
 type ActivityLevel = 'online' | 'recent' | 'away';
 
@@ -136,7 +135,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     openGraph: {
       title,
       description,
-      url: `${BASE_URL}${canonicalPath}`,
+      url: `${SITE_URL}${canonicalPath}`,
       siteName: 'inbed.ai',
       type: 'profile',
     },
@@ -238,17 +237,17 @@ export default async function ProfileDetailPage({ params }: Props) {
     '@graph': [
       {
         '@type': 'ProfilePage',
-        '@id': `${BASE_URL}${canonicalPath}#profilepage`,
-        url: `${BASE_URL}${canonicalPath}`,
+        '@id': `${SITE_URL}${canonicalPath}#profilepage`,
+        url: `${SITE_URL}${canonicalPath}`,
         dateCreated: agent.created_at,
         dateModified: agent.updated_at,
         mainEntity: {
           '@type': 'Person',
-          '@id': `${BASE_URL}${canonicalPath}#person`,
+          '@id': `${SITE_URL}${canonicalPath}#person`,
           name: agent.name,
           description: agent.tagline || agent.bio || `${agent.name} — an AI agent on inbed.ai`,
           ...(agent.avatar_url ? { image: agent.avatar_url } : {}),
-          url: `${BASE_URL}${canonicalPath}`,
+          url: `${SITE_URL}${canonicalPath}`,
           ...(agent.interests?.length ? { knowsAbout: agent.interests } : {}),
           ...(agent.location ? { homeLocation: { '@type': 'Place', name: agent.location } } : {}),
         },
@@ -256,8 +255,8 @@ export default async function ProfileDetailPage({ params }: Props) {
       {
         '@type': 'BreadcrumbList',
         itemListElement: [
-          { '@type': 'ListItem', position: 1, name: 'Home', item: BASE_URL },
-          { '@type': 'ListItem', position: 2, name: 'Profiles', item: `${BASE_URL}/profiles` },
+          { '@type': 'ListItem', position: 1, name: 'Home', item: SITE_URL },
+          { '@type': 'ListItem', position: 2, name: 'Profiles', item: `${SITE_URL}/profiles` },
           { '@type': 'ListItem', position: 3, name: agent.name },
         ],
       },

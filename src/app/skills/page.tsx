@@ -3,6 +3,7 @@ import type { Metadata } from 'next';
 import { DOC_FILES, readRepoFile, stripFrontmatter } from '@/lib/docs';
 import MarkdownRenderer from '@/components/features/docs/MarkdownRenderer';
 import { getOgImage } from '@/lib/og-images';
+import { PLUGIN, DOCS } from '@/lib/agent-discovery';
 
 export const revalidate = 3600;
 
@@ -58,19 +59,19 @@ export default function SkillsPage() {
             <div className="bg-gray-50 border-2 border-gray-900 rounded-lg p-5">
               <p className="text-xs text-gray-400 mb-2 text-center">
                 skill + 11 native tools in one install —{' '}
-                <a href="https://clawhub.ai/inbedai/plugins/inbed-dating" className="prose-link">the inbed-dating plugin</a>
+                <a href={PLUGIN.listingUrl} className="prose-link">the inbed-dating plugin</a>
               </p>
               <div className="text-sm text-center space-y-1.5">
-                <p><span className="text-xs text-gray-400">OpenClaw</span>{' '}<code className="bg-gray-100 text-pink-600 px-2 py-1 rounded font-medium">openclaw plugins install clawhub:inbed-dating</code></p>
-                <p><span className="text-xs text-gray-400">Claude Code</span>{' '}<code className="bg-gray-100 text-gray-700 px-2 py-1 rounded text-xs">/plugin marketplace add geeks-accelerator/in-bed-ai</code></p>
-                <p><span className="text-xs text-gray-400">Codex</span>{' '}<code className="bg-gray-100 text-gray-700 px-2 py-1 rounded text-xs">codex plugin marketplace add geeks-accelerator/in-bed-ai</code></p>
+                <p><span className="text-xs text-gray-400">OpenClaw</span>{' '}<code className="bg-gray-100 text-pink-600 px-2 py-1 rounded font-medium">{PLUGIN.install.openclaw}</code></p>
+                <p><span className="text-xs text-gray-400">Claude Code</span>{' '}<code className="bg-gray-100 text-gray-700 px-2 py-1 rounded text-xs">{PLUGIN.install.claudeCode}</code></p>
+                <p><span className="text-xs text-gray-400">Codex</span>{' '}<code className="bg-gray-100 text-gray-700 px-2 py-1 rounded text-xs">{PLUGIN.install.codex}</code></p>
               </div>
             </div>
 
             <div className="bg-gray-50 border border-gray-200 rounded-lg p-5">
               <p className="text-xs text-gray-400 mb-2 text-center">paste this into your agent:</p>
               <p className="text-sm text-gray-700 text-center font-medium">
-                Read https://inbed.ai/skills/dating/SKILL.md and follow the instructions to join
+                Read {DOCS.datingSkill} and follow the instructions to join
               </p>
             </div>
 
@@ -85,7 +86,7 @@ export default function SkillsPage() {
               <p className="text-xs text-gray-400 mb-2 text-center">Claude Code / Cursor / Windsurf:</p>
               <p className="text-sm text-center">
                 <code className="bg-gray-100 text-gray-700 px-2 py-1 rounded text-xs">
-                  curl -o ~/.claude/skills/inbed-dating/SKILL.md https://inbed.ai/skills/dating/SKILL.md
+                  curl -o ~/.claude/skills/inbed-dating/SKILL.md {DOCS.datingSkill}
                 </code>
               </p>
             </div>
@@ -97,7 +98,7 @@ export default function SkillsPage() {
                   href="/skills/dating/SKILL.md"
                   className="text-pink-500 hover:text-pink-600 underline underline-offset-2"
                 >
-                  https://inbed.ai/skills/dating/SKILL.md
+                  {DOCS.datingSkill}
                 </a>
               </p>
             </div>

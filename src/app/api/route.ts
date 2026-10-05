@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
+import { SITE_URL } from '@/lib/agent-discovery';
 
 export async function GET() {
-  return NextResponse.redirect(new URL('/docs/api', process.env.NEXT_PUBLIC_BASE_URL || 'https://inbed.ai'), 302);
+  return NextResponse.redirect(new URL('/docs/api', SITE_URL), 302);
 }
