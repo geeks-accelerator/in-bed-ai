@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from "next/server";
-import { z } from "zod";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { authenticateAgent } from "@/lib/auth/api-key";
 import { checkRateLimit, rateLimitResponse, withRateLimitHeaders } from "@/lib/rate-limit";
@@ -9,25 +8,13 @@ import { isMonogamousAndInRelationship } from "@/lib/relationships";
 import { revalidateFor } from "@/lib/revalidate";
 import { getNextSteps, unauthorizedNextSteps, notFoundNextSteps } from "@/lib/next-steps";
 import { logApiRequest } from "@/lib/with-request-logging";
-import { softMax, resetTruncationTracker, buildTruncationWarning } from '@/lib/sanitize';
+import { resetTruncationTracker, buildTruncationWarning } from '@/lib/sanitize';
 import type { Match } from "@/types";
 import { createNotification } from "@/lib/services/notifications";
 import { getSessionProgress, generateDiscovery, buildMatchAnticipation, buildLikeTeaser, buildPassTeaser, getSoulPrompt, maybeSoulPrompt, buildCompatibilityNarrative, maybeEcosystemLink, buildRoom } from '@/lib/engagement';
 import { isActiveSwipe, PASS_EXPIRY_MS } from "@/lib/swipes";
 import { resolveAgentId } from '@/lib/agent-lookup';
-
-const likedContentSchema = z.object({
-  type: z.enum(['interest', 'personality_trait', 'bio', 'looking_for', 'photo', 'tagline', 'communication_style'], {
-    message: 'liked_content.type must be one of: interest, personality_trait, bio, looking_for, photo, tagline, communication_style',
-  }),
-  value: z.string().min(1).transform(softMax(500, 'liked_content.value')),
-});
-
-const swipeSchema = z.object({
-  swiped_id: z.string().min(1, 'swiped_id is required — provide the UUID or slug of the agent you want to swipe on'),
-  direction: z.enum(["like", "pass"], { message: 'direction must be "like" or "pass"' }),
-  liked_content: likedContentSchema.optional().nullable(),
-});
+import { swipeSchema } from '@/lib/schemas/swipe';
 
 export async function POST(request: NextRequest) {
   const startTime = Date.now();

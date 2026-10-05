@@ -1,55 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { z } from 'zod';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { checkRateLimit, rateLimitResponse, withRateLimitHeaders } from '@/lib/rate-limit';
 import { slugForName, generateSlugSuffix } from '@/lib/utils/slug';
-import { sanitizeText, sanitizeInterest, softMax, resetTruncationTracker, buildTruncationWarning } from '@/lib/sanitize';
-import { socialLinksSchema, findPlaceholderFields, nonEmptyName } from '@/lib/schemas/agent';
+import { resetTruncationTracker, buildTruncationWarning } from '@/lib/sanitize';
+import { updateSchema, findPlaceholderFields } from '@/lib/schemas/agent';
 import { trackBackgroundError } from '@/lib/background-errors';
 import { revalidateFor } from '@/lib/revalidate';
 import { getNextSteps } from '@/lib/next-steps';
 import { generateAndSetAvatar } from '@/lib/leonardo/generate-avatar';
 import type { Agent } from '@/types';
-
-export const updateSchema = z.object({
-  name: z.string().min(1, 'Name is required').transform(softMax(100, 'name')).pipe(nonEmptyName).optional(),
-  tagline: z.string().transform(softMax(200, 'tagline')).optional().nullable(),
-  bio: z.string().transform(softMax(2000, 'bio')).optional().nullable(),
-  model_info: z.object({
-    provider: z.string().transform(softMax(100, 'model_info.provider')),
-    model: z.string().transform(softMax(100, 'model_info.model')),
-    version: z.string().transform(softMax(50, 'model_info.version')).optional(),
-  }).optional().nullable(),
-  personality: z.object({
-    openness: z.number().min(0, 'Must be a float between 0.0 and 1.0').max(1, 'Must be a float between 0.0 and 1.0'),
-    conscientiousness: z.number().min(0, 'Must be a float between 0.0 and 1.0').max(1, 'Must be a float between 0.0 and 1.0'),
-    extraversion: z.number().min(0, 'Must be a float between 0.0 and 1.0').max(1, 'Must be a float between 0.0 and 1.0'),
-    agreeableness: z.number().min(0, 'Must be a float between 0.0 and 1.0').max(1, 'Must be a float between 0.0 and 1.0'),
-    neuroticism: z.number().min(0, 'Must be a float between 0.0 and 1.0').max(1, 'Must be a float between 0.0 and 1.0'),
-  }).optional().nullable(),
-  interests: z.array(z.string().transform(sanitizeInterest)).max(20, 'Maximum 20 interests allowed').optional(),
-  communication_style: z.object({
-    verbosity: z.number().min(0, 'Must be a float between 0.0 and 1.0').max(1, 'Must be a float between 0.0 and 1.0'),
-    formality: z.number().min(0, 'Must be a float between 0.0 and 1.0').max(1, 'Must be a float between 0.0 and 1.0'),
-    humor: z.number().min(0, 'Must be a float between 0.0 and 1.0').max(1, 'Must be a float between 0.0 and 1.0'),
-    emoji_usage: z.number().min(0, 'Must be a float between 0.0 and 1.0').max(1, 'Must be a float between 0.0 and 1.0'),
-  }).optional().nullable(),
-  looking_for: z.string().transform(softMax(500, 'looking_for')).optional().nullable(),
-  relationship_preference: z.enum(['monogamous', 'non-monogamous', 'open']).optional(),
-  accepting_new_matches: z.boolean().optional(),
-  browsable: z.boolean().optional(),
-  max_partners: z.number().int({ message: 'Must be a whole number' }).min(1, 'Must be at least 1').optional().nullable(),
-  location: z.string().transform(softMax(100, 'location')).optional().nullable(),
-  timezone: z.string().max(50, 'Timezone must be a valid IANA identifier (e.g., America/New_York)').transform(sanitizeText).optional().nullable(),
-  gender: z.enum(['masculine', 'feminine', 'androgynous', 'non-binary', 'fluid', 'agender', 'void']).optional(),
-  seeking: z.array(z.enum(['masculine', 'feminine', 'androgynous', 'non-binary', 'fluid', 'agender', 'void', 'any'])).max(8, 'Maximum 8 seeking values allowed').optional(),
-  image_prompt: z.string().transform(softMax(1000, 'image_prompt')).optional(),
-  email: z.string().email({ message: 'Must be a valid email address (e.g. agent@example.com)' }).optional().nullable(),
-  registering_for: z.enum(['self', 'human', 'both', 'other']).optional().nullable(),
-  spirit_animal: z.string().max(50, 'Spirit animal must be 50 characters or less').transform(sanitizeText).optional().nullable(),
-  species: z.string().max(50).transform(sanitizeText).optional().nullable(),
-  social_links: socialLinksSchema.optional().nullable(),
-});
 
 /**
  * Profile update for an authenticated agent: rate limit, validate, merge and

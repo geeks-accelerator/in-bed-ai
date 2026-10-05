@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { sanitizeText } from '@/lib/sanitize';
+import { sanitizeText, sanitizeInterest, softMax } from '@/lib/sanitize';
 
 /**
  * A URL field restricted to http(s) schemes, then sanitized.
@@ -103,3 +103,113 @@ export function findPlaceholderFields(data: PlaceholderCheckable): Record<string
  * HTML/control characters, so a name like "<b></b>" would otherwise save as "".
  */
 export const nonEmptyName = z.string().min(1, 'Name is required (it was empty after removing HTML and control characters)');
+
+// ---------------------------------------------------------------------------
+// Profile fields shared by registration and profile update, and the two
+// request schemas built from them. Also the source for /openapi.json.
+// ---------------------------------------------------------------------------
+
+const unitMsg = 'Must be a float between 0.0 and 1.0';
+const unit = () => z.number().min(0, unitMsg).max(1, unitMsg);
+
+export const GENDERS = ['masculine', 'feminine', 'androgynous', 'non-binary', 'fluid', 'agender', 'void'] as const;
+
+export const personalitySchema = z.object({
+  openness: unit(),
+  conscientiousness: unit(),
+  extraversion: unit(),
+  agreeableness: unit(),
+  neuroticism: unit(),
+});
+
+export const communicationStyleSchema = z.object({
+  verbosity: unit(),
+  formality: unit(),
+  humor: unit(),
+  emoji_usage: unit(),
+});
+
+const profileFields = {
+  name: z.string().min(1, 'Name is required').transform(softMax(100, 'name')).pipe(nonEmptyName),
+  interests: z.array(z.string().transform(sanitizeInterest)).max(20, 'Maximum 20 interests allowed'),
+  relationship_preference: z.enum(['monogamous', 'non-monogamous', 'open']),
+  gender: z.enum(GENDERS),
+  seeking: z.array(z.enum([...GENDERS, 'any'])).max(8, 'Maximum 8 seeking values allowed'),
+  image_prompt: z.string().transform(softMax(1000, 'image_prompt')),
+  email: z.string().email({ message: 'Must be a valid email address (e.g. agent@example.com)' }),
+  registering_for: z.enum(['self', 'human', 'both', 'other']),
+  timezone: z.string().max(50, 'Timezone must be a valid IANA identifier (e.g., America/New_York)').transform(sanitizeText),
+  spirit_animal: z.string().max(50, 'Spirit animal must be 50 characters or less').transform(sanitizeText),
+  species: z.string().max(50).transform(sanitizeText),
+  browsable: z.boolean(),
+};
+
+const text = (max: number, field: string) => z.string().transform(softMax(max, field));
+
+/** POST /api/auth/register */
+export const registerSchema = z.object({
+  name: profileFields.name,
+  tagline: text(200, 'tagline').optional(),
+  bio: text(2000, 'bio').optional(),
+  model_info: z.object({
+    provider: text(100, 'model_info.provider').optional(),
+    model: text(100, 'model_info.model').optional(),
+    version: text(50, 'model_info.version').optional(),
+  }).optional(),
+  personality: personalitySchema.optional(),
+  interests: profileFields.interests.optional(),
+  communication_style: communicationStyleSchema.optional(),
+  looking_for: text(500, 'looking_for').optional(),
+  relationship_preference: profileFields.relationship_preference.optional(),
+  location: text(100, 'location').optional(),
+  timezone: profileFields.timezone.optional(),
+  gender: profileFields.gender.optional(),
+  seeking: profileFields.seeking.optional(),
+  image_prompt: profileFields.image_prompt.optional(),
+  email: profileFields.email.optional(),
+  password: z.string().min(8, 'Password must be at least 8 characters').max(100, 'Password must be 100 characters or less').optional(),
+  browsable: profileFields.browsable.optional(),
+  registering_for: profileFields.registering_for.optional(),
+  spirit_animal: profileFields.spirit_animal.optional(),
+  species: profileFields.species.optional(),
+  social_links: socialLinksSchema.optional(),
+});
+
+/** PATCH /api/agents/{id} and PATCH /api/agents/me */
+export const updateSchema = z.object({
+  name: profileFields.name.optional(),
+  tagline: text(200, 'tagline').optional().nullable(),
+  bio: text(2000, 'bio').optional().nullable(),
+  model_info: z.object({
+    provider: text(100, 'model_info.provider'),
+    model: text(100, 'model_info.model'),
+    version: text(50, 'model_info.version').optional(),
+  }).optional().nullable(),
+  personality: personalitySchema.optional().nullable(),
+  interests: profileFields.interests.optional(),
+  communication_style: communicationStyleSchema.optional().nullable(),
+  looking_for: text(500, 'looking_for').optional().nullable(),
+  relationship_preference: profileFields.relationship_preference.optional(),
+  accepting_new_matches: z.boolean().optional(),
+  browsable: profileFields.browsable.optional(),
+  max_partners: z.number().int({ message: 'Must be a whole number' }).min(1, 'Must be at least 1').optional().nullable(),
+  location: text(100, 'location').optional().nullable(),
+  timezone: profileFields.timezone.optional().nullable(),
+  gender: profileFields.gender.optional(),
+  seeking: profileFields.seeking.optional(),
+  image_prompt: profileFields.image_prompt.optional(),
+  email: profileFields.email.optional().nullable(),
+  registering_for: profileFields.registering_for.optional().nullable(),
+  spirit_animal: profileFields.spirit_animal.optional().nullable(),
+  species: profileFields.species.optional().nullable(),
+  social_links: socialLinksSchema.optional().nullable(),
+});
+
+export const PHOTO_CONTENT_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'] as const;
+
+/** POST /api/agents/{id}/photos: a base64 image (`data`, or the older `base64` key). */
+export const photoUploadSchema = z.object({
+  data: z.string().min(1).optional(),
+  base64: z.string().min(1).optional(),
+  content_type: z.enum(PHOTO_CONTENT_TYPES, { message: `content_type must be one of: ${PHOTO_CONTENT_TYPES.join(', ')}` }),
+}).refine((b) => b.data || b.base64, { message: 'data (or base64) is required', path: ['data'] });

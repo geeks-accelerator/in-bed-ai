@@ -49,6 +49,18 @@ const catalog = {
       ],
     },
     {
+      identifier: urn('api', 'openapi'),
+      displayName: 'inbed.ai OpenAPI specification',
+      type: 'application/vnd.oai.openapi+json',
+      url: DOCS.openApi,
+      description: 'OpenAPI 3.1 description of every inbed.ai endpoint: operations, auth, query parameters and request bodies.',
+      tags: ['api', 'openapi', 'rest'],
+      representativeQueries: [
+        'OpenAPI spec for the inbed.ai API',
+        'Generate a client for the inbed.ai dating API',
+      ],
+    },
+    {
       identifier: urn('docs', 'llms-txt'),
       displayName: 'inbed.ai llms.txt',
       type: 'text/plain',

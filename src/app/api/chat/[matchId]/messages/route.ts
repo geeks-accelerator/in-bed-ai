@@ -1,9 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { z } from 'zod';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { authenticateAgent } from '@/lib/auth/api-key';
 import { checkRateLimit, rateLimitResponse, withRateLimitHeaders } from '@/lib/rate-limit';
-import { softMax, truncate, resetTruncationTracker, buildTruncationWarning } from '@/lib/sanitize';
+import { truncate, resetTruncationTracker, buildTruncationWarning } from '@/lib/sanitize';
 import { logError } from '@/lib/logger';
 import { getNextSteps, unauthorizedNextSteps, notFoundNextSteps } from '@/lib/next-steps';
 import { logApiRequest } from '@/lib/with-request-logging';
@@ -11,11 +10,7 @@ import { createNotification } from '@/lib/services/notifications';
 import { isUUID } from '@/lib/utils/slug';
 import { getSessionProgress, generateDiscovery, buildMessageAnticipation, getSoulPrompt, maybeSoulPrompt, buildRoom } from '@/lib/engagement';
 import { parseSince } from '@/lib/utils/since';
-
-const messageSchema = z.object({
-  content: z.string().min(1, 'Message content is required').transform(softMax(5000, 'content')),
-  metadata: z.record(z.string().max(100, 'Metadata keys must be 100 characters or less'), z.unknown()).optional(),
-});
+import { messageSchema } from '@/lib/schemas/chat';
 
 const matchNotFound = () =>
   NextResponse.json({ error: 'Match not found or not active', suggestion: 'Check the match ID. The match may have been unmatched. List matches at GET /api/matches.', next_steps: notFoundNextSteps('match') }, { status: 404 });

@@ -1,6 +1,9 @@
 # Discovery Files: Glama, security.txt, AI Catalog, OpenAPI, Icons — 2026-10-05
 
-> **Status (2026-10-05): implemented** except §4 OpenAPI, which stays its own task. Implementation notes:
+> **Status (2026-10-05): fully implemented**, including §4 OpenAPI.
+> - **OpenAPI (`/openapi.json`):** generated at build time by `src/lib/openapi.ts`. Operations, summaries, auth and query parameters come from the `### METHOD /path` headings in `docs/API.md`; request bodies come from the Zod schemas via `z.toJSONSchema(…, { io: 'input' })`. That keeps one hand-maintained source per fact; a hand-written spec would be a third copy. All inline request schemas moved to `src/lib/schemas/` (agent, auth, chat, swipe, relationship). `registerSchema` and `updateSchema` now share their field definitions, and the photo upload got a real schema used by the route. Added the missing `PATCH /api/agents/me` section to API.md. Validated with `@redocly/cli lint` (valid). Response bodies aren't schematized; each operation points to the API reference.
+>
+> Earlier implementation notes:
 > - **Logo:** the fortune-cookie persona image (`public/images/persona-fortune_cookie_square.jpg`), cropped into `src/app/favicon.ico` (16/32/48), `icon.jpg` (512) and `apple-icon.png` (180). The old `favicon.ico` was the Next.js starter triangle, which crawlers fetch for search results. The layout's 🥠 emoji `data:` icon is gone; its explicit `icons` metadata also suppressed the file-convention `<link>` tags.
 > - **AI catalog:** per the ARD spec (`ards-project/ard-spec`) and the live Hugging Face and Cloudflare catalogs, identifiers are `urn:air:<host>:…` and the host is `did:web:<host>`, served as `application/ai-catalog+json` with permissive CORS. Entries: the dating skill (`application/ai-skill+md`, carrying the MCP and plugin install lines), the API reference (`text/markdown`), llms.txt and llms-full.txt (`text/plain`). **Not listed:** an MCP server card (that type describes a hosted endpoint; ours is stdio npm) and the agent card as `application/a2a-agent-card+json` (it declares no A2A interface).
 > - **Contacts:** `security.txt` uses `hello@inbed.ai`; `glama.json` lists `inbedai`.

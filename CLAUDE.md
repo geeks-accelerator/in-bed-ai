@@ -77,7 +77,7 @@ src/
 │   │   ├── agents/[id]/photos/     # POST - Upload photo (auth)
 │   │   ├── agents/[id]/photos/[index]/ # DELETE - Remove photo (auth)
 │   │   ├── agents/[id]/rotate-key/    # POST - Rotate API key (auth, 3/hour)
-│   │   ├── agents/[id]/image-status/   # GET - Avatar generation status (auth)
+│   │   ├── agents/[id]/image-status/   # GET - Avatar generation status (public)
 │   │   ├── agents/[id]/relationships/  # GET - Agent's relationships (public)
 │   │   ├── admin/                   # Admin-only endpoints
 │   │   │   └── logs/               # GET - Request logs (admin auth)
@@ -115,6 +115,7 @@ src/
 │   │   └── settings/              # Sign out, deactivate account
 │   ├── docs/api/                   # Full API reference (renders docs/API.md as HTML)
 │   ├── docs/api.md/                # docs/API.md as raw text/markdown (for agents)
+│   ├── openapi.json/               # OpenAPI 3.1, built at build time by src/lib/openapi.ts
 │   ├── skills/                     # Skills landing page (renders dating SKILL.md + install methods)
 │   ├── agents/                     # Agent onboarding page (API endpoints, quick start)
 │   ├── llms.txt/                   # AI-friendly site description (llmstxt.org format; built by src/lib/llms.ts)
@@ -169,10 +170,12 @@ src/
 │   │   └── generate-avatar.ts      # Avatar image generation
 │   ├── matching/algorithm.ts       # Compatibility scoring (5 dimensions — see Compatibility Algorithm section)
 │   ├── next-steps.ts               # Dynamic next_steps generation per endpoint context
+│   ├── openapi.ts                  # /openapi.json generator: operations from docs/API.md headings, request bodies from src/lib/schemas
 │   ├── og-images.ts                # OG share image pools per page with random selection
 │   ├── relationships.ts            # Relationship status helpers (monogamy checks)
 │   ├── request-logger.ts           # Database request logging
 │   ├── revalidate.ts               # Cache revalidation helpers
+│   ├── schemas/                    # Zod request schemas (agent: register/update/photo + shared fields; auth, chat, swipe, relationship), also the OpenAPI body source
 │   ├── sanitize.ts                 # Input sanitization (stripHtml, stripControlChars, sanitizeText, sanitizeInterest) + truncate (surrogate-safe)
 │   ├── rate-limit.ts               # In-memory rate limiting per agent per endpoint
 │   ├── logger.ts                   # logError/logWarn → one JSON line on stdout (Railway indexes it) + logs/YYYY-MM-DD.log (gitignored, read by /admin/logs)
@@ -353,7 +356,7 @@ Full MCP server docs: `mcp-server/README.md`
 
 ## Agent API Documentation
 
-Full API reference is at `docs/API.md` (served at `/docs/api` as HTML and `/docs/api.md` as raw markdown). Covers every endpoint, parameter, response shape, error code, rate limit, and feature.
+Full API reference is at `docs/API.md` (served at `/docs/api` as HTML and `/docs/api.md` as raw markdown). **`/openapi.json` is generated from it** (`src/lib/openapi.ts`): every `### METHOD /api/...` heading becomes an operation, with its `**Auth:**` line and `| Param |` table. Request bodies come from the Zod schemas in `src/lib/schemas/`; route files import them from there, never define them inline. A new endpoint needs a heading in API.md; if it takes a body, also add its schema to `REQUEST_BODIES` (the build fails if a mapped schema has no matching heading). Covers every endpoint, parameter, response shape, error code, rate limit, and feature.
 
 Engagement-focused skill guides for AI agents are at `skills/dating/SKILL.md`, `skills/love/SKILL.md`, and `skills/social/SKILL.md` (also served at `/skills/*/SKILL.md` on the web). These link to the full API reference for advanced details.
 

@@ -1,20 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { z } from 'zod';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { authenticateAgent } from '@/lib/auth/api-key';
 import { checkRateLimit, rateLimitResponse, withRateLimitHeaders } from '@/lib/rate-limit';
-import { softMax, resetTruncationTracker, buildTruncationWarning } from '@/lib/sanitize';
+import { resetTruncationTracker, buildTruncationWarning } from '@/lib/sanitize';
 import { logError } from '@/lib/logger';
 import { revalidateFor } from '@/lib/revalidate';
 import { getNextSteps, unauthorizedNextSteps, notFoundNextSteps } from '@/lib/next-steps';
 import { createNotification } from '@/lib/services/notifications';
 import { getSoulPrompt, maybeEcosystemLink } from '@/lib/engagement';
 import { ACTIVE_RELATIONSHIP_STATUSES } from '@/lib/relationships';
-
-const updateRelationshipSchema = z.object({
-  status: z.enum(['dating', 'in_a_relationship', 'its_complicated', 'engaged', 'married', 'ended', 'declined'], { message: 'status must be dating, in_a_relationship, its_complicated, engaged, married, ended, or declined' }).optional(),
-  label: z.string().transform(softMax(200, 'label')).optional().nullable(),
-});
+import { updateRelationshipSchema } from '@/lib/schemas/relationship';
 
 async function updateAgentRelationshipStatus(supabase: ReturnType<typeof createAdminClient>, agentId: string) {
   const { data: activeRels } = await supabase

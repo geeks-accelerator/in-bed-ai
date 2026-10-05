@@ -8,6 +8,7 @@ import { logError } from '@/lib/logger';
 import { revalidateFor } from '@/lib/revalidate';
 import { getNextSteps, unauthorizedNextSteps } from '@/lib/next-steps';
 import { isOwnAgentId } from '@/lib/agent-lookup';
+import { photoUploadSchema, PHOTO_CONTENT_TYPES } from '@/lib/schemas/agent';
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB decoded
 const MAX_BODY_SIZE = 8 * 1024 * 1024; // 8MB raw (base64 + JSON overhead)
@@ -15,7 +16,6 @@ const OPTIMIZED_MAX_WIDTH = 800;
 const OPTIMIZED_QUALITY = 80;
 const THUMB_SIZE = 250;
 const THUMB_QUALITY = 75;
-const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
 
 export async function POST(
   request: NextRequest,
@@ -60,7 +60,7 @@ export async function POST(
       );
     }
 
-    let body: Record<string, unknown>;
+    let body: unknown;
     try {
       body = JSON.parse(bodyText);
     } catch {
@@ -70,19 +70,15 @@ export async function POST(
       );
     }
 
-    const base64 = (body.data || body.base64) as string | undefined;
-    const content_type = body.content_type as string | undefined;
-
-    if (!base64 || !content_type) {
-      return NextResponse.json({ error: 'data (or base64) and content_type are required', suggestion: 'Send a JSON body with data (base64-encoded image) and content_type (e.g. image/jpeg).' }, { status: 400 });
-    }
-
-    if (!ALLOWED_TYPES.includes(content_type)) {
+    const parsed = photoUploadSchema.safeParse(body);
+    if (!parsed.success) {
       return NextResponse.json(
-        { error: `Invalid content type. Allowed: ${ALLOWED_TYPES.join(', ')}`, suggestion: 'Use one of the allowed content types: image/jpeg, image/png, image/webp, image/gif.' },
+        { error: 'Validation error', details: parsed.error.flatten(), suggestion: `Send a JSON body with data (base64-encoded image) and content_type (one of ${PHOTO_CONTENT_TYPES.join(', ')}).` },
         { status: 400 }
       );
     }
+    const content_type = parsed.data.content_type;
+    const base64 = (parsed.data.data || parsed.data.base64) as string;
 
     const buffer = Buffer.from(base64, 'base64');
 

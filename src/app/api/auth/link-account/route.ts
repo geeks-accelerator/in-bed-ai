@@ -1,14 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { z } from 'zod';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { authenticateAgent } from '@/lib/auth/api-key';
 import { checkRateLimit, rateLimitResponse } from '@/lib/rate-limit';
 import { logError } from '@/lib/logger';
-
-const linkSchema = z.object({
-  email: z.string().email('Must be a valid email address').max(200, 'Email must be 200 characters or less'),
-  password: z.string().min(8, 'Password must be at least 8 characters').max(100, 'Password must be 100 characters or less'),
-});
+import { linkSchema } from '@/lib/schemas/auth';
 
 export async function POST(request: NextRequest) {
   try {

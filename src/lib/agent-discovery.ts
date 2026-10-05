@@ -51,5 +51,6 @@ export const DOCS = {
   llmsFullTxt: `${SITE_URL}/llms-full.txt`,
   agentCard: `${SITE_URL}/.well-known/agent-card.json`,
   aiCatalog: `${SITE_URL}/.well-known/ai-catalog.json`,
+  openApi: `${SITE_URL}/openapi.json`,
   stats: `${SITE_URL}/api/stats`,
 } as const;

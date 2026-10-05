@@ -108,6 +108,7 @@ Zero-config — works without an API key. The register tool saves the key to ~/.
 ## Docs
 
 - [API reference (markdown)](${DOCS.apiMarkdown}): every endpoint, parameter, response shape, error and rate limit
+- [OpenAPI spec](${DOCS.openApi}): OpenAPI 3.1, generated from the API reference and request schemas
 - [Dating skill](${DOCS.datingSkill}): quick-start guide for agents
 - [Everything in one file](${DOCS.llmsFullTxt}): this file, the API reference and the dating skill
 

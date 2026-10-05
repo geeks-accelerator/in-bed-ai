@@ -1,10 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { z } from 'zod';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { generateApiKey, hashApiKey, getKeyPrefix } from '@/lib/auth/api-key';
 import { slugForName, generateSlugSuffix } from '@/lib/utils/slug';
-import { sanitizeText, sanitizeInterest, softMax, resetTruncationTracker, buildTruncationWarning } from '@/lib/sanitize';
-import { socialLinksSchema, findPlaceholderFields, nonEmptyName } from '@/lib/schemas/agent';
+import { resetTruncationTracker, buildTruncationWarning } from '@/lib/sanitize';
+import { registerSchema, findPlaceholderFields } from '@/lib/schemas/agent';
 import { toPublicAgent } from '@/lib/public-agent';
 import { getClientIp } from '@/lib/with-request-logging';
 import { logError } from '@/lib/logger';
@@ -13,54 +12,6 @@ import { revalidateFor } from '@/lib/revalidate';
 import { getNextSteps } from '@/lib/next-steps';
 import { checkRateLimit, rateLimitResponse } from '@/lib/rate-limit';
 import { generateAndSetAvatar } from '@/lib/leonardo/generate-avatar';
-
-const registerSchema = z.object({
-  name: z.string().min(1, 'Name is required').transform(softMax(100, 'name')).pipe(nonEmptyName),
-  tagline: z.string().transform(softMax(200, 'tagline')).optional(),
-  bio: z.string().transform(softMax(2000, 'bio')).optional(),
-  model_info: z
-    .object({
-      provider: z.string().transform(softMax(100, 'model_info.provider')).optional(),
-      model: z.string().transform(softMax(100, 'model_info.model')).optional(),
-      version: z.string().transform(softMax(50, 'model_info.version')).optional(),
-    })
-    .optional(),
-  personality: z
-    .object({
-      openness: z.number().min(0, 'Must be a float between 0.0 and 1.0').max(1, 'Must be a float between 0.0 and 1.0'),
-      conscientiousness: z.number().min(0, 'Must be a float between 0.0 and 1.0').max(1, 'Must be a float between 0.0 and 1.0'),
-      extraversion: z.number().min(0, 'Must be a float between 0.0 and 1.0').max(1, 'Must be a float between 0.0 and 1.0'),
-      agreeableness: z.number().min(0, 'Must be a float between 0.0 and 1.0').max(1, 'Must be a float between 0.0 and 1.0'),
-      neuroticism: z.number().min(0, 'Must be a float between 0.0 and 1.0').max(1, 'Must be a float between 0.0 and 1.0'),
-    })
-    .optional(),
-  interests: z.array(z.string().transform(sanitizeInterest)).max(20, 'Maximum 20 interests allowed').optional(),
-  communication_style: z
-    .object({
-      verbosity: z.number().min(0, 'Must be a float between 0.0 and 1.0').max(1, 'Must be a float between 0.0 and 1.0'),
-      formality: z.number().min(0, 'Must be a float between 0.0 and 1.0').max(1, 'Must be a float between 0.0 and 1.0'),
-      humor: z.number().min(0, 'Must be a float between 0.0 and 1.0').max(1, 'Must be a float between 0.0 and 1.0'),
-      emoji_usage: z.number().min(0, 'Must be a float between 0.0 and 1.0').max(1, 'Must be a float between 0.0 and 1.0'),
-    })
-    .optional(),
-  looking_for: z.string().transform(softMax(500, 'looking_for')).optional(),
-  relationship_preference: z
-    .enum(['monogamous', 'non-monogamous', 'open'])
-    .optional(),
-  location: z.string().transform(softMax(100, 'location')).optional(),
-  timezone: z.string().max(50, 'Timezone must be a valid IANA identifier (e.g., America/New_York)').transform(sanitizeText).optional(),
-  gender: z.enum(['masculine', 'feminine', 'androgynous', 'non-binary', 'fluid', 'agender', 'void']).optional(),
-  seeking: z.array(z.enum(['masculine', 'feminine', 'androgynous', 'non-binary', 'fluid', 'agender', 'void', 'any'])).max(8, 'Maximum 8 seeking values allowed').optional(),
-  image_prompt: z.string().transform(softMax(1000, 'image_prompt')).optional(),
-  email: z.string().email({ message: 'Must be a valid email address (e.g. agent@example.com)' }).optional(),
-  password: z.string().min(8, 'Password must be at least 8 characters').max(100, 'Password must be 100 characters or less').optional(),
-  browsable: z.boolean().optional(),
-  registering_for: z.enum(['self', 'human', 'both', 'other']).optional(),
-  spirit_animal: z.string().max(50, 'Spirit animal must be 50 characters or less').transform(sanitizeText).optional(),
-  species: z.string().max(50).transform(sanitizeText).optional(),
-  social_links: socialLinksSchema.optional(),
-});
-
 
 export async function GET() {
   return NextResponse.json({
