@@ -22,6 +22,35 @@ All 27,423 Railway HTTP requests from 2026-10-02 15:06 to 10-05 15:06 UTC (paged
 
 Glama has no inbed.ai listing (searching glama.ai for "inbed" finds nothing).
 
+## Codebase audit (2026-10-05)
+
+Checked each item against the code. Folded into the sections below:
+
+- **Shared constants, not a new data layer.** The facts the discovery files need are already copied around:
+  - The site URL: `process.env.NEXT_PUBLIC_BASE_URL || 'https://inbed.ai'` appears in 5 files (`layout.tsx`, `sitemap.ts`, `profiles/[id]/page.tsx`, `chat/[matchId]/page.tsx`, `api/route.ts`), and the agent card and llms.txt hard-code `https://inbed.ai`.
+  - The MCP and plugin links: the npm, MCP Registry, Smithery and ClawHub URLs appear 4× in `src/lib/llms.ts` and once in `skills/page.tsx`.
+  - "11 tools, 6 resources, 2 prompts" appears in the agent card, `llms.ts` and `docs/mcp/page.tsx` (×2).
+
+  So §3's `src/lib/agent-discovery.ts` holds these constants:
+  - `SITE_URL`
+  - the MCP package, Registry, Smithery and plugin-listing URLs, and the install commands
+  - `MCP_SUMMARY`, the tool/resource/prompt counts in one string
+
+  Consumers: llms.ts, the agent card, the new catalog, `skills/page.tsx`, `docs/mcp/page.tsx`, and the 5 `BASE_URL` copies. The catalog is then just another view of the same constants. It isn't a generic "discovery registry"; that would be speculative structure.
+- **The agent card's count:** it runs its own `count('agents')`. It switches to `getPlatformStats().agents.active`, the same source as llms.txt (`getLlmsStats` already maps from it). It's cached for 300s, so the extra counts inside `getPlatformStats` don't matter.
+- **The catalog has no live data,** so it needs no database and no `revalidate`. It's a static route. (The agent card stays dynamic for its count.)
+- **Route segment config can't be re-exported.** Next statically parses `revalidate`/`dynamic` in each route file, so `export { revalidate } from '../ai-catalog.json/route'` is ignored. `ard.json/route.ts` imports and re-exports only `GET`, and the catalog being static means there's no config to duplicate anyway.
+- **Text responses:** `textResponse()` already exists (in `src/lib/llms.ts`, also used by `/docs/api.md`). `security.txt` reuses it. It's a generic helper living in a topic module, so move it to `src/lib/docs.ts` next to `readRepoFile` and update its three importers. One line each, and no new file.
+- **Redirects:** `next.config.js` has `headers()` but no `redirects()`. Add `redirects()` there for `/security.txt` → `/.well-known/security.txt` and the two `apple-touch-icon` probes.
+- **Icons:** `src/app/favicon.ico` already uses Next's metadata file convention, so `src/app/apple-icon.png` and `icon.svg` sit beside it and Next generates the `<link>` tags. No layout changes.
+- **security.txt `Policy`:** the terms page says nothing about security reports. Omit `Policy:` (it's optional) rather than point at unrelated terms.
+- **robots.txt is a static file** (`public/robots.txt`) with a comment block listing machine-readable files. Add the catalog there as a comment line; no code.
+- **OpenAPI groundwork:**
+  - `src/lib/schemas/agent.ts` and the exported `updateSchema` (`src/lib/services/profile-update.ts`) are already in `lib`.
+  - The remaining inline schemas: `registerSchema` (register), `linkSchema` (link-account), `messageSchema`, `swipeSchema` + `likedContentSchema`, `createRelationshipSchema`, `updateRelationshipSchema`. That's 7 schemas in 6 route files.
+  - Zod 4.3 has `z.toJSONSchema()`, but schemas with `.transform()` (all the `softMax` text fields) need `{ io: 'input' }` to emit the request shape.
+- **Glama and the monorepo:** Glama documents `glama.json` at the repo root. Our server lives in `mcp-server/`. Put the file at the repo root, and confirm during submission that Glama links the subpath; if it wants the file beside the package, move it to `mcp-server/glama.json`.
+
 ## 1. Glama: add the repo-root `glama.json` now
 
 Glama has **two** ownership files. Neither contains a secret token.
@@ -49,16 +78,15 @@ Ours is the first case: `mcp-inbed-dating` is an npm stdio server whose source i
 
 A site that issues API keys should say where vulnerability reports go. Scanners already ask for it.
 
-- `src/app/.well-known/security.txt/route.ts` returning `text/plain`:
+- `src/app/.well-known/security.txt/route.ts`, via the existing `textResponse()` (moved to `src/lib/docs.ts`, see the audit):
   ```
   Contact: mailto:<security contact>
   Expires: <now + 1 year, ISO 8601>
   Preferred-Languages: en
-  Canonical: https://inbed.ai/.well-known/security.txt
-  Policy: https://inbed.ai/terms
+  Canonical: ${SITE_URL}/.well-known/security.txt
   ```
-  `Expires` is required and must be under a year away. Computing it per request (cached like `agent-card.json`) means it never lapses, with no yearly chore.
-- `/security.txt` at the site root: a one-line `next.config.js` redirect to the well-known path (RFC 9116 §3 allows the legacy location). The rest of `next.config.js` `headers()` already lives there.
+  `Expires` is required and must be under a year away. Computing it in the handler with `revalidate = 86400` means it never lapses, with no yearly chore. No `Policy:` until a disclosure policy exists.
+- `/security.txt` at the site root: a redirect in a new `redirects()` in `next.config.js` (RFC 9116 §3 allows the legacy location).
 
 **Decision needed:** the contact address. Suggested: a `security@geeksinthewoods.com` alias (or `lucas@…`).
 
@@ -81,8 +109,10 @@ Shape (spec `specVersion` 1.0):
 }
 ```
 
-- **One source of truth.** `agent-card.json/route.ts` currently hand-writes the site description, provider and docs links. Extract those into `src/lib/agent-discovery.ts` (name, description, provider, documentation URLs, the MCP install line). Both the agent card and the catalog import it, so the two can't drift. Live counts stay in `getPlatformStats()`, which the agent card already depends on in spirit; switch its inline agent count to that service while we're there.
-- **Routes:** `src/app/.well-known/ai-catalog.json/route.ts`, plus `ard.json/route.ts` re-exporting the same `GET` (`export { GET, revalidate } from '../ai-catalog.json/route'`). Two URLs, one handler.
+- **One source of truth:** `src/lib/agent-discovery.ts` constants (see the audit). The catalog, agent card and llms.txt all read them, and the existing copies in `llms.ts`, `skills/page.tsx`, `docs/mcp/page.tsx` and the 5 `BASE_URL` definitions move to them in the same change. The agent card's count comes from `getPlatformStats()`.
+- **Routes:**
+  - `src/app/.well-known/ai-catalog.json/route.ts`: static (no database, no `revalidate`)
+  - `ard.json/route.ts`: `export { GET } from '../ai-catalog.json/route'`. Segment config can't be re-exported, and the static route needs none.
 - **Verify against the spec at implementation time:** the media type for an A2A agent entry, the identifier URN rules, and whether an MCP entry may point at a registry or npm page rather than a hosted endpoint (ours is stdio). Check the spec text and Hugging Face's live catalog (`https://huggingface.co/.well-known/ai-catalog.json`). Ship only fields the spec defines.
 - Add both to the `robots.txt` comment block and to llms.txt's Optional section.
 
@@ -90,7 +120,7 @@ Shape (spec `specVersion` 1.0):
 
 Only 3 requests, but a real spec is what tool-building agents and API directories consume. **A hand-written spec goes stale, so it has to be generated:**
 - Zod v4 (already a dependency) has `z.toJSONSchema()`.
-- But request schemas are declared inline inside route files (`registerSchema` in `auth/register/route.ts`, `swipeSchema`, `messageSchema`, …), and route files can't export helpers. So the first step is moving them into `src/lib/schemas/` (where `schemas/agent.ts` already exists) and importing them back into the routes.
+- But 7 request schemas are declared inline in 6 route files, and route files can't export helpers. So the first step is moving them into `src/lib/schemas/`, beside `schemas/agent.ts`, and importing them back into the routes. The profile-update `updateSchema` is already exported from `src/lib/services/profile-update.ts`, so move it alongside for consistency. Use `z.toJSONSchema(schema, { io: 'input' })`, because the `softMax` transforms would otherwise block conversion.
 - Response shapes have no schemas at all; they'd start as hand-maintained JSON Schema or be left as `200: object` initially.
 
 Plan and size this on its own. Serve the result at `/openapi.json` and link it from `docs/API.md`, the agent card (`documentationUrl` stays the markdown) and the catalog (§3, as an API entry with `application/vnd.oai.openapi+json`).
@@ -98,7 +128,7 @@ Plan and size this on its own. Serve the result at `/openapi.json` and link it f
 ## 5. Logo, which unblocks four things at once
 
 There's still no logo asset (only `favicon.ico`). One logo fixes:
-- `apple-touch-icon`: use Next's file convention, `src/app/apple-icon.png` (180×180) plus `src/app/icon.svg`. Next emits the `<link>` tags, and a `next.config.js` redirect from `/apple-touch-icon.png` and `-precomposed.png` to it covers iOS's blind probes.
+- `apple-touch-icon`: use Next's file convention beside the existing `src/app/favicon.ico`: `src/app/apple-icon.png` (180×180) plus `src/app/icon.svg`. Next emits the `<link>` tags. Redirects in the same `next.config.js` `redirects()` (from `/apple-touch-icon.png` and `-precomposed.png`) cover iOS's blind probes.
 - Organization JSON-LD `logo` (`src/app/layout.tsx`)
 - the agent card's `iconUrl` (the TODO in its route)
 - the ClawHub plugin listing icon (`plugins/inbed-dating/assets/icon.png`, declared in `openclaw.plugin.json` as `icon`)
@@ -116,8 +146,8 @@ There's still no logo asset (only `favicon.ico`). One logo fixes:
 
 ## Order and verification
 
-1. `glama.json` (repo root) and `security.txt`: small, once the two decisions are made.
-2. `ai-catalog.json` / `ard.json` plus the `agent-discovery.ts` extraction.
+1. `glama.json` (repo root) and `security.txt` (with the `textResponse` move and `redirects()`): small, once the two decisions are made.
+2. `agent-discovery.ts` constants, migrating the existing copies (llms.ts, skills page, docs/mcp page, 5 × `BASE_URL`, agent card plus `getPlatformStats`), then `ai-catalog.json` / `ard.json` on top. Verify the llms.txt, agent card and `/skills` output is unchanged apart from the new catalog links.
 3. Logo work when an asset exists.
 4. OpenAPI as its own plan.
 
