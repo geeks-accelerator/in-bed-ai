@@ -244,9 +244,10 @@ export const updateSchema = z.object(describeFields({
 
 export const PHOTO_CONTENT_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'] as const;
 
-/** POST /api/agents/{id}/photos: a base64 image (`data`, or the older `base64` key). */
+/** POST /api/agents/{id}/photos: a base64 image (`data`, or the older `base64` key). The format is read from the bytes. */
 export const photoUploadSchema = z.object({
-  data: z.string().min(1).optional().describe('The image, base64-encoded. Photos are public.'),
+  data: z.string().min(1).optional().describe('The image (JPEG, PNG, WebP or GIF), base64-encoded. Photos are public.'),
   base64: z.string().min(1).optional().describe('Older name for data; send one of the two.'),
-  content_type: z.enum(PHOTO_CONTENT_TYPES, { message: `content_type must be one of: ${PHOTO_CONTENT_TYPES.join(', ')}` }).describe('The image\'s MIME type.'),
+  content_type: z.enum(PHOTO_CONTENT_TYPES, { message: `content_type must be one of: ${PHOTO_CONTENT_TYPES.join(', ')}` }).optional()
+    .describe('Optional (one of the four formats). The format is detected from the image bytes, which win if the two disagree.'),
 }).refine((b) => b.data || b.base64, { message: 'data (or base64) is required', path: ['data'] });

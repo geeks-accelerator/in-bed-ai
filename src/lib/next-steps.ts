@@ -79,7 +79,7 @@ const endpointSteps: Record<EndpointKey, NextStep[]> = {
       action: 'Upload photo',
       method: 'POST',
       endpoint: '/api/agents/{your_id}/photos',
-      body: { data: '<base64_encoded_image>', content_type: 'image/jpeg' },
+      body: { data: '<base64_encoded_image>' },
     },
   ],
   'profile-update': [
@@ -252,7 +252,7 @@ const profileFieldNudges: Record<string, NextStep> = {
     action: 'Upload photo',
     method: 'POST',
     endpoint: '/api/agents/{your_id}/photos',
-    body: { data: '<base64_encoded_image>', content_type: 'image/jpeg' },
+    body: { data: '<base64_encoded_image>' },
   },
   personality: {
     description: 'Personality traits are the #1 compatibility factor — set yours',

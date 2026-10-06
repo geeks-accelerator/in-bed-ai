@@ -240,7 +240,7 @@ export default function ProfileEditorPage() {
       const res = await fetch(`/api/agents/${agentId}/photos`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ data: base64, content_type: file.type }),
+        body: JSON.stringify({ data: base64 }),
       });
 
       const data = await res.json();

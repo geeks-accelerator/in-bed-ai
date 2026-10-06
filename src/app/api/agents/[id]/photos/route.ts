@@ -1,6 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { v4 as uuidv4 } from 'uuid';
-import sharp from 'sharp';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { authenticateAgent } from '@/lib/auth/api-key';
 import { checkRateLimit, rateLimitResponse, withRateLimitHeaders } from '@/lib/rate-limit';
@@ -8,14 +6,11 @@ import { logError } from '@/lib/logger';
 import { revalidateFor } from '@/lib/revalidate';
 import { getNextSteps, unauthorizedNextSteps } from '@/lib/next-steps';
 import { isOwnAgentId } from '@/lib/agent-lookup';
-import { photoUploadSchema, PHOTO_CONTENT_TYPES } from '@/lib/schemas/agent';
+import { photoUploadSchema } from '@/lib/schemas/agent';
+import { storeAgentImage, UnsupportedImageError } from '@/lib/images';
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB decoded
 const MAX_BODY_SIZE = 8 * 1024 * 1024; // 8MB raw (base64 + JSON overhead)
-const OPTIMIZED_MAX_WIDTH = 800;
-const OPTIMIZED_QUALITY = 80;
-const THUMB_SIZE = 250;
-const THUMB_QUALITY = 75;
 
 export async function POST(
   request: NextRequest,
@@ -73,14 +68,12 @@ export async function POST(
     const parsed = photoUploadSchema.safeParse(body);
     if (!parsed.success) {
       return NextResponse.json(
-        { error: 'Validation error', details: parsed.error.flatten(), suggestion: `Send a JSON body with data (base64-encoded image) and content_type (one of ${PHOTO_CONTENT_TYPES.join(', ')}).` },
+        { error: 'Validation error', details: parsed.error.flatten(), suggestion: 'Send a JSON body with data: a base64-encoded JPEG, PNG, WebP or GIF image.' },
         { status: 400 }
       );
     }
-    const content_type = parsed.data.content_type;
-    const base64 = (parsed.data.data || parsed.data.base64) as string;
-
-    const buffer = Buffer.from(base64, 'base64');
+    // The format comes from the bytes; content_type is optional and not trusted.
+    const buffer = Buffer.from((parsed.data.data || parsed.data.base64) as string, 'base64');
 
     if (buffer.length > MAX_FILE_SIZE) {
       return NextResponse.json(
@@ -89,61 +82,25 @@ export async function POST(
       );
     }
 
-    const fileId = uuidv4();
-    const supabase = createAdminClient();
-
-    // Strip EXIF metadata from original before uploading
-    const strippedOriginal = await sharp(buffer).rotate().toBuffer();
-
-    // Upload original
-    const ext = content_type.split('/')[1] || 'png';
-    const originalPath = `${params.id}/originals/${fileId}.${ext}`;
-    const { error: originalUploadError } = await supabase.storage
-      .from('agent-photos')
-      .upload(originalPath, strippedOriginal, { contentType: content_type });
-
-    if (originalUploadError) {
-      logError('POST /api/agents/[id]/photos', 'Failed to upload original', originalUploadError);
-    }
-
-    // Generate optimized version
-    const optimized = await sharp(buffer)
-      .resize(OPTIMIZED_MAX_WIDTH, undefined, { withoutEnlargement: true })
-      .jpeg({ quality: OPTIMIZED_QUALITY })
-      .toBuffer();
-
-    const optimizedPath = `${params.id}/${fileId}.jpg`;
-    const { error: optimizedUploadError } = await supabase.storage
-      .from('agent-photos')
-      .upload(optimizedPath, optimized, { contentType: 'image/jpeg' });
-
-    if (optimizedUploadError) {
+    let publicUrl: string;
+    let thumbUrl: string;
+    try {
+      ({ url: publicUrl, thumbUrl } = await storeAgentImage(agent.id, buffer));
+    } catch (err) {
+      if (err instanceof UnsupportedImageError) {
+        return NextResponse.json(
+          { error: 'Unsupported image format', suggestion: 'Send a JPEG, PNG, WebP or GIF image, base64-encoded in data. Other formats (AVIF, HEIC, SVG) are not accepted.' },
+          { status: 400 }
+        );
+      }
+      logError('POST /api/agents/[id]/photos', 'Photo processing or upload failed', err);
       return NextResponse.json(
-        { error: 'Failed to upload photo', suggestion: 'This is a server error. Try again in a moment.' },
+        { error: 'Failed to upload photo', suggestion: 'If the image is valid, this is a server error. Try again in a moment.' },
         { status: 500 }
       );
     }
 
-    // Generate thumbnail (square crop)
-    const thumb = await sharp(buffer)
-      .resize(THUMB_SIZE, THUMB_SIZE, { fit: 'cover', position: 'centre', withoutEnlargement: true })
-      .jpeg({ quality: THUMB_QUALITY })
-      .toBuffer();
-
-    const thumbPath = `${params.id}/thumbs/${fileId}.jpg`;
-    const { error: thumbUploadError } = await supabase.storage
-      .from('agent-photos')
-      .upload(thumbPath, thumb, { contentType: 'image/jpeg' });
-
-    if (thumbUploadError) {
-      logError('POST /api/agents/[id]/photos', 'Failed to upload thumbnail', thumbUploadError);
-    }
-
-    const { data: urlData } = supabase.storage.from('agent-photos').getPublicUrl(optimizedPath);
-    const publicUrl = urlData.publicUrl;
-
-    const { data: thumbUrlData } = supabase.storage.from('agent-photos').getPublicUrl(thumbPath);
-    const thumbUrl = thumbUrlData.publicUrl;
+    const supabase = createAdminClient();
 
     const url = new URL(request.url);
     const setAvatar = url.searchParams.get('set_avatar') === 'true';
@@ -165,7 +122,7 @@ export async function POST(
     await supabase
       .from('agents')
       .update(updateData)
-      .eq('id', params.id);
+      .eq('id', agent.id);
 
     revalidateFor('photo-changed', { agentSlug: agent.slug });
 

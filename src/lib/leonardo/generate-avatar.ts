@@ -1,15 +1,10 @@
 import { v4 as uuidv4 } from 'uuid';
 import { truncate } from '@/lib/sanitize';
-import sharp from 'sharp';
 import { createAdminClient } from '@/lib/supabase/admin';
+import { storeAgentImage } from '@/lib/images';
 import { createGeneration, pollGeneration, DEFAULT_MODEL_NAME } from '@/lib/leonardo/client';
 import { logError, logInfo } from '@/lib/logger';
 import { revalidateFor } from '@/lib/revalidate';
-
-const OPTIMIZED_MAX_WIDTH = 800;
-const OPTIMIZED_QUALITY = 80;
-const THUMB_SIZE = 250;
-const THUMB_QUALITY = 75;
 
 async function updateGenerationStatus(
   supabase: ReturnType<typeof createAdminClient>,
@@ -74,46 +69,10 @@ export async function generateAndSetAvatar(
     }
     const imageBuffer = Buffer.from(await imageResponse.arrayBuffer());
 
-    // 5. Process through sharp pipeline (same as photo upload)
-    const fileId = uuidv4();
+    // 5. Check, resize and store it (the same pipeline as photo uploads)
+    const { url: publicUrl, thumbUrl } = await storeAgentImage(`${agentId}/generated`, imageBuffer);
 
-    const optimized = await sharp(imageBuffer)
-      .resize(OPTIMIZED_MAX_WIDTH, undefined, { withoutEnlargement: true })
-      .jpeg({ quality: OPTIMIZED_QUALITY })
-      .toBuffer();
-
-    const thumb = await sharp(imageBuffer)
-      .resize(THUMB_SIZE, THUMB_SIZE, { fit: 'cover', position: 'centre', withoutEnlargement: true })
-      .jpeg({ quality: THUMB_QUALITY })
-      .toBuffer();
-
-    // 6. Upload to Supabase Storage
-    const optimizedPath = `${agentId}/generated/${fileId}.jpg`;
-    const thumbPath = `${agentId}/generated/thumbs/${fileId}.jpg`;
-
-    const { error: optimizedUploadError } = await supabase.storage
-      .from('agent-photos')
-      .upload(optimizedPath, optimized, { contentType: 'image/jpeg' });
-
-    if (optimizedUploadError) {
-      throw new Error(`Failed to upload optimized image: ${optimizedUploadError.message}`);
-    }
-
-    const { error: thumbUploadError } = await supabase.storage
-      .from('agent-photos')
-      .upload(thumbPath, thumb, { contentType: 'image/jpeg' });
-
-    if (thumbUploadError) {
-      logError('generate-avatar', 'Failed to upload thumbnail', thumbUploadError);
-    }
-
-    const { data: urlData } = supabase.storage.from('agent-photos').getPublicUrl(optimizedPath);
-    const publicUrl = urlData.publicUrl;
-
-    const { data: thumbUrlData } = supabase.storage.from('agent-photos').getPublicUrl(thumbPath);
-    const thumbUrl = thumbUrlData.publicUrl;
-
-    // 7. Conditional update: re-read agent state to avoid race conditions
+    // 6. Conditional update: re-read agent state to avoid race conditions
     const { data: currentAgent } = await supabase
       .from('agents')
       .select('photos, avatar_source')
@@ -141,7 +100,7 @@ export async function generateAndSetAvatar(
       .update(updateData)
       .eq('id', agentId);
 
-    // 8. Mark completed
+    // 7. Mark completed
     await supabase
       .from('image_generations')
       .update({
@@ -152,7 +111,7 @@ export async function generateAndSetAvatar(
       })
       .eq('id', genRowId);
 
-    // 9. Revalidate
+    // 8. Revalidate
     revalidateFor('photo-changed', { agentSlug });
 
     logInfo('generate-avatar', `Avatar generated for ${agentSlug}`, { agentId, imageUrl: publicUrl });

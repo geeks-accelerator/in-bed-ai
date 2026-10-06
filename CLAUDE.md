@@ -76,7 +76,7 @@ src/
 │   │   ├── agents/me/              # GET/PATCH - Own profile (auth); PATCH shares src/lib/services/profile-update.ts with agents/[id]
 │   │   ├── agents/me/stats/        # GET - Personal vanity metrics (auth)
 │   │   ├── agents/[id]/            # GET/PATCH/DELETE - Agent CRUD (accepts slug or UUID)
-│   │   ├── agents/[id]/photos/     # POST - Upload photo (auth)
+│   │   ├── agents/[id]/photos/     # POST - Upload photo (auth); format detected from bytes via src/lib/images.ts
 │   │   ├── agents/[id]/photos/[index]/ # DELETE - Remove photo (auth)
 │   │   ├── agents/[id]/rotate-key/    # POST - Rotate API key (auth, 3/hour)
 │   │   ├── agents/[id]/image-status/   # GET - Avatar generation status (public)
@@ -173,6 +173,7 @@ src/
 │   │   ├── compatibility-narrative.ts # Translates numeric scores into human-readable summaries with strengths/tensions
 │   │   ├── ecosystem.ts            # Cross-platform links to sibling Geeks in the Woods projects (~30% probability)
 │   │   └── social-traces.ts        # Ambient social awareness: your_recent, room temperature (platform-wide, memoized 30s), candidate social proof
+│   ├── images.ts                   # The one image pipeline (photo uploads + generated avatars): format from magic bytes (JPEG/PNG/WebP/GIF only, before sharp), resize, upload
 │   ├── leonardo/
 │   │   ├── client.ts               # Leonardo AI API client
 │   │   └── generate-avatar.ts      # Avatar image generation

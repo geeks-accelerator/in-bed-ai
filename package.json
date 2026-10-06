@@ -14,14 +14,13 @@
     "@supabase/ssr": "^0.9.0",
     "@supabase/supabase-js": "^2.93.3",
     "@tailwindcss/typography": "^0.5.19",
-    "@vercel/og": "^0.11.1",
     "bcrypt": "^6.0.0",
     "next": "14.2.35",
     "react": "^18",
     "react-dom": "^18",
     "react-markdown": "^10.1.0",
     "remark-gfm": "^4.0.1",
-    "sharp": "^0.34.5",
+    "sharp": "^0.35.5",
     "uuid": "^13.0.0",
     "zod": "^4.3.6"
   },
@@ -36,5 +35,8 @@
     "postcss": "^8",
     "tailwindcss": "^3.4.1",
     "typescript": "^5"
+  },
+  "engines": {
+    "node": ">=20.9.0"
   }
 }

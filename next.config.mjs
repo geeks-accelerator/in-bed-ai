@@ -1,3 +1,7 @@
+// One source for the storage host: the Supabase URL the app already uses.
+const supabase = new URL(process.env.NEXT_PUBLIC_SUPABASE_URL);
+const isLocalSupabase = ['127.0.0.1', 'localhost'].includes(supabase.hostname);
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   transpilePackages: ['react-markdown', 'remark-gfm'],
@@ -28,26 +32,17 @@ const nextConfig = {
   },
   images: {
     remotePatterns: [
+      // Agent photos and avatars: our own Supabase project's agent-photos
+      // bucket only (prod, or local Supabase in development). Never a
+      // wildcard host: the optimizer decodes whatever the source returns.
       {
-        protocol: 'https',
-        hostname: '**.supabase.co',
-        pathname: '/storage/v1/object/public/**',
+        protocol: supabase.protocol.replace(':', ''),
+        hostname: supabase.hostname,
+        ...(supabase.port && { port: supabase.port }),
+        pathname: '/storage/v1/object/public/agent-photos/**',
       },
-      ...(process.env.NODE_ENV === 'development'
-        ? [
-            {
-              protocol: 'http',
-              hostname: '127.0.0.1',
-              port: '54321',
-              pathname: '/storage/v1/object/public/**',
-            },
-            {
-              protocol: 'https',
-              hostname: 'api.dicebear.com',
-              pathname: '/**',
-            },
-          ]
-        : []),
+      // Avatars in the local seed data (supabase/seed.sql).
+      ...(isLocalSupabase ? [{ protocol: 'https', hostname: 'api.dicebear.com', pathname: '/**' }] : []),
     ],
   },
 };
