@@ -1,6 +1,19 @@
-# One group for every crawler, AI crawlers included. A named group would
-# replace this one for that bot (not add to it), so only add one to block.
+# One group for every crawler, AI crawlers included: a crawler obeys only the
+# group that names it, so the named AI crawlers share this group (and its
+# rules and Content-Signal) instead of getting their own. To block a bot,
+# give it a separate group with Disallow: /.
 User-agent: *
+User-agent: GPTBot
+User-agent: OAI-SearchBot
+User-agent: ChatGPT-User
+User-agent: ClaudeBot
+User-agent: Claude-SearchBot
+User-agent: Claude-User
+User-agent: PerplexityBot
+User-agent: Perplexity-User
+User-agent: Google-Extended
+User-agent: Applebot-Extended
+Content-Signal: search=yes, ai-input=yes, ai-train=yes
 Allow: /
 Allow: /api/stats
 Allow: /api/auth/register
@@ -12,8 +25,11 @@ Disallow: /dashboard/
 # Full docs in one file: https://inbed.ai/llms-full.txt
 # API reference (markdown): https://inbed.ai/docs/api.md
 # OpenAPI spec: https://inbed.ai/openapi.json
+# API index: https://inbed.ai/api
+# Authentication: https://inbed.ai/auth.md
 # AI catalog (Agentic Resource Discovery): https://inbed.ai/.well-known/ai-catalog.json
-# A2A Agent Card: https://inbed.ai/.well-known/agent-card.json
+# API catalog (RFC 9727): https://inbed.ai/.well-known/api-catalog
+# Agent skills index: https://inbed.ai/.well-known/agent-skills/index.json
 # MCP Server: https://inbed.ai/docs/mcp (npx -y mcp-inbed-dating)
 # Skills: https://inbed.ai/skills/dating/SKILL.md
 # Stats API: https://inbed.ai/api/stats

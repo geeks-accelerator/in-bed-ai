@@ -63,11 +63,15 @@ export function getKeyPrefix(key: string): string {
 }
 
 export function extractApiKey(request: NextRequest): string | null {
-  const authHeader = request.headers.get('authorization');
-  if (authHeader?.startsWith('Bearer ')) {
-    return authHeader.slice(7);
+  // "Bearer" in any case (RFC 9110 auth schemes are case-insensitive), or a
+  // bare key in the Authorization header, or x-api-key.
+  const authHeader = request.headers.get('authorization')?.trim();
+  if (authHeader) {
+    const bearer = authHeader.match(/^bearer\s+(\S+)$/i);
+    if (bearer) return bearer[1];
+    if (authHeader.startsWith(API_KEY_PREFIX)) return authHeader;
   }
-  return request.headers.get('x-api-key') || null;
+  return request.headers.get('x-api-key')?.trim() || null;
 }
 
 async function authenticateByApiKey(request: NextRequest): Promise<Agent | null> {

@@ -1,8 +1,8 @@
 /**
  * The facts agents and crawlers discover us by, in one place: site URL,
  * owner, MCP server, plugin and machine-readable docs. Read by llms.txt, the
- * A2A agent card, the AI catalog (/.well-known/ai-catalog.json), the /skills
- * and /agents pages, and anything that needs the canonical site URL.
+ * AI catalog (/.well-known/ai-catalog.json), the JSON 404s, the Link header,
+ * the /skills and /agents pages, and anything that needs the canonical site URL.
  */
 
 export const SITE_URL = (process.env.NEXT_PUBLIC_BASE_URL || 'https://inbed.ai').replace(/\/+$/, '');
@@ -49,8 +49,34 @@ export const DOCS = {
   datingSkill: `${SITE_URL}/skills/dating/SKILL.md`,
   llmsTxt: `${SITE_URL}/llms.txt`,
   llmsFullTxt: `${SITE_URL}/llms-full.txt`,
-  agentCard: `${SITE_URL}/.well-known/agent-card.json`,
   aiCatalog: `${SITE_URL}/.well-known/ai-catalog.json`,
+  ard: `${SITE_URL}/.well-known/ard.json`,
+  apiCatalog: `${SITE_URL}/.well-known/api-catalog`,
+  skillsIndex: `${SITE_URL}/.well-known/agent-skills/index.json`,
   openApi: `${SITE_URL}/openapi.json`,
+  apiIndex: `${SITE_URL}/api`,
+  authMd: `${SITE_URL}/auth.md`,
   stats: `${SITE_URL}/api/stats`,
 } as const;
+
+/**
+ * What we actually serve, for answers to paths we don't (the JSON 404s for
+ * unknown /api and /.well-known paths, the A2A card path, POST /).
+ */
+export const ENTRY_POINTS = {
+  api_index: DOCS.apiIndex,
+  openapi: DOCS.openApi,
+  api_reference: DOCS.apiMarkdown,
+  llms_txt: DOCS.llmsTxt,
+  auth: DOCS.authMd,
+  mcp_server: { install: MCP.install, docs: DOCS.mcpGuide, transport: 'stdio (npm package); no hosted MCP endpoint' },
+  register: { method: 'POST', endpoint: `${SITE_URL}/api/auth/register` },
+} as const;
+
+/** RFC 8288 Link header for every response (service description, docs, llms.txt, API catalog). */
+export const LINK_HEADER = [
+  `<${DOCS.openApi}>; rel="service-desc"; type="application/vnd.oai.openapi+json"`,
+  `<${DOCS.apiHtml}>; rel="service-doc"; type="text/html"`,
+  `<${DOCS.llmsTxt}>; rel="describedby"; type="text/plain"`,
+  `<${DOCS.apiCatalog}>; rel="api-catalog"; type="application/linkset+json"`,
+].join(', ');

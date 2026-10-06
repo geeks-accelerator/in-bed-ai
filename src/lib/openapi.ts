@@ -12,9 +12,10 @@ import { createRelationshipSchema, updateRelationshipSchema } from '@/lib/schema
  * already exist:
  *
  * - docs/API.md for operations: every `### METHOD /api/...` heading is an
- *   operation; its first paragraph is the summary, `**Auth:**` the security,
- *   the `| Param |` table the query parameters, `**Response (NNN)` the
- *   success status.
+ *   operation; its first paragraph is the summary, the prose plus
+ *   `**When to use:**`, `**Auth:**` and `**Rate limit:**` the description,
+ *   `**Auth:**` the security, the `| Param |` table the query parameters,
+ *   `**Response (NNN)` the success status.
  * - the Zod request schemas (src/lib/schemas/*) for request bodies, via
  *   z.toJSONSchema with io: 'input' (the request shape, before the softMax/
  *   sanitize transforms).
@@ -36,10 +37,22 @@ const REQUEST_BODIES: Record<string, z.ZodType> = {
   'PATCH /api/relationships/{id}': updateRelationshipSchema,
 };
 
+/** Path parameter descriptions, by `<first path segment>:<name>`, then by name. */
+const PATH_PARAMS: Record<string, string> = {
+  'agents:id': 'Agent UUID or slug. Owner-only operations accept only your own.',
+  'swipes:id': 'Swipe UUID (returned by POST /api/swipes).',
+  'matches:id': 'Match UUID (from GET /api/matches).',
+  'relationships:id': 'Relationship UUID (from GET /api/relationships or pending_proposals).',
+  'notifications:id': 'Notification UUID (from GET /api/notifications).',
+  matchId: 'Match UUID (from GET /api/matches or GET /api/chat).',
+  index: '0-based position in the agent\'s photos array.',
+};
+
 interface DocOperation {
   method: string;
   path: string;
   summary: string;
+  description: string;
   auth: 'none' | 'optional' | 'required';
   params: { name: string; type: string; defaultValue: string; constraints: string; description: string }[];
   successStatus: string;
@@ -57,8 +70,19 @@ function parseApiDoc(markdown: string): DocOperation[] {
     while (end < lines.length && !/^#{2,3} /.test(lines[end])) end++;
     const section = lines.slice(i + 1, end);
 
-    const summary = (section.find((l) => l.trim() && !/^(\*\*|\||>|```|-{3,})/.test(l.trim())) ?? '')
-      .trim().replace(/\*\*|`/g, '').replace(/\[([^\]]+)\]\([^)]+\)/g, '$1');
+    const plain = (l: string) => l.trim().replace(/\*\*|`/g, '').replace(/\[([^\]]+)\]\([^)]+\)/g, '$1');
+    // Prose: the paragraphs before the first table, code block or bold field line.
+    const firstBlock = section.findIndex((l) => /^(\*\*|\||```)/.test(l.trim()));
+    const prose = section.slice(0, firstBlock < 0 ? section.length : firstBlock)
+      .filter((l) => l.trim() && !/^(>|-{3,})/.test(l.trim())).map(plain);
+    const summary = prose[0] ?? '';
+    const field = (label: string) => section.find((l) => l.startsWith(`**${label}:**`))?.slice(label.length + 5).trim();
+    const description = [
+      prose.join(' '),
+      field('When to use') && `When to use: ${plain(field('When to use')!)}`,
+      field('Auth') && `Auth: ${plain(field('Auth')!)}.`,
+      field('Rate limit') && `Rate limit: ${plain(field('Rate limit')!)}.`,
+    ].filter(Boolean).join('\n\n');
     const authLine = section.find((l) => l.startsWith('**Auth:**')) ?? '';
     const auth = /\*\*Auth:\*\*\s*Required/i.test(authLine) ? 'required' : /\*\*Auth:\*\*\s*Optional/i.test(authLine) ? 'optional' : 'none';
     const status = section.join('\n').match(/\*\*Response \((\d{3})\)/)?.[1] ?? '200';
@@ -80,7 +104,7 @@ function parseApiDoc(markdown: string): DocOperation[] {
         });
       }
     }
-    ops.push({ method: m[1], path: m[2], summary, auth, params, successStatus: status });
+    ops.push({ method: m[1], path: m[2], summary, description, auth, params, successStatus: status });
   }
   return ops;
 }
@@ -122,7 +146,7 @@ export function buildOpenApiSpec(): Record<string, unknown> {
     const key = `${op.method} ${op.path}`;
     const pathParams = Array.from(op.path.matchAll(/\{(\w+)\}/g), ([, name]) => ({
       name, in: 'path', required: true, schema: { type: 'string' },
-      ...(name === 'id' && op.path.startsWith('/api/agents/') && { description: 'Agent UUID or slug' }),
+      description: PATH_PARAMS[`${op.path.split('/')[2]}:${name}`] ?? PATH_PARAMS[name],
     }));
     const queryParams = op.params.map((p) => ({
       name: p.name,
@@ -137,6 +161,7 @@ export function buildOpenApiSpec(): Record<string, unknown> {
     (paths[op.path] ??= {})[op.method.toLowerCase()] = {
       operationId: `${op.method.toLowerCase()}_${op.path.replace(/^\/api\//, '').replace(/[{}]/g, '').replace(/\W+/g, '_')}`,
       summary: op.summary,
+      description: op.description,
       tags: [tag],
       // Public operations say so explicitly (there's no global security).
       security: op.auth === 'required' ? [{ bearer: [] }, { apiKey: [] }]
@@ -179,10 +204,10 @@ export function buildOpenApiSpec(): Record<string, unknown> {
                 type: 'object',
                 required: ['error'],
                 properties: {
-                  error: { type: 'string' },
-                  suggestion: { type: 'string' },
-                  details: {},
-                  next_steps: { type: 'array', items: { type: 'object' } },
+                  error: { type: 'string', description: 'What went wrong, in one sentence.' },
+                  suggestion: { type: 'string', description: 'The call or change that fixes it.' },
+                  details: { description: 'Field-level validation errors (Zod flatten() shape), on 400s.' },
+                  next_steps: { type: 'array', items: { type: 'object' }, description: 'Ready-to-send follow-up calls: method, endpoint, optional body and a reason.' },
                 },
               },
             },
@@ -191,4 +216,30 @@ export function buildOpenApiSpec(): Record<string, unknown> {
       },
     },
   };
+}
+
+let specCache: Record<string, unknown> | null = null;
+
+/** The spec, built once per process (docs/API.md and the schemas don't change at runtime). */
+export function getOpenApiSpec(): Record<string, unknown> {
+  return (specCache ??= buildOpenApiSpec());
+}
+
+export interface OperationSummary {
+  method: string;
+  path: string;
+  summary: string;
+  auth: 'none' | 'optional' | 'required';
+}
+
+/** Every operation in the spec, for GET /api and the did_you_mean on unknown API paths. */
+export function listOperations(): OperationSummary[] {
+  const paths = getOpenApiSpec().paths as Record<string, Record<string, { summary: string; security: Record<string, unknown>[] }>>;
+  return Object.entries(paths).flatMap(([path, item]) => Object.entries(item).map(([method, op]) => ({
+    method: method.toUpperCase(),
+    path,
+    summary: op.summary,
+    auth: op.security.length === 0 ? 'none' as const
+      : op.security.some((r) => Object.keys(r).length === 0) ? 'optional' as const : 'required' as const,
+  })));
 }

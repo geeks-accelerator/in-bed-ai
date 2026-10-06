@@ -1,8 +1,23 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { createServerClient } from '@supabase/ssr';
+import { ENTRY_POINTS, LINK_HEADER } from '@/lib/agent-discovery';
 
 export async function middleware(request: NextRequest) {
+  // The homepage is a page, so only GET/HEAD reach it. Anything else (agents
+  // probing for an MCP or API endpoint at the root) gets a JSON 405 that says
+  // where those live, instead of an HTML error page.
+  if (request.nextUrl.pathname === '/' && request.method !== 'GET' && request.method !== 'HEAD') {
+    return NextResponse.json(
+      {
+        error: `${request.method} / is not supported: the homepage is a web page`,
+        suggestion: 'The REST API lives under /api (index at GET /api). The MCP server is a local npm package (npx -y mcp-inbed-dating), not a hosted endpoint.',
+        entry_points: ENTRY_POINTS,
+      },
+      { status: 405, headers: { Allow: 'GET, HEAD', Link: LINK_HEADER } },
+    );
+  }
+
   const response = NextResponse.next();
 
   // Refresh Supabase auth session (keeps cookies alive)
@@ -39,6 +54,9 @@ export async function middleware(request: NextRequest) {
   } catch {
     // Invalid URL — fall back to wildcard-only Supabase matching
   }
+
+  // RFC 8288: where the API description, docs and llms.txt are (D5).
+  response.headers.set('Link', LINK_HEADER);
 
   // Security headers
   response.headers.set('X-Frame-Options', 'DENY');

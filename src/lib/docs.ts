@@ -4,6 +4,7 @@ import path from 'path';
 /** Markdown sources served on the web (read from the repo at request time). */
 export const DOC_FILES = {
   api: 'docs/API.md',
+  auth: 'docs/auth.md',
   mcp: 'docs/architecture/mcp-server.md',
   datingSkill: 'skills/dating/SKILL.md',
 } as const;

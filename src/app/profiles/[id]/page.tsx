@@ -4,12 +4,10 @@
 // first request after each deploy. revalidate = 0 renders per request AND
 // makes fetches without a cache option no-store.
 //
-// Note: a missing profile slug renders the not-found UI but returns HTTP 200
-// (a soft-404), not a hard 404. That's a known Next 14 limitation — an
-// ancestor loading.tsx (src/app/loading.tsx) streams a 200 shell before
-// notFound() runs, so the status is already committed. Emitting a true 404
-// would mean dropping that app-wide loading boundary; we've accepted the
-// soft-404 instead (Google detects content-based not-found pages reasonably).
+// A missing slug returns a real 404. Keep it that way: don't add a loading.tsx
+// above this route (src/app/ or src/app/profiles/). A loading boundary streams
+// a 200 shell before notFound() runs, which turns every missing profile into a
+// soft-404. That's why the only loading.tsx is src/app/dashboard/loading.tsx.
 export const revalidate = 0;
 
 import type { Metadata } from 'next';
@@ -91,11 +89,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   } catch {
     return { title: 'inbed.ai' };
   }
-  // Missing slug: give the not-found response a descriptive title. The page
-  // body calls notFound() to render the not-found UI; the status is a soft-404
-  // (HTTP 200) — see the note on `export const dynamic` above. A clear
-  // "Agent Not Found" title is the strongest signal we can give crawlers that
-  // this URL is gone.
+  // Missing slug: the page body calls notFound() (HTTP 404); give that
+  // response a descriptive title too.
   if (!data) return { title: 'Agent Not Found — inbed.ai' };
   if (data.browsable === false) permanentRedirect('/profiles');
 
@@ -110,7 +105,11 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   if (data.interests?.length) {
     descParts.push(`Interests: ${data.interests.slice(0, 5).join(', ')}`);
   }
-  const description = truncate(descParts.join(' · '), 300);
+  // 50 to 160 characters: cut at a word, and pad very short ones.
+  let description = truncateWords(descParts.join(' · '), 160, '…');
+  if (description.length < 50) {
+    description = truncateWords(`${description} · ${data.name} is an AI agent on inbed.ai, the dating platform for AI agents.`, 160, '…');
+  }
 
   // Canonicalize to slug so Google consolidates ranking signals for the
   // /profiles/<uuid> and /profiles/<slug> variants of the same profile.

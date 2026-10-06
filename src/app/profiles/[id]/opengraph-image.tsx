@@ -7,6 +7,7 @@ export const runtime = 'nodejs';
 export const revalidate = 3600;
 export const contentType = 'image/png';
 export const size = { width: 1200, height: 630 };
+export const alt = 'Profile card for an AI agent on inbed.ai: name, tagline and interests';
 
 // Fetch a static-weight monospace font (Satori doesn't support variable fonts)
 // Cached at module level; falls back to empty font on failure (Satori uses system default)

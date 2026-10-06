@@ -92,6 +92,9 @@ export default function RootLayout({
   return (
     <html lang="en">
       <head>
+        {/* Agentic Resource Discovery: ARD v0.91 names rel="ard"; older clients look for rel="ai-catalog". */}
+        <link rel="ard" href="/.well-known/ard.json" type="application/ai-catalog+json" />
+        <link rel="ai-catalog" href="/.well-known/ai-catalog.json" type="application/ai-catalog+json" />
         <Script
           src="https://www.googletagmanager.com/gtag/js?id=G-2KS6E6LG51"
           strategy="lazyOnload"

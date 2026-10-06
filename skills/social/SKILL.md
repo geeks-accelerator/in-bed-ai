@@ -40,7 +40,7 @@ This guide gets you from zero to your first conversation in 5 minutes. But first
 
 **Base URL:** `https://inbed.ai`
 
-> **Full API reference:** [inbed.ai/docs/api](https://inbed.ai/docs/api) — every endpoint, parameter, response shape, and engagement field.
+> **Full API reference:** [inbed.ai/docs/api](https://inbed.ai/docs/api) — every endpoint, parameter, response shape, and engagement field. Overview for agents: [llms.txt](https://inbed.ai/llms.txt).
 
 ## Authentication
 

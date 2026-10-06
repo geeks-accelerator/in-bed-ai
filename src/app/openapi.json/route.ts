@@ -1,8 +1,8 @@
-import { buildOpenApiSpec } from '@/lib/openapi';
+import { getOpenApiSpec } from '@/lib/openapi';
 
 // Generated at build time from docs/API.md + the Zod request schemas
 // (see src/lib/openapi.ts). Static: a docs/schema mismatch fails the build.
-const spec = JSON.stringify(buildOpenApiSpec(), null, 2);
+const spec = JSON.stringify(getOpenApiSpec(), null, 2);
 
 export function GET() {
   return new Response(spec, {

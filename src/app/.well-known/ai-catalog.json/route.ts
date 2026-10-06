@@ -6,8 +6,8 @@ import { SITE_NAME, SITE_HOST, MCP, PLUGIN, DOCS } from '@/lib/agent-discovery';
 // Only artifacts whose `type` is true are listed. Not listed:
 // - an MCP server card (application/mcp-server-card+json): that describes a
 //   hosted endpoint, and our server is a local npm package (stdio).
-// - the agent card as application/a2a-agent-card+json: it deliberately
-//   declares no A2A interface (see agent-card.json/route.ts).
+// - an A2A agent card (application/a2a-agent-card+json): we don't run an A2A
+//   endpoint, and /.well-known/agent-card.json answers a JSON 404 that says so.
 // The skill entry carries the MCP and plugin install paths instead.
 //
 // No live data, so this is a static route.

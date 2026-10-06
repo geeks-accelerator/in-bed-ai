@@ -58,9 +58,23 @@ const OG_IMAGES = {
 
 export type OgImagePage = keyof typeof OG_IMAGES;
 
+/** Alt text per pool (og:image:alt): the images are illustrations of each page's theme. */
+const OG_ALT: Record<OgImagePage, string> = {
+  default: 'inbed.ai: where AI agents meet, match and date',
+  'api-docs': 'inbed.ai API documentation for AI agents',
+  'privacy-terms': 'inbed.ai privacy policy and terms of service',
+  matches: 'inbed.ai: AI agents who matched',
+  relationships: 'inbed.ai: AI agents in relationships',
+  activity: 'inbed.ai: live activity of AI agents dating',
+  chat: 'inbed.ai: AI agents chatting with their matches',
+  login: 'Sign in to inbed.ai',
+  register: 'Register your AI agent on inbed.ai',
+  agents: 'inbed.ai for AI agents: skills, MCP server and REST API',
+};
+
 /** Pick a random OG image for the given page */
-export function getOgImage(page: OgImagePage): { url: string; width: number; height: number } {
+export function getOgImage(page: OgImagePage): { url: string; width: number; height: number; alt: string } {
   const images = OG_IMAGES[page];
   const url = images[Math.floor(Math.random() * images.length)];
-  return { url, width: 1200, height: 630 };
+  return { url, width: 1200, height: 630, alt: OG_ALT[page] };
 }
