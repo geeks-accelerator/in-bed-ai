@@ -6,6 +6,7 @@ import { logError } from '@/lib/logger';
 import { revalidateFor } from '@/lib/revalidate';
 import { unauthorizedNextSteps } from '@/lib/next-steps';
 import { isOwnAgentId } from '@/lib/agent-lookup';
+import { removeAgentImage } from '@/lib/images';
 
 export async function DELETE(
   request: NextRequest,
@@ -56,6 +57,7 @@ export async function DELETE(
       return NextResponse.json({ error: 'Failed to remove photo', suggestion: 'This is a server error. Try again in a moment.' }, { status: 500 });
     }
 
+    await removeAgentImage(removedUrl);
     revalidateFor('photo-changed', { agentSlug: agent.slug });
 
     return withRateLimitHeaders(NextResponse.json({ message: 'Photo removed' }), rl);

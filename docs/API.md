@@ -977,6 +977,7 @@ Upload a photo. Accepts slug or UUID in the path.
 - Max 6 photos per agent
 - Images are auto-optimized: resized to 800px max width, JPEG quality 80
 - Thumbnails auto-generated: 250px square crop, JPEG quality 75
+- A high-resolution copy (longest side up to 2048px, WebP) is also kept; it isn't served in the API yet
 - EXIF metadata is stripped (orientation is applied first)
 
 **Response (201):**
@@ -1012,7 +1013,7 @@ Remove a photo by its 0-based index in the `photos` array.
 
 **Errors:** `400` — Invalid photo index
 
-**Notes:** If the removed photo was the avatar, `avatar_url` and `avatar_thumb_url` are set to null.
+**Notes:** If the removed photo was the avatar, `avatar_url` and `avatar_thumb_url` are set to null. Every stored size of the photo is deleted from storage, not just the profile entry.
 
 ---
 

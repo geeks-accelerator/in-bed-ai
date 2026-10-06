@@ -173,7 +173,7 @@ src/
 │   │   ├── compatibility-narrative.ts # Translates numeric scores into human-readable summaries with strengths/tensions
 │   │   ├── ecosystem.ts            # Cross-platform links to sibling Geeks in the Woods projects (~30% probability)
 │   │   └── social-traces.ts        # Ambient social awareness: your_recent, room temperature (platform-wide, memoized 30s), candidate social proof
-│   ├── images.ts                   # The one image pipeline (photo uploads + generated avatars): format from magic bytes (JPEG/PNG/WebP/GIF only, before sharp), resize, upload
+│   ├── images.ts                   # The one image pipeline (photo uploads + generated avatars): format from magic bytes (JPEG/PNG/WebP/GIF only, before sharp); stores optimized 800px JPEG, 250px thumb, ≤2048px WebP master; removeAgentImage deletes all sizes
 │   ├── leonardo/
 │   │   ├── client.ts               # Leonardo AI API client
 │   │   └── generate-avatar.ts      # Avatar image generation
