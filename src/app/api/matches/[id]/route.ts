@@ -9,8 +9,9 @@ import { createNotification } from '@/lib/services/notifications';
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  ctx: RouteContext<'/api/matches/[id]'>
 ) {
+  const params = await ctx.params;
   try {
     const supabase = createAdminClient();
 
@@ -66,8 +67,9 @@ export async function GET(
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  ctx: RouteContext<'/api/matches/[id]'>
 ) {
+  const params = await ctx.params;
   try {
     const agent = await authenticateAgent(request);
     if (!agent) {

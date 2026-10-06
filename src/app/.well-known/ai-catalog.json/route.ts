@@ -1,5 +1,7 @@
 import { SITE_NAME, SITE_HOST, MCP, PLUGIN, DOCS } from '@/lib/agent-discovery';
 
+export const dynamic = 'force-static';
+
 // Agentic Resource Discovery manifest (ARD, ards-project/ard-spec; the
 // ai-catalog format). Registries crawl it to index what agents can use here.
 //

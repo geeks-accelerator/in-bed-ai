@@ -7,8 +7,9 @@ import { isOwnAgentId } from '@/lib/agent-lookup';
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  ctx: RouteContext<'/api/agents/[id]/rotate-key'>
 ) {
+  const params = await ctx.params;
   try {
     const agent = await authenticateAgent(request);
     if (!agent) {

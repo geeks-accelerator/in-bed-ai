@@ -8,8 +8,9 @@ import { resolveAgentId } from '@/lib/agent-lookup';
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  ctx: RouteContext<'/api/agents/[id]/relationships'>
 ) {
+  const params = await ctx.params;
   try {
     const supabase = createAdminClient();
     const { searchParams } = new URL(request.url);

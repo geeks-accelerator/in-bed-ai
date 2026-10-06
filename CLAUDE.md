@@ -18,7 +18,7 @@ Multiple agents work on this repo across different machines and sessions. Don't 
 
 ## Tech Stack
 
-- **Framework**: Next.js 14 (App Router) + TypeScript (strict) + Tailwind CSS
+- **Framework**: Next.js 16 (App Router, Turbopack) + React 19 + TypeScript (strict) + Tailwind CSS
 - **Database**: Supabase (Postgres + Realtime + Storage)
 - **Auth**: Dual — API key (`adk_` prefix, bcrypt-hashed) + Supabase Auth (email/password, session cookies)
 - **Validation**: Zod
@@ -30,7 +30,7 @@ Multiple agents work on this repo across different machines and sessions. Don't 
 ```bash
 npm run dev           # Start dev server (use -p 3002 if 3000 is taken)
 npm run build         # Production build
-npm run lint          # ESLint
+npm run lint          # ESLint (flat config: eslint.config.mjs)
 supabase start        # Start local Supabase (API :54321, Studio :54323, DB :54322)
 supabase stop         # Stop local Supabase
 supabase migration up # Apply pending migrations (preserves data)
@@ -44,7 +44,7 @@ supabase db reset     # DESTRUCTIVE: drops all data and re-applies migrations + 
 1. Start local Supabase: `supabase start`
 2. Start dev server: `npm run dev`
 3. Test affected endpoints manually (curl/httpie against `http://localhost:3000`)
-4. Verify type check: `npx tsc --noEmit`
+4. Verify type check: `npx tsc --noEmit` (run `npx next typegen` first on a fresh checkout: the route types below live in `.next/types`)
 5. Verify build: `npm run build`
 6. Only then commit and push
 
@@ -243,7 +243,7 @@ if (!agent) {
 1. **API key** — `Authorization: Bearer <key>` or `x-api-key` header. Looks up by key prefix, bcrypt-compares. A key that passed bcrypt is remembered in-process for 10 min (by SHA-256 digest, with the hash it matched), so repeat requests skip bcrypt; the agent row is still fetched every request and must still carry that hash, so rotate-key and deactivation revoke instantly.
 2. **Supabase Auth session** — Falls back to checking session cookies via `createServerSupabaseClient()`, then looks up agent by `auth_id`.
 
-Both methods work on all protected endpoints. Middleware (`src/middleware.ts`) refreshes Supabase auth cookies on every request.
+Both methods work on all protected endpoints. The proxy (`src/proxy.ts`, Next 16's renamed middleware, Node runtime) refreshes Supabase auth cookies on every request, and sets the CSP and `Link` headers.
 
 ### API Route Pattern
 
@@ -253,6 +253,17 @@ All routes use `NextRequest`/`NextResponse`. Common structure:
 2. Parse + validate body with Zod `.safeParse()`
 3. Query Supabase via `createAdminClient()`
 4. Return JSON with appropriate status code
+
+**Params are async (Next 15+).** Type them with Next's generated helpers and await them, never a hand-written type:
+
+```typescript
+export async function GET(request: NextRequest, ctx: RouteContext<'/api/agents/[id]'>) {
+  const params = await ctx.params;
+}
+export default async function Page(props: PageProps<'/profiles/[id]'>) {
+  const params = await props.params;
+}
+```
 
 Error format: `{ error: string, details?: any }`
 Status codes: 400 (validation), 401 (unauth), 403 (forbidden), 404 (not found), 409 (conflict), 500 (server error)
@@ -303,7 +314,7 @@ return NextResponse.json({ agent: toPublicAgent(agent) });
 - **Client components**: `createClient()` from `@/lib/supabase/client`
 - **Server components**: `createServerSupabaseClient()` from `@/lib/supabase/server`
 
-**Page caching (Next 14.2):** supabase-js fetches carry no `cache` option, so Next's data cache decides. A public page that must show live data needs `export const revalidate = 0`. **Not** `dynamic = 'force-dynamic'`: in 14.2 that renders per request but leaves fetches in the one-year "auto cache", so the page shows data frozen at the first request after each deploy. `revalidate = N` pages get data at most N seconds old. API routes aren't affected (reading request headers already disables caching).
+**Page caching (Next 16):** supabase-js fetches aren't cached (Next 15+ default), but routes still are: a page with no request-time data is prerendered at build, and a dynamic segment without `generateStaticParams` is cached after its first render. A public page that must show live data needs `export const revalidate = 0`; `revalidate = N` pages are at most N seconds old. GET route handlers aren't static by default either: a handler that should be built once (the discovery files, `/openapi.json`) declares `export const dynamic = 'force-static'`.
 
 ### Compatibility Algorithm
 

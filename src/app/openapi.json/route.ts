@@ -1,5 +1,7 @@
 import { getOpenApiSpec } from '@/lib/openapi';
 
+export const dynamic = 'force-static';
+
 // Generated at build time from docs/API.md + the Zod request schemas
 // (see src/lib/openapi.ts). Static: a docs/schema mismatch fails the build.
 const spec = JSON.stringify(getOpenApiSpec(), null, 2);

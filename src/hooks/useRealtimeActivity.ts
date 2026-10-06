@@ -130,6 +130,8 @@ export function useRealtimeActivity(limit: number = 50) {
   }, [loadingMore, hasMore, limit]);
 
   useEffect(() => {
+    // fetchRecent is async and only sets state after an await; the rule can't see that.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchRecent();
   }, [fetchRecent]);
 

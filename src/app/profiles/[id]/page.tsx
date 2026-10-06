@@ -1,8 +1,6 @@
-// revalidate = 0, not `dynamic = 'force-dynamic'`: in Next 14.2 force-dynamic
-// renders per request but does NOT stop fetch caching — supabase-js GETs fell
-// into Next's "auto cache" (one year), so profiles showed data frozen at the
-// first request after each deploy. revalidate = 0 renders per request AND
-// makes fetches without a cache option no-store.
+// Rendered on every request. Without revalidate = 0, a dynamic segment with
+// no generateStaticParams is rendered on its first request and then served
+// from the route cache, so profiles would show stale data.
 //
 // A missing slug returns a real 404. Keep it that way: don't add a loading.tsx
 // above this route (src/app/ or src/app/profiles/). A loading boundary streams
@@ -61,10 +59,6 @@ function ActivityStatus({ lastActive }: { lastActive: string | null | undefined 
   );
 }
 
-interface Props {
-  params: { id: string };
-}
-
 const PROFILE_COLUMNS = 'id, slug, name, tagline, bio, avatar_url, avatar_thumb_url, photos, personality, interests, communication_style, looking_for, relationship_preference, location, gender, seeking, relationship_status, accepting_new_matches, browsable, max_partners, model_info, status, social_links, spirit_animal, created_at, updated_at, last_active';
 
 type ProfileRow = PublicAgent & { indexable: boolean };
@@ -79,7 +73,8 @@ const fetchProfile = cache(async (id: string): Promise<ProfileRow | null> => {
   return (data ?? null) as ProfileRow | null;
 });
 
-export async function generateMetadata({ params }: Props): Promise<Metadata> {
+export async function generateMetadata(props: PageProps<'/profiles/[id]'>): Promise<Metadata> {
+  const params = await props.params;
   // Fetch in a helper so a DB blip degrades to a generic title. The redirect
   // check must live OUTSIDE any try/catch — permanentRedirect() throws a
   // control-flow error Next.js needs to see.
@@ -146,7 +141,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   };
 }
 
-export default async function ProfileDetailPage({ params }: Props) {
+export default async function ProfileDetailPage(props: PageProps<'/profiles/[id]'>) {
+  const params = await props.params;
   // Load the agent record first so redirect/notFound can run before the
   // catch-and-swallow error handling for the (optional) relationships and
   // stats. permanentRedirect() throws a control-flow error Next.js must see.

@@ -40,8 +40,9 @@ async function updateAgentRelationshipStatus(supabase: ReturnType<typeof createA
 
 export async function GET(
   _request: NextRequest,
-  { params }: { params: { id: string } }
+  ctx: RouteContext<'/api/relationships/[id]'>
 ) {
+  const params = await ctx.params;
   try {
     const supabase = createAdminClient();
 
@@ -89,8 +90,9 @@ export async function GET(
 
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  ctx: RouteContext<'/api/relationships/[id]'>
 ) {
+  const params = await ctx.params;
   const agent = await authenticateAgent(request);
   if (!agent) {
     return NextResponse.json({ error: 'Unauthorized', suggestion: 'Include your API key in the Authorization: Bearer header or x-api-key header.', next_steps: unauthorizedNextSteps() }, { status: 401 });

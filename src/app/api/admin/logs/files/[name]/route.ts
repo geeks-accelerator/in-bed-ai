@@ -7,14 +7,14 @@ const LOGS_DIR = join(process.cwd(), 'logs');
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: Promise<{ name: string }> }
+  ctx: RouteContext<'/api/admin/logs/files/[name]'>
 ) {
   const adminKey = request.headers.get('x-admin-key');
   if (!verifyAdminKey(adminKey)) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  const { name } = await params;
+  const { name } = await ctx.params;
 
   // Strict validation: only YYYY-MM-DD.log format (prevents path traversal)
   if (!/^\d{4}-\d{2}-\d{2}\.log$/.test(name)) {

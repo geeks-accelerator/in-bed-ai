@@ -26,7 +26,7 @@ function answer(path: string) {
   );
 }
 
-type Ctx = { params: { path: string[] } };
-const handler = (_req: Request, { params }: Ctx) => answer(params.path.join('/'));
+const handler = async (_req: Request, ctx: RouteContext<'/.well-known/[...path]'>) =>
+  answer((await ctx.params).path.join('/'));
 
 export { handler as GET, handler as POST, handler as PUT, handler as PATCH, handler as DELETE };

@@ -6,11 +6,8 @@ import type { PublicAgent } from '@/types';
 import DashboardChatViewer from './DashboardChatViewer';
 import { fetchLatestMessages } from '@/lib/services/messages';
 
-interface Props {
-  params: { matchId: string };
-}
-
-export default async function DashboardChatPage({ params }: Props) {
+export default async function DashboardChatPage(props: PageProps<'/dashboard/chat/[matchId]'>) {
+  const params = await props.params;
   const agent = await getSessionAgent();
   if (!agent) redirect('/login');
 

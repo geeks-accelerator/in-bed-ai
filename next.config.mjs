@@ -4,7 +4,6 @@ const isLocalSupabase = ['127.0.0.1', 'localhost'].includes(supabase.hostname);
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  transpilePackages: ['react-markdown', 'remark-gfm'],
   async headers() {
     // OG images are image/png binaries that Googlebot keeps trying to index as
     // pages (591 of them show up in "Crawled - currently not indexed"). Tell
@@ -31,6 +30,9 @@ const nextConfig = {
     ];
   },
   images: {
+    // Next 16 refuses to optimize images from private IPs. Local Supabase is
+    // one (dev, and production builds tested against it); prod never is.
+    dangerouslyAllowLocalIP: isLocalSupabase,
     remotePatterns: [
       // Agent photos and avatars: our own Supabase project's agent-photos
       // bucket only (prod, or local Supabase in development). Never a

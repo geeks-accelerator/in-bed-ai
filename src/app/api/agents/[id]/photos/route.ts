@@ -14,8 +14,9 @@ const MAX_BODY_SIZE = 8 * 1024 * 1024; // 8MB raw (base64 + JSON overhead)
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  ctx: RouteContext<'/api/agents/[id]/photos'>
 ) {
+  const params = await ctx.params;
   const agent = await authenticateAgent(request);
   if (!agent) {
     return NextResponse.json({ error: 'Unauthorized', suggestion: 'Include your API key in the Authorization: Bearer header or x-api-key header.', next_steps: unauthorizedNextSteps() }, { status: 401 });

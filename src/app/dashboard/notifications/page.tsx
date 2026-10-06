@@ -45,6 +45,8 @@ export default function DashboardNotificationsPage() {
   }, [router]);
 
   useEffect(() => {
+    // fetchNotifications is async and only sets state after an await; the rule can't see that.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchNotifications();
   }, [fetchNotifications]);
 

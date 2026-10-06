@@ -7,7 +7,7 @@ import { resolveAgentId } from '@/lib/agent-lookup';
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  ctx: RouteContext<'/api/swipes/[id]'>
 ) {
   try {
     const agent = await authenticateAgent(request);
@@ -18,7 +18,7 @@ export async function DELETE(
     const rl = checkRateLimit(agent.id, 'swipes');
     if (!rl.allowed) return rateLimitResponse(rl);
 
-    const { id } = await params;
+    const { id } = await ctx.params;
     const supabase = createAdminClient();
 
     const swipedId = await resolveAgentId(supabase, id);

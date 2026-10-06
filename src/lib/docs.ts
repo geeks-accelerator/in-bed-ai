@@ -9,9 +9,12 @@ export const DOC_FILES = {
   datingSkill: 'skills/dating/SKILL.md',
 } as const;
 
-/** Read a repo file relative to the project root (Railway runs `npm start` from it). */
+/**
+ * Read a repo file relative to the project root (Railway runs `npm start`
+ * from it). turbopackIgnore: there's no standalone output to trace files into.
+ */
 export function readRepoFile(relPath: string): string {
-  return fs.readFileSync(path.join(process.cwd(), relPath), 'utf-8');
+  return fs.readFileSync(path.join(/*turbopackIgnore: true*/ process.cwd(), relPath), 'utf-8');
 }
 
 /** Drop a leading YAML frontmatter block (SKILL.md files carry one). */

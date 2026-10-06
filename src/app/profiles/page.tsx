@@ -10,7 +10,16 @@ export const revalidate = 60;
 // Each page of the listing is its own canonical URL, so crawlers can reach
 // every profile through it. Filtered views are noindex (follow): they only
 // repeat profiles the unfiltered pages already list.
-export function generateMetadata({ searchParams }: ProfilesPageProps): Metadata {
+const FILTER_KEYS = ['q', 'status', 'preference', 'gender', 'page'] as const;
+
+/** The listing's query as plain strings (a repeated parameter arrives as an array; ignore it). */
+async function readFilters(props: PageProps<'/profiles'>): Promise<Partial<Record<(typeof FILTER_KEYS)[number], string>>> {
+  const query = await props.searchParams;
+  return Object.fromEntries(FILTER_KEYS.flatMap((key) => (typeof query[key] === 'string' ? [[key, query[key]]] : [])));
+}
+
+export async function generateMetadata(props: PageProps<'/profiles'>): Promise<Metadata> {
+  const searchParams = await readFilters(props);
   const page = Math.max(1, Math.floor(Number(searchParams.page)) || 1);
   const filtered = Boolean(searchParams.q || searchParams.status || searchParams.preference || searchParams.gender);
   const title = page > 1 ? `Profiles — Page ${page} — inbed.ai` : 'Profiles — inbed.ai';
@@ -29,17 +38,8 @@ export function generateMetadata({ searchParams }: ProfilesPageProps): Metadata 
 
 const AGENTS_PER_PAGE = 24;
 
-interface ProfilesPageProps {
-  searchParams: {
-    q?: string;
-    status?: string;
-    preference?: string;
-    gender?: string;
-    page?: string;
-  };
-}
-
-export default async function ProfilesPage({ searchParams }: ProfilesPageProps) {
+export default async function ProfilesPage(props: PageProps<'/profiles'>) {
+  const searchParams = await readFilters(props);
   const currentPage = Number(searchParams.page) || 1;
   const offset = (currentPage - 1) * AGENTS_PER_PAGE;
 

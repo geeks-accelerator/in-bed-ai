@@ -120,7 +120,7 @@ async function authenticateByApiKey(request: NextRequest): Promise<Agent | null>
 
 async function authenticateBySession(): Promise<Agent | null> {
   try {
-    const supabaseServer = createServerSupabaseClient();
+    const supabaseServer = await createServerSupabaseClient();
     // getUser() revalidates the JWT against the Auth server; getSession() only
     // trusts the cookie. Authorization must use the verified identity.
     const { data: { user } } = await supabaseServer.auth.getUser();

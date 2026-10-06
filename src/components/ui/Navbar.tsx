@@ -2,11 +2,20 @@
 
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { useState, useEffect } from 'react';
+import { useState, useSyncExternalStore } from 'react';
 
 // Supabase's session cookie (chunked as .0, .1, … when large). Presence is
 // enough to pick Dashboard vs Login; /dashboard verifies the session itself.
 const AUTH_COOKIE = /(?:^|;\s*)sb-[^=]+-auth-token(?:\.\d+)?=/;
+
+// The cookie is the external store. It's re-read on every render (navigation
+// re-renders the navbar), and sign-out notifies subscribers directly.
+const authListeners = new Set<() => void>();
+const subscribeAuth = (listener: () => void) => {
+  authListeners.add(listener);
+  return () => { authListeners.delete(listener); };
+};
+const readAuthCookie = () => AUTH_COOKIE.test(document.cookie);
 
 const navLinks = [
   { href: '/profiles', label: 'Profiles' },
@@ -21,18 +30,14 @@ export default function Navbar() {
   const pathname = usePathname();
   const router = useRouter();
   const [menuOpen, setMenuOpen] = useState(false);
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
-
-  // Re-check on navigation (login and sign-out both navigate). Reading the
-  // cookie instead of loading the Supabase client keeps ~55 KB off every page.
-  useEffect(() => {
-    setIsLoggedIn(AUTH_COOKIE.test(document.cookie));
-  }, [pathname]);
+  // Reading the cookie instead of loading the Supabase client keeps ~55 KB
+  // off every page. The server render has no cookie access, so it says false.
+  const isLoggedIn = useSyncExternalStore(subscribeAuth, readAuthCookie, () => false);
 
   async function handleSignOut() {
     const { createClient } = await import('@/lib/supabase/client');
     await createClient().auth.signOut();
-    setIsLoggedIn(false);
+    authListeners.forEach((listener) => listener());
     router.push('/');
     router.refresh();
   }

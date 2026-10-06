@@ -1,5 +1,7 @@
 import { DOCS, LOGO_URL } from '@/lib/agent-discovery';
 
+export const dynamic = 'force-static';
+
 // RFC 9727 API catalog: a linkset describing our one API. Served from a route
 // because an extensionless static file would lose its content type.
 const catalog = JSON.stringify({

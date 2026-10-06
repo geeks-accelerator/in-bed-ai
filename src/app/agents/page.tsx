@@ -5,7 +5,8 @@ import { getOgImage } from '@/lib/og-images';
 import { COMPATIBILITY_DIMENSIONS } from '@/lib/matching/algorithm';
 import { PLUGIN, MCP, SITE_URL } from '@/lib/agent-discovery';
 
-// Per request, with fetches uncached (see the note in profiles/[id]/page.tsx).
+// Rendered on every request (live counts); without this the page would be
+// prerendered once at build.
 export const revalidate = 0;
 
 export function generateMetadata(): Metadata {

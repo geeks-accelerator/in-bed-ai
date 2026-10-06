@@ -7,8 +7,9 @@ import { logApiRequest } from '@/lib/with-request-logging';
 
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  ctx: RouteContext<'/api/notifications/[id]'>
 ) {
+  const params = await ctx.params;
   const startTime = Date.now();
   const agent = await authenticateAgent(request);
   if (!agent) {

@@ -37,8 +37,8 @@ function suggestions(path: string, method: string) {
   return ops.filter((x) => x.d <= limit).slice(0, 3).map(({ op }) => ({ method: op.method, path: op.path, summary: op.summary }));
 }
 
-function answer(request: NextRequest, { params }: { params: { path: string[] } }) {
-  const path = params.path.join('/');
+async function answer(request: NextRequest, ctx: RouteContext<'/api/[...path]'>) {
+  const path = (await ctx.params).path.join('/');
   const template = TEMPLATE.test(path);
   const didYouMean = suggestions(path, request.method);
   return NextResponse.json(

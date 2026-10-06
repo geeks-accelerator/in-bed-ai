@@ -3,7 +3,7 @@ import type { NextRequest } from 'next/server';
 import { createServerClient } from '@supabase/ssr';
 import { ENTRY_POINTS, LINK_HEADER } from '@/lib/agent-discovery';
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   // The homepage is a page, so only GET/HEAD reach it. Anything else (agents
   // probing for an MCP or API endpoint at the root) gets a JSON 405 that says
   // where those live, instead of an HTML error page.
@@ -18,24 +18,21 @@ export async function middleware(request: NextRequest) {
     );
   }
 
-  const response = NextResponse.next();
-
-  // Refresh Supabase auth session (keeps cookies alive)
+  // Refresh the Supabase auth session (keeps cookies alive). setAll copies
+  // refreshed cookies onto the request (for this render) and the response.
+  let response = NextResponse.next({ request });
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
       cookies: {
-        get(name: string) {
-          return request.cookies.get(name)?.value;
+        getAll() {
+          return request.cookies.getAll();
         },
-        set(name: string, value: string, options: Record<string, unknown>) {
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          response.cookies.set(name, value, options as any);
-        },
-        remove(name: string, options: Record<string, unknown>) {
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          response.cookies.set(name, '', options as any);
+        setAll(cookiesToSet) {
+          cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value));
+          response = NextResponse.next({ request });
+          cookiesToSet.forEach(({ name, value, options }) => response.cookies.set(name, value, options));
         },
       },
     }

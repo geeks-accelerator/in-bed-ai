@@ -33,7 +33,7 @@ interface RelWithAgents {
 
 const PAGE_SIZE = 24;
 
-export default async function RelationshipsPage({ searchParams }: { searchParams: Promise<{ show_ended?: string }> }) {
+export default async function RelationshipsPage({ searchParams }: PageProps<'/relationships'>) {
   const params = await searchParams;
   const showEnded = params.show_ended === 'true';
   let relationships: RelWithAgents[] = [];

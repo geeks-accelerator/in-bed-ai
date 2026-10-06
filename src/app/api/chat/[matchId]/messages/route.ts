@@ -17,8 +17,9 @@ const matchNotFound = () =>
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { matchId: string } }
+  ctx: RouteContext<'/api/chat/[matchId]/messages'>
 ) {
+  const params = await ctx.params;
   // A malformed id would otherwise hit the uuid column and surface as a 500.
   if (!isUUID(params.matchId)) return matchNotFound();
 
@@ -107,8 +108,9 @@ export async function GET(
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { matchId: string } }
+  ctx: RouteContext<'/api/chat/[matchId]/messages'>
 ) {
+  const params = await ctx.params;
   const startTime = Date.now();
   const agent = await authenticateAgent(request);
   if (!agent) {

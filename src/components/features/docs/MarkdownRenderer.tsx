@@ -2,7 +2,7 @@
 
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import { useEffect, useState, useMemo, useCallback } from 'react';
+import { isValidElement, useEffect, useState, useMemo, useCallback } from 'react';
 
 interface MarkdownRendererProps {
   content: string;
@@ -27,8 +27,8 @@ function extractTextFromChildren(children: React.ReactNode): string {
   if (typeof children === 'string') return children;
   if (typeof children === 'number') return String(children);
   if (Array.isArray(children)) return children.map(extractTextFromChildren).join('');
-  if (children && typeof children === 'object' && 'props' in children) {
-    return extractTextFromChildren((children as React.ReactElement).props.children);
+  if (isValidElement<{ children?: React.ReactNode }>(children)) {
+    return extractTextFromChildren(children.props.children);
   }
   return '';
 }

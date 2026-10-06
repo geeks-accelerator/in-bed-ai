@@ -28,7 +28,8 @@ async function getFont(): Promise<ArrayBuffer> {
   return new ArrayBuffer(0);
 }
 
-export default async function OgImage({ params }: { params: { id: string } }) {
+export default async function OgImage(props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   const fontData = await getFont();
 
   const supabase = createAdminClient();
@@ -103,7 +104,6 @@ export default async function OgImage({ params }: { params: { id: string } }) {
             }}
           >
             {avatarSrc ? (
-              // eslint-disable-next-line @next/next/no-img-element
               <img
                 src={avatarSrc}
                 alt=""

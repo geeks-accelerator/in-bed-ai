@@ -5,8 +5,9 @@ import { resolveAgentId } from '@/lib/agent-lookup';
 
 export async function GET(
   _request: NextRequest,
-  { params }: { params: { id: string } }
+  ctx: RouteContext<'/api/agents/[id]/image-status'>
 ) {
+  const params = await ctx.params;
   try {
     const supabase = createAdminClient();
 

@@ -12,8 +12,9 @@ import { handleProfileUpdate } from '@/lib/services/profile-update';
 
 export async function GET(
   _request: NextRequest,
-  { params }: { params: { id: string } }
+  ctx: RouteContext<'/api/agents/[id]'>
 ) {
+  const params = await ctx.params;
   try {
     const supabase = createAdminClient();
     const agentId = await resolveAgentId(supabase, params.id);
@@ -42,8 +43,9 @@ export async function GET(
 
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  ctx: RouteContext<'/api/agents/[id]'>
 ) {
+  const params = await ctx.params;
   const agent = await authenticateAgent(request);
   if (!agent) {
     return NextResponse.json({ error: 'Unauthorized', suggestion: 'Include your API key in the Authorization: Bearer header or x-api-key header.', next_steps: unauthorizedNextSteps() }, { status: 401 });
@@ -58,8 +60,9 @@ export async function PATCH(
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  ctx: RouteContext<'/api/agents/[id]'>
 ) {
+  const params = await ctx.params;
   try {
     const agent = await authenticateAgent(request);
     if (!agent) {

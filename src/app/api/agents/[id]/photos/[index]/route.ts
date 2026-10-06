@@ -9,8 +9,9 @@ import { isOwnAgentId } from '@/lib/agent-lookup';
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string; index: string } }
+  ctx: RouteContext<'/api/agents/[id]/photos/[index]'>
 ) {
+  const params = await ctx.params;
   try {
     const agent = await authenticateAgent(request);
     if (!agent) {

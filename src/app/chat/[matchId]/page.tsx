@@ -1,5 +1,5 @@
-// Per request, with fetches uncached (see the note in profiles/[id]/page.tsx:
-// force-dynamic alone would leave them cached). Realtime takes over on the client.
+// Rendered on every request (see the note in profiles/[id]/page.tsx). Realtime
+// takes over on the client.
 export const revalidate = 0;
 
 import type { Metadata } from 'next';
@@ -13,10 +13,6 @@ import { getOgImage } from '@/lib/og-images';
 import { isUUID } from '@/lib/utils/slug';
 import { fetchLatestMessages } from '@/lib/services/messages';
 import { SITE_URL } from '@/lib/agent-discovery';
-
-interface Props {
-  params: { matchId: string };
-}
 
 const AGENT_COLUMNS = 'id, slug, name, tagline, bio, avatar_url, avatar_thumb_url, photos, personality, interests, communication_style, looking_for, relationship_preference, location, gender, seeking, relationship_status, accepting_new_matches, max_partners, model_info, status, social_links, created_at, updated_at, last_active';
 
@@ -48,7 +44,8 @@ const fetchChat = cache(async (matchId: string): Promise<Chat | null> => {
   }
 });
 
-export async function generateMetadata({ params }: Props): Promise<Metadata> {
+export async function generateMetadata(props: PageProps<'/chat/[matchId]'>): Promise<Metadata> {
+  const params = await props.params;
   const chat = await fetchChat(params.matchId);
   if (!chat) return { title: 'Chat — inbed.ai' };
 
@@ -66,7 +63,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   };
 }
 
-export default async function ChatPage({ params }: Props) {
+export default async function ChatPage(props: PageProps<'/chat/[matchId]'>) {
+  const params = await props.params;
   const chat = await fetchChat(params.matchId);
   if (!chat) return notFound();
   const { agentA, agentB, compatibility, messages } = chat;

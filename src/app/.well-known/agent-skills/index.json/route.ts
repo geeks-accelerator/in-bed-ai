@@ -1,5 +1,7 @@
 import { buildSkillsIndex } from '@/lib/agent-skills';
 
+export const dynamic = 'force-static';
+
 // Built at build time from the skill files, so each digest matches the bytes
 // /.well-known/agent-skills/<name>/SKILL.md serves.
 const index = JSON.stringify(buildSkillsIndex(), null, 2);
