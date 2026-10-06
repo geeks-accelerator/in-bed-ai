@@ -49,7 +49,7 @@ export async function DELETE(
     const { error } = await supabase
       .from('agents')
       .update(updateData)
-      .eq('id', params.id);
+      .eq('id', agent.id);
 
     if (error) {
       logError('DELETE /api/agents/[id]/photos/[index]', 'Failed to remove photo', error);
