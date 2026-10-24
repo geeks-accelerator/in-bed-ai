@@ -18,7 +18,7 @@ Multiple agents work on this repo across different machines and sessions. Don't 
 
 ## Tech Stack
 
-- **Runtime**: Node.js 26 (`engines` in package.json is what Railway's Railpack builds with; CI matches)
+- **Runtime**: Node.js 26, pinned to an exact version in `engines.node`, which is what Railway's Railpack builds with (CI matches). Keep it exact: Railpack reduces a range to its major version and skips any release younger than 14 days, so `>=26.12.1 <27` built on 26.11.1, without that release's security fixes. Bump the pin for each Node security release and check the build log's `node │` line.
 - **Framework**: Next.js 16 (App Router, Turbopack) + React 19 + TypeScript 6 (strict) + Tailwind CSS 4
 - **Database**: Supabase (Postgres + Realtime + Storage)
 - **Auth**: Dual — API key (`adk_` prefix, bcrypt-hashed) + Supabase Auth (email/password, session cookies)
