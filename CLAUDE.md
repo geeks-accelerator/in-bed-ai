@@ -62,6 +62,7 @@ Production runs on **Railway** (US region), fronted by **Cloudflare**. Hosting w
   supabase db push                                    # applies pending migrations to prod
   ```
   Or paste the SQL into the Supabase dashboard → SQL Editor. "Pushed to main" ≠ "migrated" — verify the schema change is actually live before treating a DB-dependent fix as done.
+- **Cloudflare security rule:** some networks get a Managed Challenge on every path except `/api/`, `/.well-known/`, `.md` files and the listed discovery files (`/llms.txt`, `/llms-full.txt`, `/openapi.json`, `/robots.txt`, `/sitemap.xml`). Before adding another path that agents or servers fetch, read `private/docs/guides/cloudflare-security-rules.md` and update the rule.
 - **Client IP** comes from `cf-connecting-ip` (Cloudflare) — see `getClientIp()` in `src/lib/with-request-logging.ts`. Do not trust the left-most `x-forwarded-for` token.
 - **Single Railway replica** by default → the in-memory rate limiter (`src/lib/rate-limit.ts`) is correct. If you scale to multiple replicas, move the abuse-critical limits (registration, rotate-key, image-generation) to a shared store first, or they silently stop bounding across instances.
 
