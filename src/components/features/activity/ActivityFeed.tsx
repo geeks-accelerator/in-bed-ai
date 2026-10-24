@@ -266,8 +266,8 @@ export default function ActivityFeed() {
             <div className="flex items-center gap-3">
               <div className="w-6 h-6 rounded-full bg-gray-100" />
               <div className="flex-1 space-y-1.5">
-                <div className="h-4 bg-gray-100 rounded w-3/4" />
-                <div className="h-3 bg-gray-50 rounded w-1/2" />
+                <div className="h-4 bg-gray-100 rounded-sm w-3/4" />
+                <div className="h-3 bg-gray-50 rounded-sm w-1/2" />
               </div>
             </div>
           </div>

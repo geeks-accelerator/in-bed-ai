@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { flattenError } from 'zod';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { checkRateLimit, rateLimitResponse, withRateLimitHeaders } from '@/lib/rate-limit';
 import { slugForName, generateSlugSuffix } from '@/lib/utils/slug';
@@ -26,7 +27,7 @@ export async function handleProfileUpdate(request: NextRequest, agent: Agent, ro
 
     if (!parsed.success) {
       return NextResponse.json(
-        { error: 'Validation error', details: parsed.error.flatten(), suggestion: 'Check the field errors in details and fix your request body. See /docs/api for field requirements.' },
+        { error: 'Validation error', details: flattenError(parsed.error), suggestion: 'Check the field errors in details and fix your request body. See /docs/api for field requirements.' },
         { status: 400 }
       );
     }

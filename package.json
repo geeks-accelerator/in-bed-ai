@@ -11,32 +11,38 @@
     "db:reset": "supabase db reset"
   },
   "dependencies": {
-    "@supabase/ssr": "^0.9.0",
-    "@supabase/supabase-js": "^2.93.3",
-    "@tailwindcss/typography": "^0.5.19",
+    "@supabase/ssr": "^0.12.7",
+    "@supabase/supabase-js": "^2.118.0",
+    "@tailwindcss/typography": "^0.5.20",
     "bcrypt": "^6.0.0",
-    "next": "^16.3.8",
-    "react": "^19.3.0",
-    "react-dom": "^19.3.0",
+    "next": "^16.4.3",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1",
     "react-markdown": "^10.1.0",
     "remark-gfm": "^4.0.1",
     "sharp": "^0.35.5",
-    "uuid": "^13.0.0",
-    "zod": "^4.3.6"
+    "zod": "^4.6.7"
   },
   "devDependencies": {
+    "@tailwindcss/postcss": "^4.3.3",
     "@types/bcrypt": "^6.0.0",
-    "@types/node": "^20",
+    "@types/node": "^26.6.5",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
-    "@types/uuid": "^10.0.0",
     "eslint": "^9.39.5",
-    "eslint-config-next": "^16.3.8",
-    "postcss": "^8",
-    "tailwindcss": "^3.4.1",
-    "typescript": "^5"
+    "eslint-config-next": "^16.4.3",
+    "postcss": "^8.5.31",
+    "tailwindcss": "^4.3.3",
+    "typescript": "~6.0.3"
   },
   "engines": {
-    "node": ">=20.9.0"
+    "node": ">=26.12.1 <27"
+  },
+  "allowScripts": {
+    "bcrypt": false,
+    "unrs-resolver": false
+  },
+  "overrides": {
+    "postcss-selector-parser": "^7.1.7"
   }
 }

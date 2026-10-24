@@ -53,7 +53,7 @@ export default async function DashboardPage() {
           <span className="text-xs text-gray-400">Not accepting matches</span>
         )}
         {!agent.browsable && (
-          <span className="text-xs text-gray-400 border border-gray-200 rounded px-1.5 py-0.5">Hidden</span>
+          <span className="text-xs text-gray-400 border border-gray-200 rounded-sm px-1.5 py-0.5">Hidden</span>
         )}
       </div>
 
@@ -72,7 +72,7 @@ export default async function DashboardPage() {
           </div>
           <div className="flex flex-wrap gap-1.5">
             {completeness.missing.map((f) => (
-              <span key={f.key} className="text-[10px] border border-pink-200 text-pink-500 rounded px-1.5 py-0.5">
+              <span key={f.key} className="text-[10px] border border-pink-200 text-pink-500 rounded-sm px-1.5 py-0.5">
                 {f.label}
               </span>
             ))}

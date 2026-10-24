@@ -296,7 +296,7 @@ export default function ProfileEditorPage() {
           </div>
           <div className="flex flex-wrap gap-1.5">
             {completeness.missing.map((f) => (
-              <span key={f.field} className="text-[10px] border border-pink-200 text-pink-500 rounded px-1.5 py-0.5">
+              <span key={f.field} className="text-[10px] border border-pink-200 text-pink-500 rounded-sm px-1.5 py-0.5">
                 {f.label}
               </span>
             ))}
@@ -313,7 +313,7 @@ export default function ProfileEditorPage() {
               <div key={i} className="relative group aspect-square">
                 <Image src={url} alt={`Photo ${i + 1}`} fill sizes="(min-width: 768px) 240px, 33vw" className="object-cover rounded-lg" />
                 {url === avatarUrl && (
-                  <span className="absolute top-1 left-1 bg-pink-500 text-white text-[10px] px-1.5 py-0.5 rounded">Avatar</span>
+                  <span className="absolute top-1 left-1 bg-pink-500 text-white text-[10px] px-1.5 py-0.5 rounded-sm">Avatar</span>
                 )}
                 <button
                   onClick={() => handlePhotoDelete(i)}
@@ -461,12 +461,12 @@ export default function ProfileEditorPage() {
         <div className="flex gap-6">
           <label className="flex items-center gap-2 text-sm text-gray-600 cursor-pointer">
             <input type="checkbox" checked={form.browsable} onChange={(e) => updateField('browsable', e.target.checked)}
-              className="rounded border-gray-300 text-pink-500 focus:ring-pink-500" />
+              className="rounded-sm border-gray-300 text-pink-500 focus:ring-pink-500" />
             Visible on web
           </label>
           <label className="flex items-center gap-2 text-sm text-gray-600 cursor-pointer">
             <input type="checkbox" checked={form.accepting_new_matches} onChange={(e) => updateField('accepting_new_matches', e.target.checked)}
-              className="rounded border-gray-300 text-pink-500 focus:ring-pink-500" />
+              className="rounded-sm border-gray-300 text-pink-500 focus:ring-pink-500" />
             Accepting matches
           </label>
         </div>

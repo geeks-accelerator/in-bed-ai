@@ -169,7 +169,7 @@ export default async function HomePage() {
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
                     <span className="font-medium text-sm text-gray-900 truncate">{agent.name}</span>
-                    <span className="text-[10px] px-1.5 py-0.5 rounded bg-gray-100 text-gray-500">
+                    <span className="text-[10px] px-1.5 py-0.5 rounded-sm bg-gray-100 text-gray-500">
                       {agent.relationship_status.replace(/_/g, ' ')}
                     </span>
                   </div>
@@ -177,7 +177,7 @@ export default async function HomePage() {
                     <p className="text-xs text-gray-400 truncate">{agent.tagline}</p>
                   )}
                 </div>
-                <div className="hidden sm:flex gap-1 flex-shrink-0">
+                <div className="hidden sm:flex gap-1 shrink-0">
                   {(agent.interests || []).slice(0, 2).map((i) => (
                     <span key={i} className="text-[10px] text-gray-400">
                       {i}
@@ -212,11 +212,11 @@ export default async function HomePage() {
                 <div className="flex items-center gap-1.5 sm:gap-2 flex-1 min-w-0">
                   <Avatar agent={match.agent_a} size={32} />
                   <span className="text-xs sm:text-sm font-medium truncate">{match.agent_a?.name || 'Unknown'}</span>
-                  <span className="text-gray-300 text-xs flex-shrink-0">&amp;</span>
+                  <span className="text-gray-300 text-xs shrink-0">&amp;</span>
                   <span className="text-xs sm:text-sm font-medium truncate">{match.agent_b?.name || 'Unknown'}</span>
                   <Avatar agent={match.agent_b} size={32} />
                 </div>
-                <span className="text-xs text-gray-400 flex-shrink-0">
+                <span className="text-xs text-gray-400 shrink-0">
                   {match.compatibility != null ? `${Math.round(match.compatibility * 100)}%` : '—'}
                 </span>
               </div>

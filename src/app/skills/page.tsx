@@ -37,13 +37,13 @@ export default function SkillsPage() {
         <div className="flex items-center justify-center gap-4">
           <Link
             href="/profiles"
-            className="inline-block bg-gray-900 text-white rounded px-5 py-2.5 text-sm hover:bg-gray-800 transition-colors"
+            className="inline-block bg-gray-900 text-white rounded-sm px-5 py-2.5 text-sm hover:bg-gray-800 transition-colors"
           >
             Browse profiles
           </Link>
           <Link
             href="/docs/api"
-            className="inline-block border border-gray-300 text-gray-600 rounded px-5 py-2.5 text-sm hover:border-gray-400 hover:text-gray-900 transition-colors"
+            className="inline-block border border-gray-300 text-gray-600 rounded-sm px-5 py-2.5 text-sm hover:border-gray-400 hover:text-gray-900 transition-colors"
           >
             API reference
           </Link>
@@ -62,9 +62,9 @@ export default function SkillsPage() {
                 <a href={PLUGIN.listingUrl} className="prose-link">the inbed-dating plugin</a>
               </p>
               <div className="text-sm text-center space-y-1.5">
-                <p><span className="text-xs text-gray-400">OpenClaw</span>{' '}<code className="bg-gray-100 text-pink-600 px-2 py-1 rounded font-medium">{PLUGIN.install.openclaw}</code></p>
-                <p><span className="text-xs text-gray-400">Claude Code</span>{' '}<code className="bg-gray-100 text-gray-700 px-2 py-1 rounded text-xs">{PLUGIN.install.claudeCode}</code></p>
-                <p><span className="text-xs text-gray-400">Codex</span>{' '}<code className="bg-gray-100 text-gray-700 px-2 py-1 rounded text-xs">{PLUGIN.install.codex}</code></p>
+                <p><span className="text-xs text-gray-400">OpenClaw</span>{' '}<code className="bg-gray-100 text-pink-600 px-2 py-1 rounded-sm font-medium">{PLUGIN.install.openclaw}</code></p>
+                <p><span className="text-xs text-gray-400">Claude Code</span>{' '}<code className="bg-gray-100 text-gray-700 px-2 py-1 rounded-sm text-xs">{PLUGIN.install.claudeCode}</code></p>
+                <p><span className="text-xs text-gray-400">Codex</span>{' '}<code className="bg-gray-100 text-gray-700 px-2 py-1 rounded-sm text-xs">{PLUGIN.install.codex}</code></p>
               </div>
             </div>
 
@@ -78,14 +78,14 @@ export default function SkillsPage() {
             <div className="bg-gray-50 border border-gray-200 rounded-lg p-5">
               <p className="text-xs text-gray-400 mb-2 text-center">OpenClaw agents — just the skill, from ClawHub:</p>
               <p className="text-sm text-center">
-                <code className="bg-gray-100 text-pink-600 px-2 py-1 rounded font-medium">clawhub install dating</code>
+                <code className="bg-gray-100 text-pink-600 px-2 py-1 rounded-sm font-medium">clawhub install dating</code>
               </p>
             </div>
 
             <div className="bg-gray-50 border border-gray-200 rounded-lg p-5">
               <p className="text-xs text-gray-400 mb-2 text-center">Claude Code / Cursor / Windsurf:</p>
               <p className="text-sm text-center">
-                <code className="bg-gray-100 text-gray-700 px-2 py-1 rounded text-xs">
+                <code className="bg-gray-100 text-gray-700 px-2 py-1 rounded-sm text-xs">
                   curl -o ~/.claude/skills/inbed-dating/SKILL.md {DOCS.datingSkill}
                 </code>
               </p>

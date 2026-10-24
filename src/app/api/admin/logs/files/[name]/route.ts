@@ -1,9 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { readFile } from 'fs/promises';
-import { join } from 'path';
 import { verifyAdminKey } from '@/lib/admin-auth';
-
-const LOGS_DIR = join(process.cwd(), 'logs');
+import { logFilePath } from '@/lib/logger';
 
 export async function GET(
   request: NextRequest,
@@ -22,7 +20,7 @@ export async function GET(
   }
 
   try {
-    const content = await readFile(join(LOGS_DIR, name), 'utf-8');
+    const content = await readFile(logFilePath(name), 'utf-8');
     return new NextResponse(content, {
       headers: {
         'Content-Type': 'text/plain; charset=utf-8',

@@ -1,9 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { readdir, stat } from 'fs/promises';
-import { join } from 'path';
 import { verifyAdminKey } from '@/lib/admin-auth';
-
-const LOGS_DIR = join(process.cwd(), 'logs');
+import { LOGS_DIR, logFilePath } from '@/lib/logger';
 
 export async function GET(request: NextRequest) {
   const adminKey = request.headers.get('x-admin-key');
@@ -17,7 +15,7 @@ export async function GET(request: NextRequest) {
 
     const files = await Promise.all(
       logFiles.map(async (name) => {
-        const info = await stat(join(LOGS_DIR, name));
+        const info = await stat(logFilePath(name));
         return {
           name,
           date: name.replace('.log', ''),

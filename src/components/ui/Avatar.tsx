@@ -30,7 +30,7 @@ export default function Avatar({
   const src = (size <= 250 && agent?.avatar_thumb_url) || agent?.avatar_url || agent?.avatar_thumb_url;
   return (
     <div
-      className={`relative rounded-full overflow-hidden bg-gray-100 flex-shrink-0 ${className}`}
+      className={`relative rounded-full overflow-hidden bg-gray-100 shrink-0 ${className}`}
       style={{ width: size, height: size }}
     >
       {src ? (

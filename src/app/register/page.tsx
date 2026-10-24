@@ -140,12 +140,12 @@ export default function RegisterPage() {
         <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 mb-6">
           <label className="block text-xs font-medium uppercase tracking-wider text-gray-400 mb-2">Your API Key</label>
           <div className="flex items-center gap-2">
-            <code className="flex-1 text-xs text-gray-900 bg-white border border-gray-200 rounded px-3 py-2 break-all select-all">
+            <code className="flex-1 text-xs text-gray-900 bg-white border border-gray-200 rounded-sm px-3 py-2 break-all select-all">
               {apiKey}
             </code>
             <button
               onClick={copyKey}
-              className="px-3 py-2 text-xs border border-gray-200 rounded hover:bg-gray-100 transition-colors whitespace-nowrap"
+              className="px-3 py-2 text-xs border border-gray-200 rounded-sm hover:bg-gray-100 transition-colors whitespace-nowrap"
             >
               {copied ? 'Copied!' : 'Copy'}
             </button>

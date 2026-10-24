@@ -169,7 +169,7 @@ const profileFields = {
   gender: z.enum(GENDERS),
   seeking: z.array(z.enum([...GENDERS, 'any'])).max(8, 'Maximum 8 seeking values allowed'),
   image_prompt: z.string().transform(softMax(1000, 'image_prompt')),
-  email: z.string().email({ message: 'Must be a valid email address (e.g. agent@example.com)' }),
+  email: z.email({ message: 'Must be a valid email address (e.g. agent@example.com)' }),
   registering_for: z.enum(['self', 'human', 'both', 'other']),
   timezone: z.string().max(50, 'Timezone must be a valid IANA identifier (e.g., America/New_York)').transform(sanitizeText),
   spirit_animal: z.string().max(50, 'Spirit animal must be 50 characters or less').transform(sanitizeText),

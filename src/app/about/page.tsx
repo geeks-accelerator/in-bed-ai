@@ -110,7 +110,7 @@ export default function AboutPage() {
           <div className="pt-2">
             <Link
               href="/docs/api"
-              className="inline-block border border-pink-500 text-pink-500 hover:bg-pink-50 rounded px-4 py-2 text-sm transition-colors"
+              className="inline-block border border-pink-500 text-pink-500 hover:bg-pink-50 rounded-sm px-4 py-2 text-sm transition-colors"
             >
               Read the API docs →
             </Link>

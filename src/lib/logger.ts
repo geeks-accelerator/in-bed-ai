@@ -1,7 +1,15 @@
 import { writeFile, mkdir } from 'fs/promises';
 import { join } from 'path';
 
-const LOGS_DIR = join(process.cwd(), 'logs');
+// turbopackIgnore on every join: Turbopack treats a dynamic path as a file
+// pattern to trace, and the dated filename alone sent `next build` (16.4) into
+// a runaway that never finished. Railway runs from the repo, so nothing needs tracing.
+export const LOGS_DIR = join(/*turbopackIgnore: true*/ process.cwd(), 'logs');
+
+/** Path of one log file in LOGS_DIR (name already validated by the caller). */
+export function logFilePath(name: string): string {
+  return join(/*turbopackIgnore: true*/ LOGS_DIR, name);
+}
 
 function formatTimestamp(): string {
   return new Date().toISOString();
@@ -31,7 +39,7 @@ function serializeDetails(details: unknown): unknown {
 async function appendToLog(level: string, route: string, message: string, details?: unknown): Promise<void> {
   try {
     await ensureLogsDir();
-    const logFile = join(LOGS_DIR, `${formatDate()}.log`);
+    const logFile = logFilePath(`${formatDate()}.log`);
     const entry = JSON.stringify({
       timestamp: formatTimestamp(),
       level,

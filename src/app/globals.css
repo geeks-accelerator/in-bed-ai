@@ -1,21 +1,37 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import 'tailwindcss' source('../');
+@plugin '@tailwindcss/typography';
 
-:root {
-  --background: #ffffff;
-  --foreground: #1a1a1a;
-  --muted: #6b7280;
-  --border: #e5e7eb;
-  --accent: #ec4899;
-  --accent-light: #fdf2f8;
-  --card: #f9fafb;
-}
+@layer base {
+  /* Borders are gray-200 unless a class says otherwise (Tailwind 4 defaults
+     to currentColor; the design uses bare `border` everywhere). */
+  *,
+  ::after,
+  ::before,
+  ::backdrop,
+  ::file-selector-button {
+    border-color: var(--color-gray-200, currentcolor);
+  }
 
-body {
-  color: var(--foreground);
-  background: var(--background);
-  font-feature-settings: "rlig" 1, "calt" 1;
+  /* Tailwind 4 gives buttons the default cursor. */
+  button:not(:disabled),
+  [role='button']:not(:disabled) {
+    cursor: pointer;
+  }
+
+  body {
+    font-feature-settings: 'rlig' 1, 'calt' 1;
+  }
+
+  /* Keyboard focus: one visible ring everywhere. Don't add outline-none
+     to elements — it hides this for keyboard users too. */
+  :focus-visible {
+    @apply outline-2 outline-offset-2 outline-pink-500;
+  }
+
+  ::selection {
+    background: #fce7f3;
+    color: #1a1a1a;
+  }
 }
 
 /* Custom scrollbar */
@@ -35,7 +51,7 @@ body {
 
 /* Content links — use .prose-link class for styled inline links */
 .prose-link {
-  color: var(--accent);
+  color: #ec4899;
   text-decoration: underline;
   text-underline-offset: 2px;
 }
@@ -43,15 +59,50 @@ body {
   color: #db2777;
 }
 
-/* Keyboard focus: one visible ring everywhere. Don't add
-   to elements — it hides this for keyboard users too. */
-@layer base {
-  :focus-visible {
-    @apply outline outline-2 outline-offset-2 outline-pink-500;
-  }
-}
+/* Rendered markdown (docs, skills, legal pages). */
+@utility prose {
+  --tw-prose-body: #4b5563;
+  --tw-prose-headings: #111827;
+  --tw-prose-links: #ec4899;
+  --tw-prose-bold: #111827;
+  --tw-prose-code: #111827;
+  --tw-prose-pre-bg: #f6f8fa;
+  --tw-prose-pre-code: #1f2937;
+  --tw-prose-th-borders: #e5e7eb;
+  --tw-prose-td-borders: #e5e7eb;
+  font-family: var(--font-geist-mono), ui-monospace, monospace;
 
-::selection {
-  background: #fce7f3;
-  color: #1a1a1a;
+  & :where(a):not(:where([class~='not-prose'], [class~='not-prose'] *)) {
+    text-decoration: underline;
+    text-underline-offset: 2px;
+    &:hover {
+      color: #db2777;
+    }
+  }
+  & :where(code):not(:where([class~='not-prose'], [class~='not-prose'] *)) {
+    background-color: #f0f2f5;
+    padding: 0.125rem 0.375rem;
+    border-radius: 0.25rem;
+    font-weight: 400;
+    &::before,
+    &::after {
+      content: none;
+    }
+  }
+  & :where(pre):not(:where([class~='not-prose'], [class~='not-prose'] *)) {
+    background-color: #f6f8fa;
+    border: 1px solid #e5e7eb;
+  }
+  & :where(pre code):not(:where([class~='not-prose'], [class~='not-prose'] *)) {
+    background-color: transparent;
+    padding: 0;
+    border-radius: 0;
+  }
+  & :where(th):not(:where([class~='not-prose'], [class~='not-prose'] *)) {
+    font-weight: 600;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.025em;
+    color: #6b7280;
+  }
 }

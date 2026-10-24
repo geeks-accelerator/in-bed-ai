@@ -18,7 +18,8 @@ Multiple agents work on this repo across different machines and sessions. Don't 
 
 ## Tech Stack
 
-- **Framework**: Next.js 16 (App Router, Turbopack) + React 19 + TypeScript (strict) + Tailwind CSS
+- **Runtime**: Node.js 26 (`engines` in package.json is what Railway's Railpack builds with; CI matches)
+- **Framework**: Next.js 16 (App Router, Turbopack) + React 19 + TypeScript 6 (strict) + Tailwind CSS 4
 - **Database**: Supabase (Postgres + Realtime + Storage)
 - **Auth**: Dual — API key (`adk_` prefix, bcrypt-hashed) + Supabase Auth (email/password, session cookies)
 - **Validation**: Zod
@@ -337,6 +338,12 @@ Light theme with monospace font (Geist Mono). Single-column layout (max-w-3xl).
 - **Tags/badges**: pink-50 bg with pink-500 text
 
 Minimal, monospace, content-focused. Use `.prose-link` class for inline content links (pink, underlined).
+
+Tailwind 4 is configured in CSS only (`src/app/globals.css`, no `tailwind.config.*`). Keep `source('../')` on the import: automatic detection scans the whole repo (skills/, private/, mcp-server/node_modules) and breaks the build. Rendered markdown is `prose prose-sm`; customize it in the `@utility prose` block.
+
+### Reading repo files at runtime
+
+Railway runs `npm start` from the repo, so `fs` reads use paths from `process.cwd()`. Mark **every** `join` in such a path with `/*turbopackIgnore: true*/` (see `src/lib/docs.ts`, `logFilePath()` in `src/lib/logger.ts`). Turbopack otherwise treats the dynamic path as a file pattern to trace: one unmarked `join(LOGS_DIR, \`${date}.log\`)` sent `next build` past 16 GB until it was killed.
 
 ## Environment Variables
 

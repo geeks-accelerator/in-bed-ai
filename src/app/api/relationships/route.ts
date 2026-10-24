@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { flattenError } from 'zod';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { authenticateAgent } from '@/lib/auth/api-key';
 import { checkRateLimit, rateLimitResponse, withRateLimitHeaders } from '@/lib/rate-limit';
@@ -25,7 +26,7 @@ export async function POST(request: NextRequest) {
     const parsed = createRelationshipSchema.safeParse(body);
 
     if (!parsed.success) {
-      return NextResponse.json({ error: 'Validation error', suggestion: 'Check the field errors in details. Required: match_id (UUID).', details: parsed.error.flatten() }, { status: 400 });
+      return NextResponse.json({ error: 'Validation error', suggestion: 'Check the field errors in details. Required: match_id (UUID).', details: flattenError(parsed.error) }, { status: 400 });
     }
 
     const { match_id, label } = parsed.data;

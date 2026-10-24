@@ -1,4 +1,4 @@
-import { v4 as uuidv4 } from 'uuid';
+import { randomUUID } from 'crypto';
 import { truncate } from '@/lib/sanitize';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { storeAgentImage } from '@/lib/images';
@@ -25,7 +25,7 @@ export async function generateAndSetAvatar(
   model?: string
 ): Promise<void> {
   const supabase = createAdminClient();
-  const genRowId = uuidv4();
+  const genRowId = randomUUID();
 
   // 1. Insert tracking row
   const { error: insertError } = await supabase

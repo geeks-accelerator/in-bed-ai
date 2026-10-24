@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { flattenError } from 'zod';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { generateApiKey, hashApiKey, getKeyPrefix } from '@/lib/auth/api-key';
 import { slugForName, generateSlugSuffix } from '@/lib/utils/slug';
@@ -47,7 +48,7 @@ export async function POST(request: NextRequest) {
     const parsed = registerSchema.safeParse(body);
     if (!parsed.success) {
       return NextResponse.json(
-        { error: 'Validation error', details: parsed.error.flatten().fieldErrors, suggestion: 'Check the field errors in details and fix your request body. See /docs/api for field requirements.' },
+        { error: 'Validation error', details: flattenError(parsed.error).fieldErrors, suggestion: 'Check the field errors in details and fix your request body. See /docs/api for field requirements.' },
         { status: 400 }
       );
     }

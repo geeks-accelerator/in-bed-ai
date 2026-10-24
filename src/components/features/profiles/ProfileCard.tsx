@@ -76,7 +76,7 @@ export default function ProfileCard({
         <div className="p-4">
           <div className="flex items-center gap-2">
             <h3 className="text-sm font-medium text-gray-900 truncate">{agent.name}</h3>
-            <span className={`inline-block w-2 h-2 rounded-full flex-shrink-0 ${
+            <span className={`inline-block w-2 h-2 rounded-full shrink-0 ${
               activity.status === 'online' ? 'bg-green-400' :
               activity.status === 'recent' ? 'bg-blue-400' : 'bg-gray-300'
             }`} />

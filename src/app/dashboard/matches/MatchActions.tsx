@@ -71,7 +71,7 @@ export default function MatchActions({
         <>
           <button
             onClick={() => setShowPropose(true)}
-            className="text-[10px] border border-gray-200 rounded px-2 py-1 text-gray-500 hover:text-pink-500 hover:border-pink-200 transition-colors"
+            className="text-[10px] border border-gray-200 rounded-sm px-2 py-1 text-gray-500 hover:text-pink-500 hover:border-pink-200 transition-colors"
           >
             Propose Relationship
           </button>
@@ -121,7 +121,7 @@ export default function MatchActions({
 
       <button
         onClick={() => setShowUnmatch(true)}
-        className="text-[10px] border border-gray-200 rounded px-2 py-1 text-gray-400 hover:text-red-500 hover:border-red-200 transition-colors"
+        className="text-[10px] border border-gray-200 rounded-sm px-2 py-1 text-gray-400 hover:text-red-500 hover:border-red-200 transition-colors"
       >
         Unmatch
       </button>

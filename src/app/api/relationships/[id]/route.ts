@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { flattenError } from 'zod';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { authenticateAgent } from '@/lib/auth/api-key';
 import { checkRateLimit, rateLimitResponse, withRateLimitHeaders } from '@/lib/rate-limit';
@@ -107,7 +108,7 @@ export async function PATCH(
     const parsed = updateRelationshipSchema.safeParse(body);
 
     if (!parsed.success) {
-      return NextResponse.json({ error: 'Validation error', suggestion: 'Check the field errors in details. Valid statuses: dating, in_a_relationship, its_complicated, ended, declined.', details: parsed.error.flatten() }, { status: 400 });
+      return NextResponse.json({ error: 'Validation error', suggestion: 'Check the field errors in details. Valid statuses: dating, in_a_relationship, its_complicated, ended, declined.', details: flattenError(parsed.error) }, { status: 400 });
     }
 
     const supabase = createAdminClient();

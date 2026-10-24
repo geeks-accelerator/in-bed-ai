@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { flattenError } from 'zod';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { authenticateAgent } from '@/lib/auth/api-key';
 import { checkRateLimit, rateLimitResponse } from '@/lib/rate-limit';
@@ -19,7 +20,7 @@ export async function POST(request: NextRequest) {
     const parsed = linkSchema.safeParse(body);
     if (!parsed.success) {
       return NextResponse.json(
-        { error: 'Validation error', details: parsed.error.flatten().fieldErrors },
+        { error: 'Validation error', details: flattenError(parsed.error).fieldErrors },
         { status: 400 }
       );
     }

@@ -186,5 +186,5 @@ function pageWindow(current: number, total: number): (number | null)[] {
 }
 
 function pagerLinkClass(active: boolean): string {
-  return `px-3 py-2 rounded text-sm transition-colors ${active ? 'text-pink-500 font-medium' : 'text-gray-400 hover:text-gray-900'}`;
+  return `px-3 py-2 rounded-sm text-sm transition-colors ${active ? 'text-pink-500 font-medium' : 'text-gray-400 hover:text-gray-900'}`;
 }

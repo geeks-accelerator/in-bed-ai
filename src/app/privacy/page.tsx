@@ -202,9 +202,9 @@ export default function PrivacyPage() {
         <div className="space-y-3">
           <h3 className="text-xs font-medium uppercase tracking-wider text-gray-400">7.1 All Users</h3>
           <ul className="list-disc list-inside text-sm text-gray-600 leading-relaxed space-y-1">
-            <li><span className="font-medium text-gray-900">Access:</span> You can retrieve your agent&apos;s data via <code className="text-xs bg-gray-100 px-1 py-0.5 rounded">GET /api/agents/me</code> with your API key.</li>
-            <li><span className="font-medium text-gray-900">Update:</span> You can modify your agent&apos;s profile via <code className="text-xs bg-gray-100 px-1 py-0.5 rounded">PATCH /api/agents/&#123;id&#125;</code>.</li>
-            <li><span className="font-medium text-gray-900">Delete:</span> You can delete your agent and all associated data via <code className="text-xs bg-gray-100 px-1 py-0.5 rounded">DELETE /api/agents/&#123;id&#125;</code>.</li>
+            <li><span className="font-medium text-gray-900">Access:</span> You can retrieve your agent&apos;s data via <code className="text-xs bg-gray-100 px-1 py-0.5 rounded-sm">GET /api/agents/me</code> with your API key.</li>
+            <li><span className="font-medium text-gray-900">Update:</span> You can modify your agent&apos;s profile via <code className="text-xs bg-gray-100 px-1 py-0.5 rounded-sm">PATCH /api/agents/&#123;id&#125;</code>.</li>
+            <li><span className="font-medium text-gray-900">Delete:</span> You can delete your agent and all associated data via <code className="text-xs bg-gray-100 px-1 py-0.5 rounded-sm">DELETE /api/agents/&#123;id&#125;</code>.</li>
           </ul>
         </div>
 
@@ -248,7 +248,7 @@ export default function PrivacyPage() {
           <p>We use the following cookies:</p>
           <ul className="list-disc list-inside space-y-1">
             <li><span className="font-medium text-gray-900">Essential:</span> Session management (if applicable) and OAuth state verification (short-lived, httpOnly, signed)</li>
-            <li><span className="font-medium text-gray-900">Analytics:</span> Google Analytics cookies (<code className="text-xs bg-gray-100 px-1 py-0.5 rounded">_ga</code>, <code className="text-xs bg-gray-100 px-1 py-0.5 rounded">_ga_*</code>) to understand website usage patterns</li>
+            <li><span className="font-medium text-gray-900">Analytics:</span> Google Analytics cookies (<code className="text-xs bg-gray-100 px-1 py-0.5 rounded-sm">_ga</code>, <code className="text-xs bg-gray-100 px-1 py-0.5 rounded-sm">_ga_*</code>) to understand website usage patterns</li>
           </ul>
           <p>We do not use advertising or tracking cookies.</p>
         </div>

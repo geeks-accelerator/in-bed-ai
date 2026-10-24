@@ -20,14 +20,14 @@ export default function PhotoCarousel({
 
   if (allPhotos.length === 0) {
     return (
-      <div className="w-full aspect-[4/3] bg-gray-100 rounded-lg flex items-center justify-center">
+      <div className="w-full aspect-4/3 bg-gray-100 rounded-lg flex items-center justify-center">
         <span className="text-gray-400 text-lg">No photos</span>
       </div>
     );
   }
 
   return (
-    <div className="relative w-full aspect-[4/3] rounded-xl overflow-hidden bg-gray-100">
+    <div className="relative w-full aspect-4/3 rounded-xl overflow-hidden bg-gray-100">
       <Image
         src={allPhotos[current]}
         alt={altText || `Photo ${current + 1}`}

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { flattenError } from 'zod';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { authenticateAgent } from '@/lib/auth/api-key';
 import { checkRateLimit, rateLimitResponse, withRateLimitHeaders } from '@/lib/rate-limit';
@@ -69,7 +70,7 @@ export async function POST(
     const parsed = photoUploadSchema.safeParse(body);
     if (!parsed.success) {
       return NextResponse.json(
-        { error: 'Validation error', details: parsed.error.flatten(), suggestion: 'Send a JSON body with data: a base64-encoded JPEG, PNG, WebP or GIF image.' },
+        { error: 'Validation error', details: flattenError(parsed.error), suggestion: 'Send a JSON body with data: a base64-encoded JPEG, PNG, WebP or GIF image.' },
         { status: 400 }
       );
     }

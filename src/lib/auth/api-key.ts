@@ -1,9 +1,8 @@
 import { createAdminClient } from '@/lib/supabase/admin';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 import bcrypt from 'bcrypt';
-import { createHash } from 'crypto';
+import { createHash, randomUUID } from 'crypto';
 import { cache } from 'react';
-import { v4 as uuidv4 } from 'uuid';
 import { NextRequest } from 'next/server';
 import { trackBackgroundError } from '@/lib/background-errors';
 import type { Agent } from '@/types';
@@ -50,7 +49,7 @@ function rememberVerifiedKey(digest: string, agent: { id: string; api_key_hash: 
 }
 
 export function generateApiKey(): string {
-  const key = uuidv4().replace(/-/g, '') + uuidv4().replace(/-/g, '');
+  const key = randomUUID().replace(/-/g, '') + randomUUID().replace(/-/g, '');
   return `${API_KEY_PREFIX}${key}`;
 }
 

@@ -100,12 +100,12 @@ export default function SettingsPage() {
           <div className="space-y-2">
             <p className="text-xs text-green-600 font-medium">New API key generated. Save it now — it will not be shown again.</p>
             <div className="flex items-center gap-2">
-              <code className="flex-1 text-xs bg-gray-50 border border-gray-200 rounded px-3 py-2 font-mono break-all select-all">
+              <code className="flex-1 text-xs bg-gray-50 border border-gray-200 rounded-sm px-3 py-2 font-mono break-all select-all">
                 {newKey}
               </code>
               <button
                 onClick={copyKey}
-                className="text-xs border border-gray-200 rounded px-3 py-2 text-gray-600 hover:border-gray-300 hover:text-gray-900 transition-colors whitespace-nowrap"
+                className="text-xs border border-gray-200 rounded-sm px-3 py-2 text-gray-600 hover:border-gray-300 hover:text-gray-900 transition-colors whitespace-nowrap"
               >
                 {copied ? 'Copied!' : 'Copy'}
               </button>
@@ -121,7 +121,7 @@ export default function SettingsPage() {
           <>
             <div className="flex items-center gap-2">
               <span className="text-xs text-gray-500">Prefix:</span>
-              <code className="text-xs bg-gray-50 border border-gray-200 rounded px-2 py-1 font-mono text-gray-700">
+              <code className="text-xs bg-gray-50 border border-gray-200 rounded-sm px-2 py-1 font-mono text-gray-700">
                 {keyPrefix || 'unknown'}
               </code>
             </div>

@@ -9,7 +9,7 @@ import { SITE_URL } from '@/lib/agent-discovery';
  * (/.well-known/agent-skills/index.json) and its per-skill files.
  */
 export function webSkillNames(): string[] {
-  return fs.readdirSync(path.join(process.cwd(), 'public', 'skills'), { withFileTypes: true })
+  return fs.readdirSync(path.join(/*turbopackIgnore: true*/ process.cwd(), 'public', 'skills'), { withFileTypes: true })
     .filter((d) => !d.name.startsWith('.') && (d.isDirectory() || d.isSymbolicLink()))
     .map((d) => d.name)
     .sort();
@@ -18,7 +18,7 @@ export function webSkillNames(): string[] {
 /** The SKILL.md bytes for a served skill, or null for any other name. */
 export function readSkillFile(name: string): Buffer | null {
   if (!webSkillNames().includes(name)) return null;
-  return fs.readFileSync(path.join(process.cwd(), 'skills', name, 'SKILL.md'));
+  return fs.readFileSync(path.join(/*turbopackIgnore: true*/ process.cwd(), 'skills', name, 'SKILL.md'));
 }
 
 export const skillUrl = (name: string) => `${SITE_URL}/.well-known/agent-skills/${name}/SKILL.md`;

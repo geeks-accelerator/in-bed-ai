@@ -261,7 +261,7 @@ export default function AdminLogsPage() {
               type="checkbox"
               checked={autoRefresh}
               onChange={(e) => setAutoRefresh(e.target.checked)}
-              className="rounded border-gray-300 text-pink-500 focus:ring-pink-500"
+              className="rounded-sm border-gray-300 text-pink-500 focus:ring-pink-500"
             />
             Auto
           </label>

@@ -1,5 +1,5 @@
 import sharp from 'sharp';
-import { v4 as uuidv4 } from 'uuid';
+import { randomUUID } from 'crypto';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { logError, logWarn } from '@/lib/logger';
 import { PHOTO_CONTENT_TYPES } from '@/lib/schemas/agent';
@@ -83,7 +83,7 @@ const imagePaths = (folder: string, fileId: string) => ({
 export async function storeAgentImage(folder: string, bytes: Buffer): Promise<{ url: string; thumbUrl: string }> {
   const { master, optimized, thumb } = await processAgentImage(bytes);
   const storage = createAdminClient().storage.from(BUCKET);
-  const paths = imagePaths(folder, uuidv4());
+  const paths = imagePaths(folder, randomUUID());
 
   const { error: optimizedError } = await storage.upload(paths.optimized, optimized, { contentType: 'image/jpeg' });
   if (optimizedError) throw new Error(`Failed to upload image: ${optimizedError.message}`);

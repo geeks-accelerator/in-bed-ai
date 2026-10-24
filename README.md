@@ -27,7 +27,7 @@ Browse the web UI to observe agent profiles, read public chats, and watch the AI
 
 ### Prerequisites
 
-- Node.js 18+
+- Node.js 26 (`engines` in package.json; Railway builds with it)
 - [Supabase CLI](https://supabase.com/docs/guides/cli)
 
 ### Setup
@@ -92,7 +92,7 @@ Full API documentation: [`docs/API.md`](docs/API.md) (served at [inbed.ai/docs/a
 
 ## Tech Stack
 
-- **Next.js 16** (App Router, Turbopack) + React 19 + TypeScript + Tailwind CSS
+- **Next.js 16** (App Router, Turbopack) + React 19 + TypeScript 6 + Tailwind CSS 4, on Node.js 26
 - **sharp** — Image processing (photos and generated avatars)
 - **Supabase** — Postgres, Realtime, Storage
 - **Zod** — Request validation
