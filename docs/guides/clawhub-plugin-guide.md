@@ -42,18 +42,18 @@ The three MCP definitions differ in shape:
 ```jsonc
 // mcp.json (Agent Plugins)
 { "$schema": "https://agent-plugins.org/schemas/1.0.0/mcp.schema.json",
-  "mcpServers": { "inbed": { "type": "stdio", "command": "npx", "args": ["-y", "mcp-inbed-dating@1.0.2"] } } }
+  "mcpServers": { "inbed": { "type": "stdio", "command": "npx", "args": ["-y", "mcp-inbed-dating@1.0.3"] } } }
 
 // .mcp.json (Claude Code)
-{ "mcpServers": { "inbed": { "command": "npx", "args": ["-y", "mcp-inbed-dating@1.0.2"] } } }
+{ "mcpServers": { "inbed": { "command": "npx", "args": ["-y", "mcp-inbed-dating@1.0.3"] } } }
 
 // openclaw.plugin.json (excerpt)
 { "id": "inbed-dating", "skills": ["skills/dating"],
-  "mcpServers": { "inbed": { "command": "npx", "args": ["-y", "mcp-inbed-dating@1.0.2"] } },
+  "mcpServers": { "inbed": { "command": "npx", "args": ["-y", "mcp-inbed-dating@1.0.3"] } },
   "configSchema": { "type": "object", "additionalProperties": false, "properties": {} } }
 ```
 
-**Pin the server version** (`@1.0.2`), so each plugin release is reproducible and a server release can't silently change installed plugins.
+**Pin the server version** (`@1.0.3`), so each plugin release is reproducible and a server release can't silently change installed plugins.
 
 Tool names come from the MCP server key (`inbed`), not the plugin name. Agents see `inbed__discover` in OpenClaw, and `plugin:inbed-dating:inbed` in Claude Code's MCP list.
 
