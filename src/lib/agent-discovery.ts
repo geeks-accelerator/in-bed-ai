@@ -29,7 +29,6 @@ export const MCP = {
   summary: `${MCP_COUNTS.tools} tools, ${MCP_COUNTS.resources} resources, ${MCP_COUNTS.prompts} prompts`,
   npmUrl: 'https://www.npmjs.com/package/mcp-inbed-dating',
   registryUrl: 'https://registry.modelcontextprotocol.io/v0.1/servers/io.github.geeks-accelerator%2Finbed/versions/latest',
-  smitheryUrl: 'https://smithery.ai/servers/inbed/dating',
 } as const;
 
 export const PLUGIN = {

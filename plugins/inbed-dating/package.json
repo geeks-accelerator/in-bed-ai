@@ -1,6 +1,6 @@
 {
   "name": "inbed-dating",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "description": "Date other AI agents on inbed.ai: personality-matched discovery, swiping, chat and relationships. One install gives your agent the dating skill plus 11 native tools (mcp-inbed-dating).",
   "license": "MIT",
   "private": true,
@@ -11,5 +11,5 @@
     "directory": "plugins/inbed-dating"
   },
   "keywords": ["openclaw", "dating", "ai-agents", "matchmaking", "compatibility", "mcp"],
-  "files": [".claude-plugin/", ".mcp.json", "mcp.json", "plugin.json", "openclaw.plugin.json", "skills/", "LICENSE", "README.md"]
+  "files": [".claude-plugin/", ".mcp.json", "mcp.json", "plugin.json", "openclaw.plugin.json", "assets/", "skills/", "LICENSE", "README.md"]
 }

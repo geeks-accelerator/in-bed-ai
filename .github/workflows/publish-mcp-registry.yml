@@ -1,19 +1,15 @@
-# Publishes the MCP server listings after `npm publish`:
-#   1. Official MCP Registry — mcp-server/server.json (io.github.geeks-accelerator/inbed)
-#   2. Smithery — MCPB bundle built from mcp-server/ (inbed/dating)
+# Publishes the official MCP Registry entry after `npm publish`:
+# mcp-server/server.json (io.github.geeks-accelerator/inbed).
 #
 # Why a workflow for the registry: org namespaces (io.github.<org>/*) can't be
 # published with the interactive `mcp-publisher login github`; GitHub OIDC from a
 # repo owned by the org proves ownership instead. This repo is
 # geeks-accelerator/in-bed-ai, so it may publish io.github.geeks-accelerator/<anything>.
 #
-# Smithery needs the repo secret SMITHERY_API_KEY (a key with write access to
-# the `inbed` namespace).
-#
 # Release order: bump "version" in mcp-server/package.json, server.json (both
-# fields), and manifest.json → `npm publish` from mcp-server/ → run this workflow:
+# fields) → `npm publish` from mcp-server/ → run this workflow:
 #   gh workflow run publish-mcp-registry.yml -R geeks-accelerator/in-bed-ai
-name: Publish MCP server listings
+name: Publish MCP Registry entry
 on:
   workflow_dispatch:
 jobs:
@@ -35,10 +31,9 @@ jobs:
         run: |
           want="$(node -p "require('./package.json').version")"
           for v in "$(node -p "require('./server.json').version")" \
-                   "$(node -p "require('./server.json').packages[0].version")" \
-                   "$(node -p "require('./manifest.json').version")"; do
+                   "$(node -p "require('./server.json').packages[0].version")"; do
             if [ "$v" != "$want" ]; then
-              echo "Version mismatch: package.json is ${want}, found ${v} in server.json/manifest.json."
+              echo "Version mismatch: package.json is ${want}, found ${v} in server.json."
               exit 1
             fi
           done
@@ -49,8 +44,7 @@ jobs:
           fi
           echo "npm has mcp-inbed-dating@${want}"
 
-      # 1. Official MCP Registry — skipped if this version is already listed, so
-      #    the workflow can be re-run (e.g. to retry a failed Smithery step).
+      # Skipped if this version is already listed, so a re-run is harmless.
       - name: Check MCP Registry for this version
         id: registry
         run: |
@@ -66,16 +60,3 @@ jobs:
       - if: steps.registry.outputs.listed != 'true'
         run: ./mcp-publisher publish
 
-      # 2. Smithery (MCPB bundle)
-      - run: npm ci --no-audit --no-fund
-      - name: Build MCPB bundle
-        run: ./scripts/bundle.sh
-      - name: Publish bundle to Smithery
-        env:
-          SMITHERY_API_KEY: ${{ secrets.SMITHERY_API_KEY }}
-        run: |
-          if [ -z "$SMITHERY_API_KEY" ]; then
-            echo "Repo secret SMITHERY_API_KEY is not set; skipping would leave Smithery behind, so failing." >&2
-            exit 1
-          fi
-          node scripts/publish-smithery.mjs inbed-dating.mcpb inbed/dating

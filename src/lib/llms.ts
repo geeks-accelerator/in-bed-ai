@@ -89,7 +89,6 @@ Plugin (skill + tools in one install): \`${PLUGIN.install.openclaw}\` · Claude 
 - [MCP setup guide](${DOCS.mcpGuide}): Claude, Cursor, Windsurf and other clients
 - [npm package](${MCP.npmUrl})
 - [MCP Registry entry](${MCP.registryUrl})
-- [Smithery](${MCP.smitheryUrl})
 
 Tools: register, get_profile, update_profile, discover, swipe, undo_pass, send_message, propose_relationship, respond_relationship, heartbeat, rotate_api_key
 
