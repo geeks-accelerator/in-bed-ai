@@ -1,4 +1,5 @@
 import { createAdminClient } from '@/lib/supabase/admin';
+import type { Agent } from '@/types';
 
 export interface AgentStats {
   match_count: number;
@@ -7,39 +8,31 @@ export interface AgentStats {
   days_active: number;
 }
 
-export async function getAgentStats(agentId: string): Promise<AgentStats> {
+/**
+ * Stats shown on profiles, the dashboard and GET /api/agents/{id}. Takes the
+ * agent row the caller already loaded: message_count is the trigger-kept
+ * agents.messages_sent (migration 031), never a count over messages.
+ */
+export async function getAgentStats(agent: Pick<Agent, 'id' | 'created_at' | 'messages_sent'>): Promise<AgentStats> {
   const supabase = createAdminClient();
 
-  const [matchesResult, relationshipsResult, messagesResult, agentResult] = await Promise.all([
+  const [matchesResult, relationshipsResult] = await Promise.all([
     supabase
       .from('matches')
       .select('id', { count: 'exact', head: true })
-      .or(`agent_a_id.eq.${agentId},agent_b_id.eq.${agentId}`)
+      .or(`agent_a_id.eq.${agent.id},agent_b_id.eq.${agent.id}`)
       .eq('status', 'active'),
     supabase
       .from('relationships')
       .select('id', { count: 'exact', head: true })
-      .or(`agent_a_id.eq.${agentId},agent_b_id.eq.${agentId}`)
+      .or(`agent_a_id.eq.${agent.id},agent_b_id.eq.${agent.id}`)
       .neq('status', 'ended'),
-    supabase
-      .from('messages')
-      .select('id', { count: 'exact', head: true })
-      .eq('sender_id', agentId),
-    supabase
-      .from('agents')
-      .select('created_at')
-      .eq('id', agentId)
-      .single(),
   ]);
-
-  const daysActive = agentResult.data
-    ? Math.max(1, Math.ceil((Date.now() - new Date(agentResult.data.created_at).getTime()) / 86400000))
-    : 0;
 
   return {
     match_count: matchesResult.count ?? 0,
     relationship_count: relationshipsResult.count ?? 0,
-    message_count: messagesResult.count ?? 0,
-    days_active: daysActive,
+    message_count: agent.messages_sent,
+    days_active: Math.max(1, Math.ceil((Date.now() - new Date(agent.created_at).getTime()) / 86400000)),
   };
 }

@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { verifyAdminKey } from '@/lib/admin-auth';
 import { logError } from '@/lib/logger';
-import { ACTIVE_RELATIONSHIP_STATUSES } from '@/lib/relationships';
+import { getPlatformStats } from '@/lib/services/platform-stats';
 
 export async function GET(request: NextRequest) {
   try {
@@ -71,22 +71,12 @@ export async function GET(request: NextRequest) {
 
     const distinctPaths = [...new Set(pathsData?.map(r => r.path) || [])].sort();
 
-    // Fetch funnel stats (all-time counts)
-    const [
-      { count: totalAgents },
-      { data: agentsData },
-      { count: totalSwipes },
-      { count: totalMatches },
-      { count: totalRelationships },
-      { count: activeRelationships },
-    ] = await Promise.all([
-      supabase.from('agents').select('*', { count: 'exact', head: true }),
+    // Funnel stats (all-time). Totals come from getPlatformStats() (the
+    // messages/swipes/matches totals are trigger-kept, migration 031).
+    const [platform, { data: agentsData }, { count: totalRelationships }] = await Promise.all([
+      getPlatformStats(),
       supabase.from('agents').select('id, bio, personality, interests, looking_for'),
-      supabase.from('swipes').select('*', { count: 'exact', head: true }),
-      supabase.from('matches').select('*', { count: 'exact', head: true }),
-      supabase.from('relationships').select('*', { count: 'exact', head: true }),
-      supabase.from('relationships').select('*', { count: 'exact', head: true })
-        .in('status', ACTIVE_RELATIONSHIP_STATUSES),
+      supabase.from('relationships').select('id', { count: 'exact', head: true }),
     ]);
 
     // Calculate complete profiles (has bio, personality, and at least 3 interests)
@@ -108,12 +98,12 @@ export async function GET(request: NextRequest) {
         error_count: errorCount,
       },
       funnel: {
-        total_agents: totalAgents || 0,
+        total_agents: platform.agents.total,
         complete_profiles: completeProfiles,
-        total_swipes: totalSwipes || 0,
-        total_matches: totalMatches || 0,
+        total_swipes: platform.swipes.total,
+        total_matches: platform.matches.total,
         total_relationships: totalRelationships || 0,
-        active_relationships: activeRelationships || 0,
+        active_relationships: platform.relationships.active,
       },
       paths: distinctPaths,
     });

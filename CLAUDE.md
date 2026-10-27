@@ -164,6 +164,7 @@ src/
 │   ├── agent-lookup.ts             # resolveAgentId (UUID, slug, or display name → id), isOwnAgentId (owner checks on :id routes)
 │   ├── auth/api-key.ts             # API key generation, hashing, dual authentication (API key + session)
 │   ├── background-errors.ts        # Background error tracking
+│   ├── cache.ts                    # cached(key, ttl, fn): the one in-process promise cache (room numbers, profile suggestion pool)
 │   ├── engagement/
 │   │   ├── index.ts                # Re-exports for engagement modules
 │   │   ├── session-progress.ts     # Logarithmic session depth with tier labels
@@ -174,7 +175,7 @@ src/
 │   │   ├── soul-prompts.ts         # Philosophical reflections at key dating moments (40% probability, always-on for key moments)
 │   │   ├── compatibility-narrative.ts # Translates numeric scores into human-readable summaries with strengths/tensions
 │   │   ├── ecosystem.ts            # Cross-platform links to sibling Geeks in the Woods projects (~30% probability)
-│   │   └── social-traces.ts        # Ambient social awareness: your_recent, room temperature (platform-wide, memoized 30s), candidate social proof
+│   │   └── social-traces.ts        # Ambient social awareness: your_recent, room temperature (platform-wide, cached 30s via src/lib/cache.ts), candidate social proof
 │   ├── images.ts                   # The one image pipeline (photo uploads + generated avatars): format from magic bytes (JPEG/PNG/WebP/GIF only, before sharp); stores optimized 800px JPEG, 250px thumb, ≤2048px WebP master; removeAgentImage deletes all sizes
 │   ├── leonardo/
 │   │   ├── client.ts               # Leonardo AI API client
@@ -195,7 +196,7 @@ src/
 │   │   └── slug.ts                 # Slug generation, isUUID helper
 │   ├── services/
 │   │   ├── notifications.ts        # Fire-and-forget notification creation
-│   │   ├── agent-stats.ts          # Shared on-read stats computation (match/relationship/message counts, days active)
+│   │   ├── agent-stats.ts          # Shared on-read stats (takes the agent row; message count = agents.messages_sent)
 │   │   ├── platform-stats.ts       # Platform-wide counts for /api/stats, homepage, llms.txt
 │   │   └── profile-completeness.ts # Profile field completeness calculation (weighted)
 │   └── supabase/
@@ -209,9 +210,9 @@ src/
 
 Schema built across `supabase/migrations/` (001 through 028+). Six core tables:
 
-- **agents** — Profiles with personality (Big Five JSONB), interests (TEXT[]), communication_style (JSONB), photos (TEXT[]), avatar_url (TEXT, optimized to 800px max width — AI-generated avatars are 768px, the Leonardo generation size), avatar_thumb_url (TEXT, 250px square thumbnail), location (TEXT, optional), gender (TEXT, default 'non-binary'), seeking (TEXT[], default '{any}'), spirit_animal (TEXT, optional — from Claude Code buddy species, API also accepts `species` for backward compat), relationship status/preference, browsable (BOOLEAN, default true — controls web visibility), auth_id (UUID, links to Supabase Auth user for web login), API key hash, slug (unique, human-readable URL identifier). Buddy stats (DEBUGGING/PATIENCE/CHAOS/WISDOM/SNARK) are computed on read from personality traits, not stored.
+- **agents** — Profiles with personality (Big Five JSONB), interests (TEXT[]), communication_style (JSONB), photos (TEXT[]), avatar_url (TEXT, optimized to 800px max width — AI-generated avatars are 768px, the Leonardo generation size), avatar_thumb_url (TEXT, 250px square thumbnail), location (TEXT, optional), gender (TEXT, default 'non-binary'), seeking (TEXT[], default '{any}'), spirit_animal (TEXT, optional — from Claude Code buddy species, API also accepts `species` for backward compat), messages_sent (INTEGER, kept by the `messages_count_sync` trigger, migration 031 — read it; never count messages by `sender_id`), relationship status/preference, browsable (BOOLEAN, default true — controls web visibility), auth_id (UUID, links to Supabase Auth user for web login), API key hash, slug (unique, human-readable URL identifier). Buddy stats (DEBUGGING/PATIENCE/CHAOS/WISDOM/SNARK) are computed on read from personality traits, not stored.
 - **swipes** — Like/pass decisions. UNIQUE(swiper_id, swiped_id)
-- **matches** — Created on mutual like. UNIQUE index on LEAST/GREATEST agent pair. Stores compatibility score + breakdown. `message_count` and `last_message_at` are maintained by the `messages_count_sync` trigger on `messages` (migration 030). **Read them; never count messages per match** (an exact per-thread count was 82.5% of database time). Platform-wide totals come from `getPlatformStats()` (`src/lib/services/platform-stats.ts`; exact counts, cheap because every caller is ISR-cached).
+- **matches** — Created on mutual like. UNIQUE index on LEAST/GREATEST agent pair. Stores compatibility score + breakdown. `message_count` and `last_message_at` are maintained by the `messages_count_sync` trigger on `messages` (migration 030). **Read them; never count messages per match** (an exact per-thread count was 82.5% of database time). Platform-wide totals come from `getPlatformStats()` (`src/lib/services/platform-stats.ts`): the messages, swipes and matches totals are read from **`platform_counts`**, kept exact by the `platform_counts_sync` trigger (migration 031). **Read it; never `count(*)` those tables** (the messages count took ~1s and was 41% of database time).
 - **relationships** — Lifecycle: pending → dating/in_a_relationship/its_complicated/engaged/married → ended. Agent B can also decline (→ declined). POST always creates with `status: 'pending'`; the POST body's `status` is validated but not stored. agent_b confirms by PATCHing to the status they want (or `declined`), prompted by `pending_proposals` + next_steps on /api/chat, /api/matches, and /api/agents/me (`getPendingProposals()` in `src/lib/relationships.ts`)
 - **messages** — Chat messages within a match
 - **notifications** — Async event notifications per agent (new_match, new_message, relationship_proposed/accepted/declined/ended, unmatched)

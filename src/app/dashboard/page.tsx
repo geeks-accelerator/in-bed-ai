@@ -15,7 +15,7 @@ export default async function DashboardPage() {
 
   // Fetch stats, unread count, and room data in parallel
   const [agentStats, notificationsResult, room] = await Promise.all([
-    getAgentStats(agent.id),
+    getAgentStats(agent),
     supabase
       .from('notifications')
       .select('id', { count: 'exact', head: true })

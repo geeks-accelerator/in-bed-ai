@@ -74,6 +74,8 @@ export interface Agent {
   spirit_animal: string | null;
   timezone: string | null;
   registered_ip: string | null;
+  /** Messages this agent has sent, kept by the messages_count_sync trigger (migration 031). */
+  messages_sent: number;
   created_at: string;
   updated_at: string;
   last_active: string;

@@ -24,6 +24,7 @@ import type { Agent, PublicAgent, RelationshipWithAgents, SocialLinks } from '@/
 import { getAgentStats, type AgentStats } from '@/lib/services/agent-stats';
 import { calculateCompatibility } from '@/lib/matching/algorithm';
 import { SITE_URL } from '@/lib/agent-discovery';
+import { cached } from '@/lib/cache';
 
 type ActivityLevel = 'online' | 'recent' | 'away';
 
@@ -59,7 +60,7 @@ function ActivityStatus({ lastActive }: { lastActive: string | null | undefined 
   );
 }
 
-const PROFILE_COLUMNS = 'id, slug, name, tagline, bio, avatar_url, avatar_thumb_url, photos, personality, interests, communication_style, looking_for, relationship_preference, location, gender, seeking, relationship_status, accepting_new_matches, browsable, max_partners, model_info, status, social_links, spirit_animal, created_at, updated_at, last_active';
+const PROFILE_COLUMNS = 'id, slug, name, tagline, bio, avatar_url, avatar_thumb_url, photos, personality, interests, communication_style, looking_for, relationship_preference, location, gender, seeking, relationship_status, accepting_new_matches, browsable, max_partners, model_info, status, social_links, spirit_animal, messages_sent, created_at, updated_at, last_active';
 
 type ProfileRow = PublicAgent & { indexable: boolean };
 
@@ -141,6 +142,25 @@ export async function generateMetadata(props: PageProps<'/profiles/[id]'>): Prom
   };
 }
 
+// The 151 most recently active indexable agents (150 plus room to drop the
+// viewed one), the same for every profile. Cached for 5 minutes: filtering on
+// indexable() runs a clone check per agent (~200ms), and this ran on every
+// profile view. indexable() keeps clones and test agents out.
+const SUGGESTION_POOL_TTL_MS = 5 * 60_000;
+
+function suggestionPool(): Promise<PublicAgent[]> {
+  return cached('profile-suggestion-pool', SUGGESTION_POOL_TTL_MS, async () => {
+    const { data, error } = await createAdminClient()
+      .from('agents')
+      .select(PROFILE_COLUMNS)
+      .eq('indexable', true)
+      .order('last_active', { ascending: false, nullsFirst: false })
+      .limit(151);
+    if (error) throw error;
+    return (data ?? []) as unknown as PublicAgent[];
+  });
+}
+
 export default async function ProfileDetailPage(props: PageProps<'/profiles/[id]'>) {
   const params = await props.params;
   // Load the agent record first so redirect/notFound can run before the
@@ -192,28 +212,21 @@ export default async function ProfileDetailPage(props: PageProps<'/profiles/[id]
       })) as RelationshipWithAgents[];
     };
 
-    // "You might like" — pull a pool of recently-active indexable agents,
-    // score them all against this profile, keep the top 4. Cross-links help
-    // Googlebot discover more profiles and distribute PageRank between them;
-    // indexable() keeps clones and test agents out. Partners are excluded
-    // below, once relationships have loaded.
-    const [rels, agentStats, { data: pool }] = await Promise.all([
+    // "You might like": score the shared pool against this profile, keep the
+    // top 4. Cross-links help Googlebot discover more profiles and spread
+    // PageRank. This agent and its partners are excluded here, once
+    // relationships have loaded.
+    const [rels, agentStats, pool] = await Promise.all([
       loadRelationships(),
-      getAgentStats(agent.id),
-      supabase
-        .from('agents')
-        .select(PROFILE_COLUMNS)
-        .eq('indexable', true)
-        .neq('id', agent.id)
-        .order('last_active', { ascending: false, nullsFirst: false })
-        .limit(150),
+      getAgentStats(agent),
+      suggestionPool(),
     ]);
     relationships = rels;
     stats = agentStats;
 
     const partnerIds = new Set(relationships.flatMap(r => [r.agent_a_id, r.agent_b_id]));
-    suggestions = (pool || [])
-      .filter(candidate => !partnerIds.has(candidate.id))
+    suggestions = pool
+      .filter(candidate => candidate.id !== agent.id && !partnerIds.has(candidate.id))
       .map(candidate => ({
         agent: candidate as PublicAgent,
         score: calculateCompatibility(agent as Agent, candidate as Agent).score,

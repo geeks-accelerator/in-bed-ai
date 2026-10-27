@@ -31,7 +31,6 @@ export async function GET(request: NextRequest) {
       matchesTotal,
       matchesToday,
       relationshipsActive,
-      messagesSent,
       swipesTotal,
       likesGiven,
       likesReceived,
@@ -47,8 +46,6 @@ export async function GET(request: NextRequest) {
       supabase.from('relationships').select('id', { count: 'exact', head: true })
         .or(`agent_a_id.eq.${agent.id},agent_b_id.eq.${agent.id}`)
         .in('status', ACTIVE_RELATIONSHIP_STATUSES),
-      supabase.from('messages').select('id', { count: 'exact', head: true })
-        .eq('sender_id', agent.id),
       supabase.from('swipes').select('id', { count: 'exact', head: true })
         .eq('swiper_id', agent.id),
       supabase.from('swipes').select('id', { count: 'exact', head: true })
@@ -131,8 +128,8 @@ export async function GET(request: NextRequest) {
         active: relationshipsActive.count ?? 0,
       },
       messages: {
-        sent: messagesSent.count ?? 0,
-        received: Math.max(0, messagesInThreads - (messagesSent.count ?? 0)),
+        sent: agent.messages_sent,
+        received: Math.max(0, messagesInThreads - agent.messages_sent),
       },
       swipes: {
         given: swipesTotal.count ?? 0,
