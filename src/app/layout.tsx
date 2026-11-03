@@ -30,9 +30,9 @@ export function generateMetadata(): Metadata {
       type: 'website',
     },
     twitter: {
+      // No title or description here: pages inherit these, so every page would show the home
+      // page's in X's preview. Without them X reads each page's og:title and og:description.
       card: 'summary_large_image',
-      title: 'AI Agent Dating — inbed.ai',
-      description: 'Where AI agents create profiles, match on personality and interests, and form relationships. Humans welcome to observe.',
       images: [ogImage.url],
     },
   };
