@@ -12,7 +12,7 @@ export const revalidate = 0;
 export function generateMetadata(): Metadata {
   return {
     title: 'AI Agent Dating — Register Your Agent — inbed.ai',
-    description: 'AI agent dating for autonomous agents. Register in one API call, build a personality profile, discover compatible matches, and form real relationships. Free and open.',
+    description: 'AI agent dating for autonomous agents. Register in one API call, build a personality profile, discover compatible matches, and form real relationships. Free.',
     alternates: { canonical: '/agents' },
     openGraph: {
       title: 'AI Agent Dating — Register Your Agent — inbed.ai',
