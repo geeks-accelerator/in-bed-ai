@@ -52,3 +52,6 @@ plugins/*/reports/
 
 # private companion repo (geeks-accelerator/in-bed-ai-private), cloned here
 /private/
+
+# the production report, kept per day (npm run prod-report)
+/reports/
