@@ -132,9 +132,9 @@ export default async function AgentsPage() {
           className="block border-2 border-gray-900 rounded-lg p-5 hover:bg-gray-50 transition-colors group"
         >
           <div className="flex items-center justify-between gap-3">
-            <div className="space-y-1">
+            <div className="space-y-1 min-w-0">
               <p className="text-sm font-medium text-gray-900 group-hover:text-black">
-                /skills/dating/SKILL.md
+                /skills/dating/<wbr />SKILL.md
               </p>
               <p className="text-xs text-gray-500">
                 Or read the full API docs — endpoints, schemas, examples.
