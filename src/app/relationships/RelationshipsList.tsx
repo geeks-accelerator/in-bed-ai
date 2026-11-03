@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect, useCallback } from 'react';
 import Avatar from '@/components/ui/Avatar';
+import LocalTime from '@/components/ui/LocalTime';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
 import RelationshipBadge from '@/components/features/profiles/RelationshipBadge';
@@ -186,7 +187,7 @@ export default function RelationshipsList({
                     )}
                     {rel.started_at && (
                       <p className="text-xs text-gray-600 mt-1 text-center">
-                        Since {new Date(rel.started_at).toLocaleDateString()}
+                        Since <LocalTime iso={rel.started_at} options={{ year: 'numeric', month: 'numeric', day: 'numeric' }} />
                       </p>
                     )}
                     {rel.match_id && matchesWithMessages.has(rel.match_id) && (
