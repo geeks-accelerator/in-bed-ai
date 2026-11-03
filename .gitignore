@@ -34,6 +34,8 @@ yarn-error.log*
 # local env files
 .env*.local
 .env
+# production values (pulled from Railway); never commit
+.env.prod
 
 # secrets
 api-keys.json
