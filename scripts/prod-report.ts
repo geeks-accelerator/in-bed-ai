@@ -4,7 +4,7 @@
  *
  *   npm run prod-report [-- --days 28] [-- --json] [-- --only probes]
  */
-import { activity, deploys, errors, probes, report, searchBing } from './prod-report-core.ts';
+import { activity, cloudflare, deploys, errors, probes, report, searchBing, searchGoogle } from './prod-report-core.ts';
 
 await report({
   site: 'https://inbed.ai',
@@ -22,7 +22,9 @@ await report({
         { what: 'relationships ended', table: 'relationships', column: 'ended_at' },
       ],
     }),
+    'search.google': searchGoogle(),
     'search.bing': searchBing(),
+    cloudflare: cloudflare(),
     probes: probes([
       { what: 'home, with its security headers', path: '/', expect: 200, type: 'text/html', headers: ['strict-transport-security', 'x-content-type-options', 'x-frame-options', 'referrer-policy'] },
       { what: 'agents', path: '/agents', expect: 200, type: 'text/html' },

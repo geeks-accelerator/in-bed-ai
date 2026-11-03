@@ -624,6 +624,155 @@ export function searchBing(): SectionSpec<Bing> {
   };
 }
 
+// ─── search.google ─────────────────────────────────────────────────────
+
+/** Search Console's data lags about this many days, so its windows end that far back. */
+export const SC_LAG_DAYS = 3;
+
+/** A window moved back by Search Console's lag, keeping its length. */
+export function lagged(w: Window, days = SC_LAG_DAYS): Window {
+  const back = (d: string) => new Date(Date.parse(`${d}T00:00:00Z`) - days * 864e5).toISOString().slice(0, 10);
+  return { from: back(w.from), to: back(w.to) };
+}
+
+/** A row of Search Console's searchAnalytics. */
+export interface ScApiRow {
+  keys?: string[];
+  clicks: number;
+  impressions: number;
+  ctr: number;
+  position: number;
+}
+
+export interface ScRow {
+  /** The query, or the page's path; for queries by page, the query. */
+  key: string;
+  /** For queries by page: the page's path. */
+  page?: string;
+  clicks: number;
+  impressions: number;
+  /** Percent, one decimal. */
+  ctr: number;
+  position: number;
+}
+
+export interface ScTotals {
+  clicks: number;
+  impressions: number;
+  position: number | null;
+}
+
+export interface SearchGoogle {
+  property: string;
+  /** The windows asked for, each moved back by the lag: Search Console's data ends about then. */
+  now: Window;
+  before: Window;
+  totals: { now: ScTotals; before: ScTotals };
+  queries: ScRow[];
+  pages: ScRow[];
+  /** Each page's queries, the busiest pairs first: where a title misses its searchers' words. */
+  queriesByPage: ScRow[];
+}
+
+const pathOf = (url: string) => url.replace(/^https?:\/\/[^/]+/, '') || '/';
+
+/** API rows as the report keeps them, the most impressions first: paths not URLs, ctr in percent, position to one decimal. */
+export function scRows(rows: ScApiRow[], dims: string[]): ScRow[] {
+  return rows.map((r) => {
+    const k = (d: string) => r.keys?.[dims.indexOf(d)] ?? '';
+    const out: ScRow = {
+      key: dims.includes('query') ? k('query') : pathOf(k('page')),
+      clicks: r.clicks,
+      impressions: r.impressions,
+      ctr: Math.round(r.ctr * 1000) / 10,
+      position: Math.round(r.position * 10) / 10,
+    };
+    if (dims.includes('query') && dims.includes('page')) out.page = pathOf(k('page'));
+    return out;
+  }).sort((a, b) => b.impressions - a.impressions || b.clicks - a.clicks);
+}
+
+/** A query with no dimensions answers one row of totals, or none when there were no impressions. */
+export function scTotals(rows: ScApiRow[]): ScTotals {
+  const r = rows[0];
+  return r ? { clicks: r.clicks, impressions: r.impressions, position: Math.round(r.position * 10) / 10 } : { clicks: 0, impressions: 0, position: null };
+}
+
+export function searchGoogleWarnings(g: SearchGoogle): Warning[] {
+  const { now, before } = g.totals;
+  if (now.impressions === 0 && before.impressions > 0) return [{ at: '', warn: `no impressions ${g.now.from} to ${g.now.to}, ${before.impressions} the window before` }];
+  if (before.impressions >= 100 && now.impressions < before.impressions / 2) return [{ at: '', warn: `impressions halved: ${now.impressions}, ${before.impressions} the window before` }];
+  return [];
+}
+
+export function searchGoogleText(g: SearchGoogle): string[] {
+  const t = (x: ScTotals) => `${x.impressions} impressions, ${x.clicks} clicks, position ${x.position ?? '–'}`;
+  // A query can be a whole pasted prompt (2026-11-03: 700 characters).
+  const short = (q: string) => (q.length > 60 ? `${q.slice(0, 57)}...` : q);
+  const rows = (xs: ScRow[]) => xs.slice(0, 15).map((r) => `${short(r.key)} ${r.impressions}/${r.clicks}/${r.position}`).join(', ') || 'none';
+  return [
+    `${g.property}, ${g.now.from} to ${g.now.to}: ${t(g.totals.now)} (before: ${t(g.totals.before)})`,
+    `Pages (impressions, clicks, position): ${rows(g.pages)}`,
+    `Queries: ${rows(g.queries)}`,
+    `Queries by page: ${g.queriesByPage.slice(0, 10).map((r) => `${r.page} "${short(r.key)}" ${r.impressions}/${r.clicks}/${r.position}`).join(', ') || 'none'}`,
+  ];
+}
+
+/** Search Console's numbers for a property, with an OAuth access token. */
+export async function readSearchGoogle(property: string, token: string, now: Window, before: Window): Promise<SearchGoogle> {
+  const query = async (w: Window, dimensions: string[], rowLimit: number): Promise<ScApiRow[]> => {
+    const res = await fetch(`https://www.googleapis.com/webmasters/v3/sites/${encodeURIComponent(property)}/searchAnalytics/query`, {
+      method: 'POST',
+      headers: { authorization: `Bearer ${token}`, 'content-type': 'application/json' },
+      body: JSON.stringify({ startDate: w.from, endDate: w.to, dimensions, rowLimit }),
+      signal: AbortSignal.timeout(30_000),
+    });
+    const body = (await res.json()) as { rows?: ScApiRow[]; error?: { message?: string } };
+    if (!res.ok) throw new Error(`Search Console answered ${res.status}: ${body.error?.message ?? ''}`);
+    return body.rows ?? [];
+  };
+  const [n, b] = [lagged(now), lagged(before)];
+  return {
+    property,
+    now: n,
+    before: b,
+    totals: { now: scTotals(await query(n, [], 1)), before: scTotals(await query(b, [], 1)) },
+    queries: scRows(await query(n, ['query'], 25), ['query']),
+    pages: scRows(await query(n, ['page'], 25), ['page']),
+    queriesByPage: scRows(await query(n, ['page', 'query'], 50), ['page', 'query']),
+  };
+}
+
+/**
+ * `search.google`, the standard's section: totals beside the window before,
+ * queries, pages, and queries by page, each window moved back by Search
+ * Console's lag. Reads GOOGLE_OAUTH_CLIENT_ID, GOOGLE_OAUTH_CLIENT_SECRET and
+ * SEARCH_CONSOLE_REFRESH_TOKEN (read-only), never printed. The property is
+ * sc-domain:<host> unless the project names another. `indexing` isn't here yet.
+ */
+export function searchGoogle(o: { property?: string } = {}): SectionSpec<SearchGoogle> {
+  return {
+    source: `Search Console searchAnalytics; its data lags about ${SC_LAG_DAYS} days, so the windows end then`,
+    windowed: true,
+    title: 'Google',
+    read: async (ctx) => {
+      const { GOOGLE_OAUTH_CLIENT_ID: id, GOOGLE_OAUTH_CLIENT_SECRET: secret, SEARCH_CONSOLE_REFRESH_TOKEN: refresh } = process.env;
+      if (!id || !secret || !refresh) throw new Error('no GOOGLE_OAUTH_CLIENT_ID, GOOGLE_OAUTH_CLIENT_SECRET or SEARCH_CONSOLE_REFRESH_TOKEN in .env');
+      const res = await fetch('https://oauth2.googleapis.com/token', {
+        method: 'POST',
+        headers: { 'content-type': 'application/x-www-form-urlencoded' },
+        body: new URLSearchParams({ client_id: id, client_secret: secret, refresh_token: refresh, grant_type: 'refresh_token' }),
+        signal: AbortSignal.timeout(30_000),
+      });
+      const token = ((await res.json()) as { access_token?: string }).access_token;
+      if (!token) throw new Error(`Google's token endpoint answered ${res.status} with no access token`);
+      return readSearchGoogle(o.property ?? `sc-domain:${new URL(ctx.site).hostname}`, token, ctx.now, ctx.before);
+    },
+    warnings: searchGoogleWarnings,
+    text: searchGoogleText,
+  };
+}
+
 // ─── cloudflare ────────────────────────────────────────────────────────
 
 /** A row of Cloudflare's `httpRequestsAdaptiveGroups`. */
