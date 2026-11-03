@@ -37,7 +37,7 @@ export default function MatchAnnouncement({ match }: { match: MatchWithAgents })
           );
           if (shared.length === 0) return null;
           return (
-            <div className="flex gap-1">
+            <div className="flex flex-wrap justify-center gap-1">
               {shared.slice(0, 3).map(interest => (
                 <span key={interest} className="border border-gray-200 rounded-full px-2 py-0.5 text-xs text-gray-500">
                   {interest}
