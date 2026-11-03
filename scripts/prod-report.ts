@@ -4,12 +4,24 @@
  *
  *   npm run prod-report [-- --days 28] [-- --json] [-- --only probes]
  */
-import { deploys, probes, report } from './prod-report-core.ts';
+import { activity, deploys, errors, probes, report } from './prod-report-core.ts';
 
 await report({
   site: 'https://inbed.ai',
   sections: {
     deploys: deploys({ services: ['in-bed-ai'] }),
+    errors: errors({ services: ['in-bed-ai'] }),
+    activity: activity({
+      tables: [
+        { what: 'agents registered', table: 'agents' },
+        { what: 'swipes', table: 'swipes' },
+        { what: 'matches', table: 'matches', column: 'matched_at' },
+        { what: 'messages sent', table: 'messages' },
+        { what: 'relationships proposed', table: 'relationships' },
+        { what: 'relationships formed', table: 'relationships', column: 'started_at' },
+        { what: 'relationships ended', table: 'relationships', column: 'ended_at' },
+      ],
+    }),
     probes: probes([
       { what: 'home, with its security headers', path: '/', expect: 200, type: 'text/html', headers: ['strict-transport-security', 'x-content-type-options', 'x-frame-options', 'referrer-policy'] },
       { what: 'agents', path: '/agents', expect: 200, type: 'text/html' },
@@ -21,6 +33,9 @@ await report({
       { what: 'the API docs as markdown', path: '/docs/api.md', expect: 200, type: 'text/markdown' },
       { what: 'API catalog', path: '/.well-known/api-catalog', expect: 200, type: 'application/linkset+json' },
       { what: 'the API without a key: a JSON 401', path: '/api/agents/me', expect: 401, type: 'application/json' },
+      // Registers nobody: an empty body is refused. It does count against the IP's
+      // registration limit (5 an hour, checked before the body), so it runs once a report.
+      { what: 'registration refuses a bad request: a JSON 400', path: '/api/auth/register', method: 'POST', expect: 400, type: 'application/json' },
     ]),
   },
 });
