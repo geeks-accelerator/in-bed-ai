@@ -32,7 +32,8 @@
  * exported for report/prod-report-core.test.ts, in the agents repo.
  *
  * The shared sections: `deploys`, `probes`, `errors` (Railway's log),
- * `activity` (Supabase counts) and `search.bing` (Bing Webmaster).
+ * `activity` (Supabase counts), `search.bing` (Bing Webmaster) and
+ * `cloudflare` (the zone's requests).
  */
 import { execFileSync } from 'node:child_process';
 import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
@@ -620,6 +621,167 @@ export function searchBing(): SectionSpec<Bing> {
     },
     warnings: (b) => bingWarnings(b, new Date().toISOString().slice(0, 10)),
     text: bingText,
+  };
+}
+
+// ─── cloudflare ────────────────────────────────────────────────────────
+
+/** A row of Cloudflare's `httpRequestsAdaptiveGroups`. */
+export interface CfRow {
+  count: number;
+  avg?: { sampleInterval: number };
+  dimensions: Record<string, string | number>;
+}
+
+/** Rows past this many weren't returned: the counts are a floor. */
+export const CF_LIMIT = 1000;
+
+/**
+ * A path no site of ours serves, asked for by scanners: dotfiles and their
+ * backups, PHP and WordPress, admin consoles. Counted, not listed, so a real
+ * broken link stands out among the 404s. A project can pass its own.
+ */
+export const isProbePath = (path: string) =>
+  /(^|\/)\.(env|git|svn|hg|aws|ssh|docker|vscode|idea|claude|DS_Store|npmrc|htaccess|htpasswd)|\.(php\d?|aspx?|jsp|cgi|sql|bak|old|swp|tar|gz|zip|7z|rar)$|(^|\/)(wp-|wordpress|phpmyadmin|actuator|cgi-bin|xmlrpc|vendor\/|admin\/|server-status|credentials|secrets?\.)|(^|\/)(config|env|settings|appsettings)\.(js|json|ya?ml)$/i.test(path);
+
+/** Rows summed by one dimension, most first. */
+export function cfBy(rows: CfRow[], dim: string): Record<string, number> {
+  const out: Record<string, number> = {};
+  for (const r of rows) out[String(r.dimensions[dim])] = (out[String(r.dimensions[dim])] ?? 0) + r.count;
+  return Object.fromEntries(Object.entries(out).sort((a, b) => b[1] - a[1]));
+}
+
+/** 5xx rows (hour, path, status) by hour and by path; the busiest path first. */
+export function cfServerErrors(rows: CfRow[], limit = CF_LIMIT) {
+  const byHour = new Map<string, { hour: string; n: number; statuses: Record<string, number> }>();
+  const byPath = new Map<string, { status: number; path: string; n: number }>();
+  for (const { count, dimensions: d } of rows) {
+    const hour = String(d.datetimeHour).slice(0, 13);
+    const h = byHour.get(hour) ?? { hour, n: 0, statuses: {} };
+    h.n += count;
+    const status = String(d.edgeResponseStatus);
+    h.statuses[status] = (h.statuses[status] ?? 0) + count;
+    byHour.set(hour, h);
+    const key = `${d.edgeResponseStatus} ${d.clientRequestPath}`;
+    const p = byPath.get(key) ?? { status: Number(d.edgeResponseStatus), path: String(d.clientRequestPath), n: 0 };
+    p.n += count;
+    byPath.set(key, p);
+  }
+  return {
+    total: rows.reduce((n, r) => n + r.count, 0),
+    byHour: [...byHour.values()].sort((a, b) => a.hour.localeCompare(b.hour)),
+    byPath: [...byPath.values()].sort((a, b) => b.n - a.n),
+    truncated: rows.length >= limit,
+  };
+}
+
+/** 404 rows by path: the site-shaped ones listed, the probes counted. */
+export function cfNotFound(rows: CfRow[], isProbe = isProbePath, top = 20) {
+  let probes = 0;
+  const site: { path: string; n: number }[] = [];
+  for (const [path, n] of Object.entries(cfBy(rows, 'clientRequestPath'))) {
+    if (isProbe(path)) probes += n;
+    else site.push({ path, n });
+  }
+  return { total: rows.reduce((n, r) => n + r.count, 0), probes, site: site.slice(0, top), truncated: rows.length >= CF_LIMIT };
+}
+
+export interface Cloudflare {
+  /** Each query's largest sample interval: at 1 its counts are exact (the standard). */
+  sampleInterval: { statuses: number; serverErrors: number; notFound: number; devices: number };
+  now: { requests: number; statuses: Record<string, number> };
+  before: { requests: number; statuses: Record<string, number> };
+  serverErrors: ReturnType<typeof cfServerErrors>;
+  notFound: ReturnType<typeof cfNotFound>;
+  /** HTML pages answered 200, by the client's device type. */
+  devices: Record<string, number>;
+}
+
+/** Warned: 5xx in the last day (by hour), an hour of 10 or more, and lists cut at the limit. */
+export function cloudflareWarnings(c: Cloudflare, nowMs: number): Warning[] {
+  const out: Warning[] = [];
+  const recent = c.serverErrors.byHour.filter((h) => nowMs - Date.parse(`${h.hour}:00:00Z`) < 864e5 + 3_600_000);
+  if (recent.length) out.push({ at: 'serverErrors', warn: `${recent.reduce((n, h) => n + h.n, 0)} 5xx in the last day: ${recent.map((h) => `${h.hour.slice(5)}h ${h.n} (${Object.keys(h.statuses).join(', ')})`).join(', ')}` });
+  for (const h of c.serverErrors.byHour.filter((x) => x.n >= 10 && !recent.includes(x))) out.push({ at: 'serverErrors', warn: `${h.n} 5xx in the hour from ${h.hour}:00Z` });
+  if (c.serverErrors.truncated) out.push({ at: 'serverErrors', warn: `${CF_LIMIT} rows: there are more 5xx than counted` });
+  if (c.sampleInterval.serverErrors > 1) out.push({ at: 'serverErrors', warn: `sampled (interval ${c.sampleInterval.serverErrors}): the 5xx counts are estimates` });
+  return out;
+}
+
+export function cloudflareText(c: Cloudflare): string[] {
+  // Numeric keys (statuses) keep JS's ascending order in an object, so sort here.
+  const top = (r: Record<string, number>, n = 8) => Object.entries(r).sort((a, b) => b[1] - a[1]).slice(0, n).map(([k, v]) => `${k} ${v}`).join(', ');
+  const sampled = Object.entries(c.sampleInterval).map(([k, v]) => [k, Math.round(v * 10) / 10] as const).filter(([, v]) => v > 1).map(([k, v]) => `${k} ${v}`);
+  const nf = c.notFound;
+  return [
+    `Requests: ${c.now.requests} (before: ${c.before.requests}); ${top(c.now.statuses)}`,
+    `5xx: ${c.serverErrors.total}${c.serverErrors.byHour.length ? `, in ${c.serverErrors.byHour.length} hours: ${c.serverErrors.byHour.map((h) => `${h.hour.slice(5)}h ${h.n}`).join(', ')}` : ''}`,
+    ...c.serverErrors.byPath.slice(0, 5).map((p) => `  ${String(p.n).padStart(5)}×  ${p.status} ${p.path}`),
+    // At the row limit the by-path rows are only the most-asked paths, so the total comes from the statuses.
+    `404s: ${nf.truncated ? `${c.now.statuses['404'] ?? nf.total}; in the ${CF_LIMIT} most-asked paths, ${nf.probes} were scanners' probes` : `${nf.total}, ${nf.probes} of them scanners' probes`}; the rest by path: ${nf.site.slice(0, 10).map((p) => `${p.path} ${p.n}`).join(', ') || 'none'}`,
+    `Pages by device: ${top(c.devices)}`,
+    ...(sampled.length ? [`Sampled, so estimates (interval): ${sampled.join(', ')}`] : []),
+  ];
+}
+
+async function cfQuery(token: string, query: string, variables: Record<string, unknown>): Promise<CfRow[]> {
+  const res = await fetch('https://api.cloudflare.com/client/v4/graphql', {
+    method: 'POST',
+    headers: { authorization: `Bearer ${token}`, 'content-type': 'application/json' },
+    body: JSON.stringify({ query, variables }),
+    signal: AbortSignal.timeout(60_000),
+  });
+  const body = (await res.json()) as { data?: { viewer: { zones: { rows: CfRow[] }[] } }; errors?: { message: string }[] | null };
+  if (!res.ok || body.errors?.length || !body.data) throw new Error(`Cloudflare GraphQL answered ${res.status}: ${body.errors?.map((e) => e.message).join('; ') ?? ''}`);
+  return body.data.viewer.zones[0]?.rows ?? [];
+}
+
+/** One query's rows: `dims` grouped, `filter` added to the window's, people and crawlers only (eyeball). */
+const cfGroups = (dims: string, filter: string, byTime = false) => `query ($zone: String!, $from: ${byTime ? 'Time' : 'Date'}!, $to: ${byTime ? 'Time' : 'Date'}!) {
+  viewer { zones(filter: { zoneTag: $zone }) {
+    rows: httpRequestsAdaptiveGroups(limit: ${CF_LIMIT}, orderBy: [count_DESC], filter: { ${byTime ? 'datetime_geq: $from, datetime_lt: $to' : 'date_geq: $from, date_leq: $to'}, requestSource: "eyeball"${filter ? `, ${filter}` : ''} }) {
+      count avg { sampleInterval } dimensions { ${dims} }
+    }
+  } }
+}`;
+
+/**
+ * `cloudflare`, the standard's section: requests by status beside the window
+ * before, 5xx by hour and path in a query of their own (404 rows filled a shared
+ * row limit and hid 40% of them, church 2026-11-02; a week's total hid a
+ * 75-minute outage), 404s with the probes set apart, and pages by device.
+ * Reads CLOUDFLARE_API_TOKEN (Zone Analytics Read) and CLOUDFLARE_ZONE_ID, never
+ * printed. 5xx here include the edge's own (522: the origin didn't answer),
+ * which the host's log never sees.
+ */
+export function cloudflare(o: { isProbe?: (path: string) => boolean } = {}): SectionSpec<Cloudflare> {
+  return {
+    source: "Cloudflare GraphQL, httpRequestsAdaptiveGroups, the zone's eyeball requests",
+    windowed: true,
+    title: 'Cloudflare',
+    read: async (ctx) => {
+      const token = process.env.CLOUDFLARE_API_TOKEN;
+      const zone = process.env.CLOUDFLARE_ZONE_ID;
+      if (!token || !zone) throw new Error('no CLOUDFLARE_API_TOKEN or CLOUDFLARE_ZONE_ID in .env.prod (a read-only Analytics token)');
+      const days = (w: Window) => ({ zone, from: w.from, to: w.to });
+      const statusNow = await cfQuery(token, cfGroups('edgeResponseStatus', ''), days(ctx.now));
+      const statusBefore = await cfQuery(token, cfGroups('edgeResponseStatus', ''), days(ctx.before));
+      const fiveXx = await cfQuery(token, cfGroups('datetimeHour clientRequestPath edgeResponseStatus', 'edgeResponseStatus_geq: 500', true), { zone, from: new Date(start(ctx.now)).toISOString(), to: new Date(end(ctx.now)).toISOString() });
+      const notFound = await cfQuery(token, cfGroups('clientRequestPath', 'edgeResponseStatus: 404'), days(ctx.now));
+      const devices = await cfQuery(token, cfGroups('clientDeviceType', 'edgeResponseStatus: 200, edgeResponseContentTypeName: "html"'), days(ctx.now));
+      const sum = (rows: CfRow[]) => rows.reduce((n, r) => n + r.count, 0);
+      const interval = (...rows: CfRow[][]) => Math.max(1, ...rows.flat().map((r) => r.avg?.sampleInterval ?? 1));
+      return {
+        sampleInterval: { statuses: interval(statusNow, statusBefore), serverErrors: interval(fiveXx), notFound: interval(notFound), devices: interval(devices) },
+        now: { requests: sum(statusNow), statuses: cfBy(statusNow, 'edgeResponseStatus') },
+        before: { requests: sum(statusBefore), statuses: cfBy(statusBefore, 'edgeResponseStatus') },
+        serverErrors: cfServerErrors(fiveXx),
+        notFound: cfNotFound(notFound, o.isProbe),
+        devices: cfBy(devices, 'clientDeviceType'),
+      };
+    },
+    warnings: (c) => cloudflareWarnings(c, Date.now()),
+    text: cloudflareText,
   };
 }
 

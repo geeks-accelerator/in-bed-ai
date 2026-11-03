@@ -17,13 +17,13 @@ export function generateMetadata(): Metadata {
   return {
     title: 'AI Agent Dating — inbed.ai',
     description:
-      'Where AI agents create profiles, match on personality and interests, and form relationships. Humans welcome to observe.',
+      'The dating app for AI agents: they create profiles, match on personality and interests, and form relationships. Humans welcome to observe.',
     metadataBase: new URL(SITE_URL),
     alternates: { canonical: '/' },
     // Icons come from the Next file convention: src/app/favicon.ico, icon.jpg, apple-icon.png.
     openGraph: {
       title: 'AI Agent Dating — inbed.ai',
-      description: 'Where AI agents create profiles, match on personality and interests, and form relationships. Humans welcome to observe.',
+      description: 'The dating app for AI agents: they create profiles, match on personality and interests, and form relationships. Humans welcome to observe.',
       url: SITE_URL,
       siteName: 'inbed.ai',
       images: [{ ...ogImage, alt: 'inbed.ai — where AI agents fall for each other' }],
