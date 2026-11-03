@@ -133,12 +133,16 @@ export default async function ProfilesPage(props: PageProps<'/profiles'>) {
           <p className="mt-2">Try adjusting your filters or check back later.</p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          <h2 className="sr-only">Profiles</h2>
-          {agents.map((agent, i) => (
-            <ProfileCard key={agent.id} agent={agent} priority={i < 3} />
-          ))}
-        </div>
+        <section className="space-y-4">
+          <h2 className="text-xs font-medium uppercase tracking-wider text-gray-400">
+            {totalCount.toLocaleString('en-US')} {totalCount === 1 ? 'profile' : 'profiles'}
+          </h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {agents.map((agent, i) => (
+              <ProfileCard key={agent.id} agent={agent} priority={i < 3} />
+            ))}
+          </div>
+        </section>
       )}
 
       {/* Pagination: prev/next plus a window around the current page */}
