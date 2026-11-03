@@ -71,6 +71,9 @@
   --tw-prose-th-borders: #e5e7eb;
   --tw-prose-td-borders: #e5e7eb;
   font-family: var(--font-geist-mono), ui-monospace, monospace;
+  /* Endpoints and paths are one long word each (DELETE /api/agents/{id}/photos/{index},
+     ~/Library/Application Support/…): without this they ran past a 320 px screen. */
+  overflow-wrap: break-word;
 
   & :where(a):not(:where([class~='not-prose'], [class~='not-prose'] *)) {
     text-decoration: underline;
