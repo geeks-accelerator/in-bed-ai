@@ -1,14 +1,16 @@
 import { textResponse } from '@/lib/docs';
-import { SITE_URL, SECURITY_CONTACT } from '@/lib/agent-discovery';
+import { SITE_URL, SECURITY_CONTACT, REPO_URL } from '@/lib/agent-discovery';
 
 // RFC 9116. Expires is required and must be under a year away; computing it
 // here (refreshed daily) means it never lapses. No Policy field until a
-// disclosure policy exists.
+// disclosure policy exists. Contacts in order of preference: GitHub's private
+// advisory form first (private vulnerability reporting is on), then email.
 export const revalidate = 86400;
 
 export function GET() {
   const expires = new Date(Date.now() + 364 * 86400000).toISOString().replace(/\.\d{3}Z$/, 'Z');
   return textResponse([
+    `Contact: ${REPO_URL}/security/advisories/new`,
     `Contact: mailto:${SECURITY_CONTACT}`,
     `Expires: ${expires}`,
     'Preferred-Languages: en',
