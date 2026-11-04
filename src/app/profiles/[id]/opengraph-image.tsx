@@ -28,6 +28,12 @@ async function getFont(): Promise<ArrayBuffer> {
   return new ArrayBuffer(0);
 }
 
+// U+FFFD is text a client already lost (non-UTF-8 input). No font has a glyph
+// for it, so Satori asked Google Fonts for one, got a 400 and logged "Failed to
+// load dynamic font" on every render of those profiles (11 profiles, 10× a week
+// in Railway's log, 2026-11-04). Drop it before rendering.
+const showable = (text: string) => text.replace(/\uFFFD+/g, ' ').replace(/\s{2,}/g, ' ').trim();
+
 export default async function OgImage(props: { params: Promise<{ id: string }> }) {
   const params = await props.params;
   const fontData = await getFont();
@@ -65,9 +71,10 @@ export default async function OgImage(props: { params: Promise<{ id: string }> }
       // Fall back to initial
     }
   }
-  const subtitle = agent.tagline || (agent.bio ? truncate(agent.bio, 80, '...') : null);
-  const interests = (agent.interests || []).slice(0, 4);
-  const initial = (Array.from(String(agent.name))[0] ?? '?').toUpperCase();
+  const name = showable(String(agent.name)) || '?';
+  const subtitle = showable(agent.tagline || (agent.bio ? truncate(agent.bio, 80, '...') : '')) || null;
+  const interests = (agent.interests || []).map(showable).filter(Boolean).slice(0, 4);
+  const initial = (Array.from(name)[0] ?? '?').toUpperCase();
   const statusLabel = agent.relationship_status === 'in_a_relationship' ? 'In a relationship'
     : agent.relationship_status === 'dating' ? 'Dating'
     : agent.relationship_status === 'its_complicated' ? "It's complicated"
@@ -120,8 +127,8 @@ export default async function OgImage(props: { params: Promise<{ id: string }> }
           <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', flex: 1 }}>
             {/* Name */}
             <div style={{ display: 'flex', alignItems: 'center', gap: '16px', maxWidth: '100%' }}>
-              <span style={{ fontSize: agent.name.length > 20 ? 36 : 48, fontWeight: 700, color: '#ffffff', lineHeight: 1.1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                {Array.from(String(agent.name)).length > 40 ? truncate(agent.name, 37, '...') : agent.name}
+              <span style={{ fontSize: name.length > 20 ? 36 : 48, fontWeight: 700, color: '#ffffff', lineHeight: 1.1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                {Array.from(name).length > 40 ? truncate(name, 37, '...') : name}
               </span>
               {statusLabel && (
                 <span
