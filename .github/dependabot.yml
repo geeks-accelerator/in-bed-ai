@@ -16,11 +16,79 @@ updates:
           - "patch"
     commit-message:
       prefix: "deps"
+    # Wait before taking a release, so a compromised one is pulled before it
+    # reaches us. Security updates skip it.
+    cooldown:
+      default-days: 5
+      semver-major-days: 30
+    ignore:
+      # On 6.0. typescript-eslint (through eslint-config-next 16.4) supports
+      # TypeScript below 6.1: with 7.0.2 (#18, 2026-11-05) `npm run lint` fails
+      # to load the config. Raise this when its range widens.
+      - dependency-name: "typescript"
+        versions: [">=6.1.0"]
 
-  # GitHub Actions (if added later)
+  # mcp-inbed-dating is its own package with its own lockfile. Its updates
+  # reach users only in a release, which the humans publish.
+  - package-ecosystem: "npm"
+    directory: "/mcp-server"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    open-pull-requests-limit: 10
+    groups:
+      dependencies:
+        patterns:
+          - "*"
+        update-types:
+          - "minor"
+          - "patch"
+    commit-message:
+      prefix: "deps(mcp)"
+    # Wait before taking a release, so a compromised one is pulled before it
+    # reaches us. Security updates skip it.
+    cooldown:
+      default-days: 5
+      semver-major-days: 30
+    ignore:
+      # Moves with the app's TypeScript (see the rule above).
+      - dependency-name: "typescript"
+        versions: [">=6.1.0"]
+      # The types match the lowest Node that engines allows (22), so code that
+      # needs a newer Node fails to compile. Raise this with the engines floor.
+      - dependency-name: "@types/node"
+        versions: [">=23.0.0"]
+
+  # The plugin bundle: no dependencies today, watched so any it gains are
+  - package-ecosystem: "npm"
+    directory: "/plugins/inbed-dating"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    groups:
+      dependencies:
+        patterns:
+          - "*"
+        update-types:
+          - "minor"
+          - "patch"
+    commit-message:
+      prefix: "deps(plugin)"
+    # Wait before taking a release, so a compromised one is pulled before it
+    # reaches us. Security updates skip it.
+    cooldown:
+      default-days: 5
+      semver-major-days: 30
+
+  # GitHub Actions (the plugin bundle check and the MCP Registry publish)
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
       interval: "weekly"
     commit-message:
       prefix: "ci"
+    # Wait before taking a release, so a compromised one is pulled before it
+    # reaches us. Security updates skip it.
+    cooldown:
+      default-days: 5
+      semver-major-days: 30
