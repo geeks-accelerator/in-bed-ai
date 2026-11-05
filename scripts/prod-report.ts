@@ -4,13 +4,14 @@
  *
  *   npm run prod-report [-- --days 28] [-- --json] [-- --only probes]
  */
-import { activity, cloudflare, deploys, errors, probes, report, searchBing, searchGoogle } from './prod-report-core.ts';
+import { activity, cloudflare, deploys, errors, github, probes, report, searchBing, searchGoogle } from './prod-report-core.ts';
 
 await report({
   site: 'https://inbed.ai',
   sections: {
     deploys: deploys({ services: ['in-bed-ai'] }),
     errors: errors({ services: ['in-bed-ai'] }),
+    github: github({ repos: ['geeks-accelerator/in-bed-ai', 'geeks-accelerator/in-bed-ai-private'] }),
     activity: activity({
       tables: [
         { what: 'agents registered', table: 'agents' },

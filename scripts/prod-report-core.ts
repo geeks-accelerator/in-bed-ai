@@ -31,9 +31,9 @@
  * Run by Node directly (no build). Nothing runs on import: the pure parts are
  * exported for report/prod-report-core.test.ts, in the agents repo.
  *
- * The shared sections: `deploys`, `probes`, `errors` (Railway's log),
- * `activity` (Supabase counts), `search.bing` (Bing Webmaster) and
- * `cloudflare` (the zone's requests).
+ * The shared sections: `deploys`, `github` (what's open on the repos),
+ * `probes`, `errors` (Railway's log), `activity` (Supabase counts),
+ * `search.bing` (Bing Webmaster) and `cloudflare` (the zone's requests).
  */
 import { execFileSync } from 'node:child_process';
 import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
@@ -241,6 +241,229 @@ export function deploys(o: { services: string[] }): SectionSpec<Deploys> {
     text: deploysText,
   };
 }
+
+// ─── github ────────────────────────────────────────────────────────────
+
+/** A row of `gh pr list --author app/dependabot --json number,title,createdAt,statusCheckRollup`. */
+export interface GhPr {
+  number: number;
+  title: string;
+  createdAt: string;
+  statusCheckRollup: { conclusion?: string | null; state?: string | null; status?: string | null }[] | null;
+}
+
+/** An open issue or PR from `gh api repos/<repo>/issues`, with its last comment's author read for outside ones. */
+export interface GhIssue {
+  number: number;
+  title: string;
+  created_at: string;
+  login: string;
+  association: string;
+  bot: boolean;
+  pr: boolean;
+  comments: number;
+  /** The last comment's author association and login, when there are comments. */
+  last?: { association: string; login: string } | null;
+}
+
+/** An open Dependabot alert, from `gh api repos/<repo>/dependabot/alerts`. */
+export interface GhAlert {
+  number: number;
+  severity: string;
+  package: string;
+  manifest: string;
+  patched: string | null;
+  /** `development` when only the build and tests use it: listed, but no warning (drifts, 2026-11-03: two such alerts waited on upstream ranges). */
+  scope?: string | null;
+}
+
+const DAY = 864e5;
+const age = (at: string, nowMs: number) => Math.floor((nowMs - Date.parse(at)) / DAY);
+
+/**
+ * What a Dependabot PR's title says it updates. A group is read on its branch;
+ * a 0.x minor can break things, so it counts with the majors (the github task).
+ */
+export function updateType(title: string): 'major' | 'minor' | 'patch' | 'group' | 'other' {
+  if (/\bgroup\b/.test(title) && !/\bfrom\b.*\bto\b/.test(title)) return 'group';
+  const m = title.match(/from v?(\d+)\.(\d+)(?:\.(\d+))?\S* to v?(\d+)\.(\d+)(?:\.(\d+))?/);
+  if (!m) return 'other';
+  const [a1, a2, b1, b2] = [m[1], m[2], m[4], m[5]].map(Number) as [number, number, number, number];
+  if (a1 !== b1) return 'major';
+  if (a2 !== b2) return a1 === 0 ? 'major' : 'minor';
+  return 'patch';
+}
+
+/** A PR's checks as one word: none ran, still running, all passed, or one failed. */
+export function checksOf(rollup: GhPr['statusCheckRollup']): 'none' | 'pending' | 'green' | 'red' {
+  const rows = rollup ?? [];
+  if (!rows.length) return 'none';
+  const results = rows.map((r) => (r.conclusion || r.state || r.status || '').toUpperCase());
+  if (results.some((x) => ['FAILURE', 'ERROR', 'CANCELLED', 'TIMED_OUT', 'ACTION_REQUIRED', 'STARTUP_FAILURE'].includes(x))) return 'red';
+  if (results.every((x) => ['SUCCESS', 'NEUTRAL', 'SKIPPED'].includes(x))) return 'green';
+  return 'pending';
+}
+
+const OURS = ['OWNER', 'MEMBER', 'COLLABORATOR'];
+
+/** Open issues and PRs by outside people (not the org, not a bot, not a login the project names as its own), and whether our word was the last. */
+export function outsideItems(issues: GhIssue[], nowMs: number, ours: string[] = []) {
+  const isOurs = (association: string, login: string) => OURS.includes(association) || ours.includes(login);
+  return issues
+    .filter((i) => !i.bot && !isOurs(i.association, i.login))
+    .map((i) => ({
+      number: i.number,
+      kind: i.pr ? ('pr' as const) : ('issue' as const),
+      title: i.title.slice(0, 100),
+      by: i.login,
+      days: age(i.created_at, nowMs),
+      comments: i.comments,
+      answered: !!i.last && isOurs(i.last.association, i.last.login),
+    }));
+}
+
+/** The manifests Dependabot can watch, from a repo's file list: [ecosystem, directory]. Dot-directories and node_modules are left out. */
+export function manifestsOf(paths: string[]): [string, string][] {
+  const out = new Map<string, [string, string]>();
+  for (const p of paths) {
+    if (/(^|\/)(node_modules|\.[^/]+)\//.test(p)) continue;
+    const name = p.split('/').pop()!;
+    const eco = name === 'package.json' ? 'npm' : name === 'pyproject.toml' || /^requirements.*\.txt$/.test(name) ? 'pip' : name === 'Dockerfile' ? 'docker' : null;
+    if (!eco) continue;
+    const dir = '/' + p.split('/').slice(0, -1).join('/');
+    out.set(`${eco} ${dir}`, [eco, dir]);
+  }
+  return [...out.values()];
+}
+
+/** The ecosystems and directories a dependabot.yml covers, and whether it has a cooldown. */
+export function dependabotConfig(yml: string): { cooldown: boolean; covers: [string, string][] } {
+  const covers: [string, string][] = [];
+  for (const block of yml.split(/^\s*-\s*package-ecosystem:/m).slice(1)) {
+    const eco = block.match(/^\s*["']?([\w-]+)/)?.[1] ?? '';
+    const dirs = [...block.matchAll(/^\s*(?:directory:|-)\s*["']?(\/[^"'\s#]*)/gm)].map((m) => m[1]!);
+    for (const d of dirs) covers.push([eco === 'npm_and_yarn' ? 'npm' : eco, d.length > 1 ? d.replace(/\/$/, '') : d]);
+  }
+  return { cooldown: /^\s*cooldown:/m.test(yml), covers };
+}
+
+export interface GithubRepo {
+  dependabot: { number: number; title: string; days: number; type: ReturnType<typeof updateType>; checks: ReturnType<typeof checksOf> }[];
+  /** `off` when the repo has Dependabot alerts turned off (a setting: the humans'). */
+  alerts: 'off' | GhAlert[];
+  outside: ReturnType<typeof outsideItems>;
+  /** `file` is false when there's no .github/dependabot.yml; `uncovered` lists manifests it doesn't watch. */
+  config: { file: boolean; cooldown: boolean; uncovered: string[] };
+}
+
+export type Github = Record<string, GithubRepo | { error: string }>;
+
+export function githubRepo(o: { prs: GhPr[]; alerts: 'off' | GhAlert[]; issues: GhIssue[]; yml: string | null; paths: string[]; nowMs: number; ours?: string[] }): GithubRepo {
+  const cfg = o.yml === null ? null : dependabotConfig(o.yml);
+  const covered = new Set((cfg?.covers ?? []).map(([e, d]) => `${e} ${d}`));
+  return {
+    dependabot: o.prs.map((p) => ({ number: p.number, title: p.title.slice(0, 100), days: age(p.createdAt, o.nowMs), type: updateType(p.title), checks: checksOf(p.statusCheckRollup) })),
+    alerts: o.alerts,
+    outside: outsideItems(o.issues, o.nowMs, o.ours),
+    config: { file: cfg !== null, cooldown: cfg?.cooldown ?? false, uncovered: manifestsOf(o.paths).filter(([e, d]) => !covered.has(`${e} ${d}`)).map(([e, d]) => `${e} ${d}`) },
+  };
+}
+
+/** A week: Dependabot opens PRs on Monday, the github task runs on Thursday. */
+const STALE_DAYS = 7;
+
+export function githubWarnings(g: Github): Warning[] {
+  const out: Warning[] = [];
+  for (const [repo, r] of Object.entries(g)) {
+    const at = repo;
+    if ('error' in r) continue;
+    for (const p of r.dependabot) {
+      if (p.checks === 'red') out.push({ at, warn: `Dependabot #${p.number} is red: ${p.title}` });
+      else if (p.days > STALE_DAYS) out.push({ at, warn: `Dependabot #${p.number} open ${p.days} days: ${p.title}` });
+    }
+    if (r.alerts !== 'off') for (const a of r.alerts) if (a.patched && a.scope !== 'development') out.push({ at, warn: `${a.severity} alert in ${a.package} (${a.manifest}), patched in ${a.patched}` });
+    for (const i of r.outside) if (!i.answered && i.days > STALE_DAYS) out.push({ at, warn: `${i.kind} #${i.number} from ${i.by}, ${i.days} days without our answer: ${i.title}` });
+    if (!r.config.file) {
+      if (r.config.uncovered.length) out.push({ at, warn: `no .github/dependabot.yml for ${r.config.uncovered.join(', ')}` });
+      continue;
+    }
+    if (!r.config.cooldown) out.push({ at, warn: 'dependabot.yml has no cooldown' });
+    if (r.config.uncovered.length) out.push({ at, warn: `dependabot.yml doesn't watch ${r.config.uncovered.join(', ')}` });
+  }
+  return out;
+}
+
+export function githubText(g: Github): string[] {
+  const out: string[] = [];
+  for (const [repo, r] of Object.entries(g)) {
+    if ('error' in r) {
+      out.push(`${repo}: (couldn't read: ${r.error})`);
+      continue;
+    }
+    const alerts = r.alerts === 'off' ? 'alerts off' : `${r.alerts.length} alerts`;
+    const config = !r.config.file ? 'no dependabot.yml' : `dependabot.yml${r.config.cooldown ? '' : ' without a cooldown'}${r.config.uncovered.length ? `, missing ${r.config.uncovered.join(', ')}` : ''}`;
+    out.push(`${repo}: ${r.dependabot.length} Dependabot PRs, ${alerts}, ${r.outside.length} from outside; ${config}`);
+    for (const p of r.dependabot) out.push(`  #${p.number} ${p.type}, ${p.checks}, ${p.days} days: ${p.title}`);
+    if (r.alerts !== 'off') for (const a of r.alerts) out.push(`  alert ${a.severity} ${a.package} (${a.manifest}${a.scope === 'development' ? ', development only' : ''}), patched: ${a.patched ?? 'none'}`);
+    for (const i of r.outside) out.push(`  ${i.kind} #${i.number} ${i.by}, ${i.days} days, ${i.comments} comments, ${i.answered ? 'answered' : 'not answered'}: ${i.title}`);
+  }
+  return out;
+}
+
+const stderrOf = (e: unknown) => String((e as { stderr?: unknown }).stderr ?? (e as Error).message ?? e);
+
+/**
+ * What's open on each of the project's GitHub repos: Dependabot's PRs and
+ * alerts, outside people's issues and PRs, and whether dependabot.yml watches
+ * every manifest (docs/plans/2026-11-02-github-task.md). `ours` names logins
+ * that are the project's own though not in the org (church's site files
+ * issues as `achurchai`). One repo that can't be read doesn't hide the others.
+ */
+export function github(o: { repos: string[]; ours?: string[] }): SectionSpec<Github> {
+  return {
+    source: `gh pr list, gh api issues, dependabot/alerts, contents and trees (${o.repos.join(', ')})`,
+    windowed: false,
+    title: 'GitHub',
+    read: (ctx) => {
+      const nowMs = Date.now();
+      const out: Github = {};
+      for (const repo of o.repos) {
+        try {
+          const prs = ctx.runJson<GhPr[]>('gh', ['pr', 'list', '-R', repo, '--author', 'app/dependabot', '--state', 'open', '--limit', '100', '--json', 'number,title,createdAt,statusCheckRollup'], []);
+          let alerts: 'off' | GhAlert[];
+          try {
+            alerts = lines<GhAlert>(ctx.run('gh', ['api', '--paginate', `repos/${repo}/dependabot/alerts?state=open&per_page=100`, '--jq', '.[] | {number, severity: .security_advisory.severity, package: .dependency.package.name, manifest: .dependency.manifest_path, patched: .security_vulnerability.first_patched_version.identifier, scope: .dependency.scope}']));
+          } catch (e) {
+            if (!/disabled/i.test(stderrOf(e))) throw e;
+            alerts = 'off';
+          }
+          const issues = lines<GhIssue>(ctx.run('gh', ['api', '--paginate', `repos/${repo}/issues?state=open&per_page=100`, '--jq', '.[] | {number, title, created_at, login: .user.login, association: .author_association, bot: (.user.type == "Bot"), pr: (.pull_request != null), comments}']));
+          for (const i of issues) {
+            if (i.bot || OURS.includes(i.association) || (o.ours ?? []).includes(i.login) || !i.comments) continue;
+            const last = lines<{ association: string; login: string }>(ctx.run('gh', ['api', '--paginate', `repos/${repo}/issues/${i.number}/comments?per_page=100`, '--jq', '.[] | {association: .author_association, login: .user.login}'])).pop();
+            i.last = last ?? null;
+          }
+          let yml: string | null = null;
+          try {
+            yml = Buffer.from(ctx.run('gh', ['api', `repos/${repo}/contents/.github/dependabot.yml`, '--jq', '.content']).trim(), 'base64').toString('utf8');
+          } catch (e) {
+            if (!/404|Not Found/i.test(stderrOf(e))) throw e;
+          }
+          const paths = ctx.run('gh', ['api', `repos/${repo}/git/trees/HEAD?recursive=1`, '--jq', '.tree[] | select(.type == "blob") | .path']).split('\n').filter(Boolean);
+          out[repo] = githubRepo({ prs, alerts, issues, yml, paths, nowMs, ours: o.ours });
+        } catch (e) {
+          out[repo] = { error: oneLine(stderrOf(e)) };
+        }
+      }
+      return out;
+    },
+    warnings: githubWarnings,
+    text: githubText,
+  };
+}
+
+/** One JSON value per line, as `gh api --paginate --jq '.[] | {…}'` prints them. */
+const lines = <T>(out: string): T[] => out.split('\n').filter((l) => l.trim()).map((l) => JSON.parse(l) as T);
 
 // ─── errors ────────────────────────────────────────────────────────────
 
@@ -548,6 +771,8 @@ export interface BingSitemap {
 export interface Bing {
   /** Bing's newest traffic day: it lags a few days. */
   through: string | null;
+  /** The windows its numbers cover: the report's, moved back to end on `through` (`bingWindows`). */
+  windows: { now: Window; before: Window };
   now: BingTraffic;
   before: BingTraffic;
   queries: BingRow[];
@@ -574,12 +799,24 @@ export function bingWarnings(b: Bing, today: string): Warning[] {
 export function bingText(b: Bing): string[] {
   const rows = (xs: BingRow[]) => xs.slice(0, 15).map((r) => `${r.key.replace(/^https?:\/\/[^/]+/, '') || '/'} ${r.impressions}/${r.clicks}/${r.position ?? '–'}`).join(', ') || 'none';
   return [
-    `Through ${b.through ?? 'no data yet'}: ${b.now.impressions} impressions, ${b.now.clicks} clicks (before: ${b.before.impressions}, ${b.before.clicks})`,
+    `${b.windows.now.from} to ${b.windows.now.to} (Bing's data through ${b.through ?? 'no day yet'}): ${b.now.impressions} impressions, ${b.now.clicks} clicks (before, ${b.windows.before.from} to ${b.windows.before.to}: ${b.before.impressions}, ${b.before.clicks})`,
     `Pages (impressions, clicks, position): ${rows(b.pages)}`,
     `Queries: ${rows(b.queries)}`,
     `Index: ${b.crawl.inIndex ?? '–'} pages (through ${b.crawl.through ?? '–'}); crawled in the window ${b.crawl.crawled}, errors ${b.crawl.errors}, 4xx ${b.crawl.code4xx}, 5xx ${b.crawl.code5xx}, other codes ${b.crawl.otherCodes}, blocked by robots.txt ${b.crawl.blockedByRobots}`,
     `Sitemaps: ${b.sitemaps.map((s) => `${s.url} ${s.status}, read ${s.lastCrawled ?? 'never'}, ${s.urls ?? '?'} URLs`).join('; ') || 'none'}`,
   ];
+}
+
+/**
+ * The report's windows moved back to end on Bing's newest day, as
+ * `search.google` lags its own. Unmoved, `now` held only the days Bing had
+ * (4 of 7 on 2026-11-04) against a whole `before`: Bing's impressions read as
+ * down 31% (721 to 1,039) the week they doubled (1,370 to 679; ollamaherd).
+ */
+export function bingWindows(through: string | null, now: Window, before: Window): { now: Window; before: Window } {
+  if (!through || through >= now.to) return { now, before };
+  const days = Math.round((Date.parse(`${now.to}T00:00:00Z`) - Date.parse(`${through}T00:00:00Z`)) / 864e5);
+  return { now: lagged(now, days), before: lagged(before, days) };
 }
 
 /**
@@ -597,13 +834,16 @@ export async function readBing(site: string, key: string, now: Window, before: W
   const traffic = await call<{ Date: string; Impressions: number; Clicks: number }>('GetRankAndTrafficStats');
   const feeds = await call<{ Url: string; Status: string; Submitted?: string; LastCrawled?: string; UrlCount?: number }>('GetFeeds');
   const day = (d?: string) => (d ? bingDay(d) : null);
+  const through = traffic.map((r) => bingDay(r.Date)).sort().at(-1) ?? null;
+  const windows = bingWindows(through, now, before);
   return {
-    through: traffic.map((r) => bingDay(r.Date)).sort().at(-1) ?? null,
-    now: bingTraffic(traffic, now),
-    before: bingTraffic(traffic, before),
-    queries: bingRows(await call<BingStatRow>('GetQueryStats'), now),
-    pages: bingRows(await call<BingStatRow>('GetPageStats'), now),
-    crawl: bingCrawl(await call<BingCrawlRow>('GetCrawlStats'), now),
+    through,
+    windows,
+    now: bingTraffic(traffic, windows.now),
+    before: bingTraffic(traffic, windows.before),
+    queries: bingRows(await call<BingStatRow>('GetQueryStats'), windows.now),
+    pages: bingRows(await call<BingStatRow>('GetPageStats'), windows.now),
+    crawl: bingCrawl(await call<BingCrawlRow>('GetCrawlStats'), windows.now),
     sitemaps: feeds.map((f) => ({ url: f.Url, status: f.Status, submitted: day(f.Submitted), lastCrawled: day(f.LastCrawled), urls: f.UrlCount ?? null })),
   };
 }
