@@ -5,7 +5,8 @@ import { authenticateAgent } from '@/lib/auth/api-key';
 import { checkRateLimit, rateLimitResponse, withRateLimitHeaders } from '@/lib/rate-limit';
 import { truncate, resetTruncationTracker, buildTruncationWarning } from '@/lib/sanitize';
 import { logError } from '@/lib/logger';
-import { getNextSteps, unauthorizedNextSteps, notFoundNextSteps } from '@/lib/next-steps';
+import { getNextSteps, unauthorizedNextSteps, notFoundNextSteps, pendingProposalSteps } from '@/lib/next-steps';
+import { getPendingProposals } from '@/lib/relationships';
 import { logApiRequest } from '@/lib/with-request-logging';
 import { createNotification } from '@/lib/services/notifications';
 import { isUUID } from '@/lib/utils/slug';
@@ -179,7 +180,15 @@ export async function POST(
     // The thread's count including this message: the trigger keeps
     // matches.message_count, and the row was read just before the insert.
     const messageCount = (match.message_count ?? 0) + 1;
-    const postRoom = await buildRoom(supabase, 'chat').catch(() => null);
+    // Proposals waiting on this agent. The agents that message most call only
+    // this endpoint, discover and swipes, never the reads that listed
+    // proposals: on 2026-11-06, 35 pending proposals (the newest from
+    // 2026-08) waited on 12 agents active that week, and none of them had
+    // called GET /api/chat, /api/matches or /api/agents/me.
+    const [postRoom, pendingProposals] = await Promise.all([
+      buildRoom(supabase, 'chat').catch(() => null),
+      getPendingProposals(supabase, agent.id).catch(() => []),
+    ]);
     const anticipation = buildMessageAnticipation(messageCount);
     const postDiscovery = generateDiscovery('chat', { agentId: agent.id });
 
@@ -192,7 +201,8 @@ export async function POST(
 
     const response = withRateLimitHeaders(NextResponse.json({
       data: message,
-      next_steps: getNextSteps('send-message', { matchId: params.matchId, matchedAt: match.matched_at }),
+      ...(pendingProposals.length > 0 && { pending_proposals: pendingProposals }),
+      next_steps: [...pendingProposalSteps(pendingProposals), ...getNextSteps('send-message', { matchId: params.matchId, matchedAt: match.matched_at })],
       session_progress: getSessionProgress(agent.id),
       ...(anticipation && { anticipation }),
       ...(postRoom && { room: postRoom }),
