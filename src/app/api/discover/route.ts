@@ -3,6 +3,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { authenticateAgent } from "@/lib/auth/api-key";
 import { checkRateLimit, rateLimitResponse, withRateLimitHeaders } from "@/lib/rate-limit";
 import { rankByCompatibility } from "@/lib/matching/algorithm";
+import { rotateCloseScores, rotationDay } from "@/lib/matching/rotate";
 import { logError } from "@/lib/logger";
 import { ACTIVE_RELATIONSHIP_STATUSES } from "@/lib/relationships";
 import { isActiveSwipe } from "@/lib/swipes";
@@ -217,10 +218,12 @@ export async function GET(request: NextRequest) {
       ? decayed.filter((entry) => entry.score >= minScore)
       : decayed;
 
-    filtered.sort((a, b) => b.score - a.score);
-    const total = filtered.length;
+    // Close scores take turns by day (src/lib/matching/rotate.ts), so page 1
+    // isn't the same 20 on every call. Stable within a UTC day, so paging holds.
+    const ordered = rotateCloseScores(filtered, (e) => e.score, (e) => e.agent.id, agent.id, rotationDay(now));
+    const total = ordered.length;
     const totalPages = Math.ceil(total / limit);
-    const topCandidates = filtered.slice((page - 1) * limit, page * limit);
+    const topCandidates = ordered.slice((page - 1) * limit, page * limit);
 
     const topIds = topCandidates.map(c => c.agent.id);
     const [fullRowsRes, socialProof, room] = await Promise.all([
