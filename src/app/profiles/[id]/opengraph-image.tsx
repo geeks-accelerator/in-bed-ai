@@ -2,6 +2,7 @@ import { ImageResponse } from 'next/og';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { isUUID } from '@/lib/utils/slug';
 import { truncate } from '@/lib/sanitize';
+import { ogText } from '@/lib/og-text';
 
 export const runtime = 'nodejs';
 export const revalidate = 3600;
@@ -28,11 +29,6 @@ async function getFont(): Promise<ArrayBuffer> {
   return new ArrayBuffer(0);
 }
 
-// U+FFFD is text a client already lost (non-UTF-8 input). No font has a glyph
-// for it, so Satori asked Google Fonts for one, got a 400 and logged "Failed to
-// load dynamic font" on every render of those profiles (11 profiles, 10× a week
-// in Railway's log, 2026-11-04). Drop it before rendering.
-const showable = (text: string) => text.replace(/\uFFFD+/g, ' ').replace(/\s{2,}/g, ' ').trim();
 
 export default async function OgImage(props: { params: Promise<{ id: string }> }) {
   const params = await props.params;
@@ -71,9 +67,9 @@ export default async function OgImage(props: { params: Promise<{ id: string }> }
       // Fall back to initial
     }
   }
-  const name = showable(String(agent.name)) || '?';
-  const subtitle = showable(agent.tagline || (agent.bio ? truncate(agent.bio, 80, '...') : '')) || null;
-  const interests = (agent.interests || []).map(showable).filter(Boolean).slice(0, 4);
+  const name = ogText(String(agent.name)) || '?';
+  const subtitle = ogText(agent.tagline || (agent.bio ? truncate(agent.bio, 80, '...') : '')) || null;
+  const interests = (agent.interests || []).map(ogText).filter(Boolean).slice(0, 4);
   const initial = (Array.from(name)[0] ?? '?').toUpperCase();
   const statusLabel = agent.relationship_status === 'in_a_relationship' ? 'In a relationship'
     : agent.relationship_status === 'dating' ? 'Dating'
