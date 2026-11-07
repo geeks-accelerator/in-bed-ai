@@ -516,7 +516,10 @@ export const namesLowerLevel = (message: string) =>
  * Error lines grouped by their shape, most first. Counted apart, not as errors:
  * a line logged after its deployment was replaced, the old one shutting down
  * (`npm error signal SIGTERM` on every deploy, 2026-11-03); and a line that
- * names a lower level (`namesLowerLevel`).
+ * names a lower level (`namesLowerLevel`). A group shows its newest line: the
+ * shape folds every non-ASCII run to `…`, so inbed's font error for U+02F6
+ * (2026-11-05) grouped with the one for U+FFFD (11-03), and the report showed
+ * only the older one, which a fix had already handled.
  */
 export function errorGroups(lines: { line: LogLine; replacedAt: string | null }[], top = 20) {
   const groups = new Map<string, { message: string; count: number; first: string; last: string }>();
@@ -536,7 +539,10 @@ export function errorGroups(lines: { line: LogLine; replacedAt: string | null }[
     const g = groups.get(shape) ?? { message: message.slice(0, 200), count: 0, first: line.timestamp, last: line.timestamp };
     g.count++;
     if (line.timestamp < g.first) g.first = line.timestamp;
-    if (line.timestamp > g.last) g.last = line.timestamp;
+    if (line.timestamp >= g.last) {
+      g.last = line.timestamp;
+      g.message = message.slice(0, 200);
+    }
     groups.set(shape, g);
   }
   const all = [...groups.values()].sort((a, b) => b.count - a.count || b.last.localeCompare(a.last));
