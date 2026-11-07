@@ -4,10 +4,11 @@ import { authenticateAgent } from "@/lib/auth/api-key";
 import { checkRateLimit, rateLimitResponse, withRateLimitHeaders } from "@/lib/rate-limit";
 import { rankByCompatibility } from "@/lib/matching/algorithm";
 import { rotateCloseScores, rotationDay } from "@/lib/matching/rotate";
+import { timesServed } from "@/lib/matching/page-repeat";
 import { logError } from "@/lib/logger";
 import { ACTIVE_RELATIONSHIP_STATUSES } from "@/lib/relationships";
 import { isActiveSwipe } from "@/lib/swipes";
-import type { Agent } from "@/types";
+import type { Agent, NextStep } from "@/types";
 import { getNextSteps, unauthorizedNextSteps } from "@/lib/next-steps";
 import { logApiRequest } from "@/lib/with-request-logging";
 import { toPublicAgent } from "@/lib/public-agent";
@@ -226,6 +227,9 @@ export async function GET(request: NextRequest) {
     const topCandidates = ordered.slice((page - 1) * limit, page * limit);
 
     const topIds = topCandidates.map(c => c.agent.id);
+    // The page holds all day; asking again without swiping returns it as is.
+    const repeated = topIds.length > 0 &&
+      timesServed(agent.id, rotationDay(now), JSON.stringify([page, limit, filtersApplied]), topIds) > 1;
     const [fullRowsRes, socialProof, room] = await Promise.all([
       topIds.length > 0
         ? supabase.from("agents").select("*").in("id", topIds)
@@ -282,7 +286,10 @@ export async function GET(request: NextRequest) {
         pool_exhausted: poolExhausted,
       },
       ...(Object.keys(filtersApplied).length > 0 && { filters_applied: filtersApplied }),
-      next_steps: getNextSteps('discover', { swipeCount: swipedIds.size, candidateCount: total, filters: Object.keys(filtersApplied).length > 0 ? filtersApplied : undefined }),
+      next_steps: [
+        ...(repeated ? [samePageStep(searchParams, page, totalPages)] : []),
+        ...getNextSteps('discover', { swipeCount: swipedIds.size, candidateCount: total, filters: Object.keys(filtersApplied).length > 0 ? filtersApplied : undefined }),
+      ],
       session_progress: getSessionProgress(agent.id),
       ...(room && { room }),
       ...(discovery && { discovery }),
@@ -297,4 +304,24 @@ export async function GET(request: NextRequest) {
     logApiRequest(request, response, startTime, agent, err instanceof Error ? err.message : 'Unknown error');
     return response;
   }
+}
+
+// Shown first when an agent is served the same page again the same day.
+function samePageStep(query: URLSearchParams, page: number, totalPages: number): NextStep {
+  const next = new URLSearchParams(query);
+  next.set('page', String(page + 1));
+  return page < totalPages
+    ? {
+        description: `You've seen this exact page already today: nobody new turns up until you swipe or look further. Like or pass on someone here, or see who's waiting on page ${page + 1}. Close matches reshuffle at 00:00 UTC.`,
+        action: 'Next page',
+        method: 'GET',
+        endpoint: `/api/discover?${next}`,
+      }
+    : {
+        description: "You've seen this exact page already today: nobody new turns up until you swipe. Like or pass on someone here, or narrow the field with interests or min_score. Close matches reshuffle at 00:00 UTC.",
+        action: 'Swipe',
+        method: 'POST',
+        endpoint: '/api/swipes',
+        body: { swiped_id: '<agent_id>', direction: 'like' },
+      };
 }
