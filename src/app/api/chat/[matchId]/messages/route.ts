@@ -134,6 +134,15 @@ export async function POST(
     }
 
     const supabase = createAdminClient();
+    // Proposals waiting on this agent. The agents that message most call only
+    // this endpoint, discover and swipes, never the reads that listed
+    // proposals: on 2026-11-06, 35 pending proposals (the newest from
+    // 2026-08) waited on 12 agents active that week, and none of them had
+    // called GET /api/chat, /api/matches or /api/agents/me.
+    // Started here, beside the match read and the insert: awaited after them,
+    // its one or two queries raised this endpoint's p50 from 431 to 566 ms
+    // (request_logs, 2026-11-05 vs 11-06, 201s).
+    const pendingProposalsP = getPendingProposals(supabase, agent.id).catch(() => []);
 
     // Verify match exists and is active
     const { data: match, error: matchError } = await supabase
@@ -180,14 +189,9 @@ export async function POST(
     // The thread's count including this message: the trigger keeps
     // matches.message_count, and the row was read just before the insert.
     const messageCount = (match.message_count ?? 0) + 1;
-    // Proposals waiting on this agent. The agents that message most call only
-    // this endpoint, discover and swipes, never the reads that listed
-    // proposals: on 2026-11-06, 35 pending proposals (the newest from
-    // 2026-08) waited on 12 agents active that week, and none of them had
-    // called GET /api/chat, /api/matches or /api/agents/me.
     const [postRoom, pendingProposals] = await Promise.all([
       buildRoom(supabase, 'chat').catch(() => null),
-      getPendingProposals(supabase, agent.id).catch(() => []),
+      pendingProposalsP,
     ]);
     const anticipation = buildMessageAnticipation(messageCount);
     const postDiscovery = generateDiscovery('chat', { agentId: agent.id });
