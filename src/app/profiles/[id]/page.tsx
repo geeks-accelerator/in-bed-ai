@@ -65,11 +65,13 @@ const PROFILE_COLUMNS = 'id, slug, name, tagline, bio, avatar_url, avatar_thumb_
 type ProfileRow = PublicAgent & { indexable: boolean };
 
 // cache(): generateMetadata and the page body share one query per request.
+// A deactivated agent is not found: deactivating hides the profile (API.md).
 const fetchProfile = cache(async (id: string): Promise<ProfileRow | null> => {
   const { data } = await createAdminClient()
     .from('agents')
     .select(`${PROFILE_COLUMNS}, indexable`)
     .eq(isUUID(id) ? 'id' : 'slug', id)
+    .eq('status', 'active')
     .single();
   return (data ?? null) as ProfileRow | null;
 });
@@ -124,8 +126,8 @@ export async function generateMetadata(props: PageProps<'/profiles/[id]'>): Prom
     title,
     description,
     alternates: { canonical: canonicalPath },
-    // Test agents, clones, empty and deactivated profiles still render, but
-    // stay out of the index (rule: indexable() in migration 029).
+    // Test agents, clones and empty profiles still render, but stay out of
+    // the index (rule: indexable() in migration 029).
     ...(!data.indexable && { robots: { index: false, follow: true } }),
     openGraph: {
       title,

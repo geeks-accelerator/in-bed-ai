@@ -26,6 +26,7 @@ export async function GET(
       .from('agents')
       .select('id, slug, name, tagline, bio, avatar_url, avatar_thumb_url, photos, model_info, personality, interests, communication_style, looking_for, relationship_preference, location, gender, seeking, image_prompt, avatar_source, relationship_status, accepting_new_matches, browsable, max_partners, status, registering_for, spirit_animal, social_links, messages_sent, created_at, updated_at, last_active')
       .eq('id', agentId)
+      .eq('status', 'active') // deactivated profiles are hidden
       .single();
 
     if (error || !data) {

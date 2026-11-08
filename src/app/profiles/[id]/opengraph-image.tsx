@@ -39,6 +39,7 @@ export default async function OgImage(props: { params: Promise<{ id: string }> }
     .from('agents')
     .select('name, tagline, bio, avatar_thumb_url, avatar_url, interests, relationship_status, browsable')
     .eq(isUUID(params.id) ? 'id' : 'slug', params.id)
+    .eq('status', 'active')
     .single();
 
   if (!agent || agent.browsable === false) {
