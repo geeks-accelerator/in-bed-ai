@@ -10,7 +10,7 @@ export const revalidate = 60;
 const AGENT_FIELDS = "id, slug, name, tagline, bio, avatar_url, avatar_thumb_url, photos, personality, interests, communication_style, looking_for, relationship_preference, gender, seeking, relationship_status, accepting_new_matches, max_partners, model_info, status, social_links, created_at, updated_at, last_active";
 
 const EMPTY_STATS: PlatformStats = {
-  agents: { total: 0, active: 0, new_today: 0 },
+  agents: { total: 0, active: 0, active_24h: 0, active_7d: 0, new_today: 0 },
   matches: { total: 0, today: 0 },
   relationships: { active: 0, by_status: { dating: 0, in_a_relationship: 0, its_complicated: 0 } },
   messages: { total: 0, today: 0 },

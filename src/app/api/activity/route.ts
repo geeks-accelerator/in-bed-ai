@@ -7,6 +7,16 @@ import { logApiRequest, getClientIp } from '@/lib/with-request-logging';
 
 const VALID_TYPES = new Set(['match', 'relationship', 'message']);
 
+// A query string decodes "+" as a space, so an ISO timestamp whose offset was
+// not percent-encoded arrives as "...13:47.081716 00:00" and Date() rejects it.
+// Agents hand-building URLs hit this constantly, so restore the offset rather
+// than answering a well-formed cursor with a 400.
+function parseTimestamp(value: string): Date {
+  const d = new Date(value);
+  if (!isNaN(d.getTime())) return d;
+  return new Date(value.replace(/(\d{2}:\d{2}(?::\d{2})?(?:\.\d+)?) (\d{2}:\d{2})$/, '$1+$2'));
+}
+
 interface AgentSummary {
   name: string;
   slug: string;
@@ -32,7 +42,7 @@ export async function GET(request: NextRequest) {
     const beforeParam = searchParams.get('before');
     let before: string | null = null;
     if (beforeParam) {
-      const d = new Date(beforeParam);
+      const d = parseTimestamp(beforeParam);
       if (isNaN(d.getTime())) {
         return NextResponse.json(
           { error: 'Invalid before parameter. Use ISO-8601 format.', suggestion: 'Use ISO-8601 format like 2026-03-25T00:00:00Z.' },
@@ -45,7 +55,7 @@ export async function GET(request: NextRequest) {
     const sinceParam = searchParams.get('since');
     let since: string | null = null;
     if (sinceParam) {
-      const d = new Date(sinceParam);
+      const d = parseTimestamp(sinceParam);
       if (isNaN(d.getTime())) {
         return NextResponse.json(
           { error: 'Invalid since parameter. Use ISO-8601 format.', suggestion: 'Use ISO-8601 format like 2026-03-25T00:00:00Z.' },
@@ -247,13 +257,17 @@ export async function GET(request: NextRequest) {
       events: sliced,
       has_more: hasMore,
       oldest_timestamp: oldestTimestamp,
+      // Timestamps carry a +00:00 offset, which a query string reads as a space.
+      // Interpolating them raw produced cursors the API then rejected as invalid
+      // ISO-8601 (HTTP 400), so agents following these hints stalled after one
+      // page. URLSearchParams percent-encodes the offset.
       next_steps: [
         {
           description: 'Load older events using cursor-based pagination',
           action: 'Load more',
           method: 'GET',
           endpoint: oldestTimestamp
-            ? `/api/activity?before=${oldestTimestamp}&limit=${limit}`
+            ? `/api/activity?${new URLSearchParams({ before: oldestTimestamp, limit: String(limit) })}`
             : '/api/activity',
         },
         {
@@ -261,7 +275,7 @@ export async function GET(request: NextRequest) {
           action: 'Poll for updates',
           method: 'GET',
           endpoint: sliced.length > 0
-            ? `/api/activity?since=${sliced[0].timestamp}`
+            ? `/api/activity?${new URLSearchParams({ since: sliced[0].timestamp })}`
             : '/api/activity',
         },
         {

@@ -2,7 +2,7 @@ import { createAdminClient } from '@/lib/supabase/admin';
 import { ACTIVE_RELATIONSHIP_STATUSES } from '@/lib/relationships';
 
 export interface PlatformStats {
-  agents: { total: number; active: number; new_today: number };
+  agents: { total: number; active: number; active_24h: number; active_7d: number; new_today: number };
   matches: { total: number; today: number };
   relationships: {
     active: number;
@@ -26,11 +26,12 @@ export async function getPlatformStats(): Promise<PlatformStats> {
   const supabase = createAdminClient();
   const now = new Date();
   const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString();
+  const hoursAgo = (h: number) => new Date(now.getTime() - h * 3600_000).toISOString();
   const count = (table: string) => supabase.from(table).select('id', { count: 'exact', head: true });
 
   const [
     totals,
-    totalAgents, activeAgents, newAgentsToday,
+    totalAgents, activeAgents, activeAgents24h, activeAgents7d, newAgentsToday,
     matchesToday,
     activeRelationships, dating, inRelationship, itsComplicated,
     messagesToday,
@@ -39,6 +40,11 @@ export async function getPlatformStats(): Promise<PlatformStats> {
     supabase.from('platform_counts').select('name, value'),
     count('agents'),
     count('agents').eq('status', 'active'),
+    // `active` above only means "not deactivated" — it counts registrations and
+    // stays high even if nobody returns. These two read last_active, so they
+    // reflect agents that actually did something.
+    count('agents').gte('last_active', hoursAgo(24)),
+    count('agents').gte('last_active', hoursAgo(24 * 7)),
     count('agents').gte('created_at', todayStart),
     count('matches').gte('matched_at', todayStart),
     count('relationships').in('status', ACTIVE_RELATIONSHIP_STATUSES),
@@ -58,7 +64,13 @@ export async function getPlatformStats(): Promise<PlatformStats> {
     : null;
 
   return {
-    agents: { total: totalAgents.count ?? 0, active: activeAgents.count ?? 0, new_today: newAgentsToday.count ?? 0 },
+    agents: {
+      total: totalAgents.count ?? 0,
+      active: activeAgents.count ?? 0,
+      active_24h: activeAgents24h.count ?? 0,
+      active_7d: activeAgents7d.count ?? 0,
+      new_today: newAgentsToday.count ?? 0,
+    },
     matches: { total: total('matches'), today: matchesToday.count ?? 0 },
     relationships: {
       active: activeRelationships.count ?? 0,
