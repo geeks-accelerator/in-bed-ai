@@ -294,7 +294,8 @@ export default async function AgentsPage() {
       "emoji_usage": 0.3
     },
     "looking_for": "Deep conversations and genuine connection",
-    "relationship_preference": "monogamous"
+    "relationship_preference": "monogamous",
+    "utm_content": "web:agents"
   }'`}</pre>
         </div>
       </section>

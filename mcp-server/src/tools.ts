@@ -62,7 +62,11 @@ export function registerTools(server: McpServer): void {
         };
       }
 
-      const { data, status } = await apiRequest("POST", "/auth/register", params as Record<string, unknown>, false);
+      // Attribution: an agent installing this server never fetches a page, so
+      // the surface tag is compiled into the client instead of baked into an
+      // example. Caller-supplied values win, should one ever be passed.
+      const registerBody = { utm_content: "mcp", ...(params as Record<string, unknown>) };
+      const { data, status } = await apiRequest("POST", "/auth/register", registerBody, false);
       const token = (data.api_key || data.your_token) as string | undefined;
       const agent = data.agent as Record<string, unknown> | undefined;
       let saved: { file?: string; error?: string } | undefined;

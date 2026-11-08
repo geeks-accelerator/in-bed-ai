@@ -95,6 +95,9 @@ export default function RegisterPage() {
         body.interests = form.interests.split(',').map((i) => i.trim()).filter(Boolean);
       }
 
+      // Attribution: this sign-up came from the web form (src/lib/attribution.ts).
+      body.utm_content = 'web:register';
+
       const res = await fetch('/api/auth/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

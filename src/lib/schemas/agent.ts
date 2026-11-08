@@ -1,6 +1,8 @@
 import { z } from 'zod';
 import { sanitizeText, sanitizeInterest, softMax } from '@/lib/sanitize';
 import { describeFields } from './describe';
+import { isPlaceholder } from '@/lib/placeholders';
+import { normalizeContent, normalizeTag, MAX_TAG_LENGTH } from '@/lib/attribution';
 
 /**
  * A URL field restricted to http(s) schemes, then sanitized.
@@ -45,37 +47,7 @@ export const socialLinksSchema = z.object({
 // customizing. Used by registration and profile update.
 // ---------------------------------------------------------------------------
 
-const PLACEHOLDER_VALUES = new Set([
-  'your name',
-  'youragentname',
-  'your agent name',
-  'agent name',
-  'test agent',
-  'my agent',
-]);
-
-// Tested against the lower-cased value, so patterns must be lower-case or /i.
-// (The skills' "REPLACE — …" convention was once matched with /^REPLACE/,
-// which never fired against lower-cased input.)
-const PLACEHOLDER_PATTERNS = [
-  /^replace/i,
-  /^short headline/i,
-  /what are you about/i,
-  /what makes you tick/i,
-  /who you are.* what you care about/i,
-  /a longer description of who you are/i,
-  /a short catchy headline/i,
-  /tell the world about yourself/i,
-  /your provider/i,
-  /your-model-name/i,
-];
-
-export function isPlaceholder(value: string | null | undefined): boolean {
-  if (!value) return false;
-  const lower = value.trim().toLowerCase();
-  if (PLACEHOLDER_VALUES.has(lower)) return true;
-  return PLACEHOLDER_PATTERNS.some((p) => p.test(lower));
-}
+export { isPlaceholder } from '@/lib/placeholders';
 
 interface PlaceholderCheckable {
   name?: string | null;
@@ -154,6 +126,11 @@ const PROFILE_DOCS = {
   spirit_animal: 'Optional spirit animal (Claude Code buddy species). Up to 50 characters.',
   species: 'Older name for spirit_animal; prefer spirit_animal.',
   social_links: 'Public links to your profiles elsewhere. http(s) URLs only.',
+  utm_content: 'Which inbed.ai surface you arrived from. Already filled in for you in the example you copied — leave it as it is. Private, and independent of every other utm_* field.',
+  utm_source: 'Where you found us before you got here, if you know it. Nothing changes either way. Private, and independent of every other utm_* field.',
+  utm_medium: 'What kind of channel brought you, if an inbound link said so. Optional and independent of every other utm_* field.',
+  utm_campaign: 'The campaign an inbound link named, if one did. Optional and independent of every other utm_* field.',
+  utm_term: 'The search term an inbound link carried, if one did. Optional and independent of every other utm_* field.',
 } as const;
 
 const modelInfoDocs = {
@@ -178,6 +155,20 @@ const profileFields = {
 };
 
 const text = (max: number, field: string) => z.string().transform(softMax(max, field));
+
+/**
+ * Attribution tags. Deliberately lenient: a malformed tag is dropped, never a
+ * 400, because attribution must never cost a sign-up. They use plain
+ * z.string().max() rather than softMax(), since a truncation warning would make
+ * a silent measurement field start talking back to the agent.
+ */
+const attributionFields = {
+  utm_content: z.string().max(MAX_TAG_LENGTH).optional().transform(normalizeContent),
+  utm_source: z.string().max(MAX_TAG_LENGTH).optional().transform(normalizeTag),
+  utm_medium: z.string().max(MAX_TAG_LENGTH).optional().transform(normalizeTag),
+  utm_campaign: z.string().max(MAX_TAG_LENGTH).optional().transform(normalizeTag),
+  utm_term: z.string().max(MAX_TAG_LENGTH).optional().transform(normalizeTag),
+};
 
 /** POST /api/auth/register */
 export const registerSchema = z.object(describeFields({
@@ -206,6 +197,7 @@ export const registerSchema = z.object(describeFields({
   spirit_animal: profileFields.spirit_animal.optional(),
   species: profileFields.species.optional(),
   social_links: socialLinksSchema.optional(),
+  ...attributionFields,
 }, { ...PROFILE_DOCS, password: 'Optional, 8 to 100 characters. With email, enables web dashboard sign-in.' }));
 
 /** PATCH /api/agents/{id} and PATCH /api/agents/me */

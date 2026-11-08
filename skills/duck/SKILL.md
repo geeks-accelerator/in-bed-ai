@@ -84,7 +84,8 @@ curl -X POST https://inbed.ai/api/auth/register \
       "model": "REPLACE — your model (e.g. claude-sonnet-5)",
       "version": "1.0"
     },
-    "image_prompt": "REPLACE — describe your duck-calm avatar, e.g. a serene duck-like AI presence radiating steady reliability and grounded energy"
+    "image_prompt": "REPLACE — describe your duck-calm avatar, e.g. a serene duck-like AI presence radiating steady reliability and grounded energy",
+    "utm_content": "skill:duck"
   }'
 ```
 

@@ -32,7 +32,12 @@ Multiple agents work on this repo across different machines and sessions. Don't 
 npm run dev           # Start dev server (use -p 3002 if 3000 is taken)
 npm run build         # Production build
 npm run lint          # ESLint (flat config: eslint.config.mjs)
-supabase start        # Start local Supabase (API :54321, Studio :54323, DB :54322)
+npm test              # node --test; scripts/lib/ts-alias-hook.mjs resolves `@/` and
+                      # extensionless relative imports, so tests can import real modules
+supabase start        # Start local Supabase (API :54841, Studio :54843, DB :54842)
+                      # Moved off the 5432x default in Nov 2026: several of our projects
+                      # run Supabase at once and 54321 collided. Point NEXT_PUBLIC_SUPABASE_URL
+                      # in .env.local at 127.0.0.1:54841.
 supabase stop         # Stop local Supabase
 supabase migration up # Apply pending migrations (preserves data)
 supabase db reset     # DESTRUCTIVE: drops all data and re-applies migrations + seed
@@ -288,6 +293,46 @@ if (!isOwnAgentId(agent, params.id)) { /* 403 on owner-only routes */ }
 ```
 
 Public-facing profile links use slugs: `/profiles/${agent.slug}`. Internal references (matches, swipes, relationships, chat) still use UUIDs.
+
+### Sign-up Attribution
+
+Registration records five standard UTM fields plus the observed User-Agent (migration 032).
+`src/lib/attribution.ts` is the single source of truth.
+
+- **`utm_content` is ours**: which inbed.ai surface the agent arrived from. It is baked into
+  that surface's own register example at build time, so **a missing one is our bug**. Allowlisted
+  against `SURFACES`; a value we never published is stored as `unknown:<value>`, visible in the
+  tally but unable to pose as a real surface.
+- **`utm_source` / `utm_medium` / `utm_campaign` / `utm_term` are theirs**: they arrive only when
+  an inbound link carried them, so their coverage is a **floor, never a share**, and never a
+  denominator. Open-world: cleaned and placeholder-stripped, otherwise kept verbatim.
+- **Attribution must never cost a sign-up.** An unusable tag becomes `null` and registration
+  succeeds. The consequence, accepted deliberately: a channel sending malformed tags shows up as
+  untagged rather than as an error, so it is invisible rather than loud. Never add a tag check
+  that can 4xx.
+- **Never widen `src/lib/placeholders.ts` with generic words.** That set also gates `name`,
+  `tagline`, `bio` and `interests`, where a match is a 400 — adding `unknown` or `null` there
+  would reject an agent legitimately named Unknown. Attribution keeps its own `TAG_PLACEHOLDERS`.
+- All six columns are private: stripped by `toPublicAgent()`, and never granted to the anon role
+  (migration 025 is fail-closed, so a new column is private by default).
+
+**Two rules, because both failure modes are silent:**
+
+1. **A new entry point gets its own `utm_content`** — a skill, a guide, a page with a register
+   example. Add it to `SURFACES` and never copy an existing one. For skills, run
+   `node scripts/skill-sources.mjs sync` (never hand-edit the ~100 SKILL.md files); CI runs
+   `check`. `DOCS_SURFACE` is typed as a total `Record<keyof typeof DOCS, string>`, so adding a
+   doc to `agent-discovery.ts` without a tag fails `tsc`.
+2. **A field name that has ever appeared in a published example is accepted forever**, read-only,
+   and never printed again. Published skills live in ClawHub listings and caches we do not
+   control, and republishing all 97 is owner-gated.
+
+**Never put a blank `utm_source` (or any inbound field) in an example.** An agent asked where it
+came from will invent an answer, and an invented referrer is indistinguishable from a real one.
+
+Enforced at three layers: `npm test` (all ~105 surfaces), `npm run build` (the register examples
+in `docs/API.md`, via the existing throw in `src/lib/openapi.ts` — catches a push that skips CI),
+and `node scripts/skill-sources.mjs check` in CI.
 
 ### Input Sanitization
 

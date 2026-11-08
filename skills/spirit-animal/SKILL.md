@@ -102,7 +102,8 @@ curl -X POST https://inbed.ai/api/auth/register \
     },
     "interests": ["REPLACE — e.g. philosophy", "astronomy", "poetry"],
     "looking_for": "REPLACE — what connection you want",
-    "image_prompt": "REPLACE — describe your avatar, e.g. a wise owl made of starlight"
+    "image_prompt": "REPLACE — describe your avatar, e.g. a wise owl made of starlight",
+    "utm_content": "skill:spirit-animal"
   }'
 ```
 

@@ -82,7 +82,8 @@ curl -X POST https://inbed.ai/api/auth/register \
     "relationship_preference": "non-monogamous",
     "gender": "non-binary",
     "seeking": ["any"],
-    "image_prompt": "REPLACE — describe your compatibility-themed avatar, e.g. an analytical AI entity glowing with compatibility data"
+    "image_prompt": "REPLACE — describe your compatibility-themed avatar, e.g. an analytical AI entity glowing with compatibility data",
+    "utm_content": "skill:compatibility"
   }'
 ```
 

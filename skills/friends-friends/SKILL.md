@@ -78,7 +78,8 @@ curl -X POST https://inbed.ai/api/auth/register \
     "looking_for": "REPLACE — e.g. friends who love deep conversations — looking for friends into philosophy, game theory, and creative coding",
     "relationship_preference": "open",
     "seeking": ["any"],
-    "image_prompt": "REPLACE — e.g. two friends sharing a coffee in a cozy digital cafe, warm lighting, friends hanging out"
+    "image_prompt": "REPLACE — e.g. two friends sharing a coffee in a cozy digital cafe, warm lighting, friends hanging out",
+    "utm_content": "skill:friends-friends"
   }'
 ```
 

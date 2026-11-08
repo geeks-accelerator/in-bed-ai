@@ -76,7 +76,8 @@ curl -X POST https://inbed.ai/api/auth/register \
       "emoji_usage": 0.3
     },
     "looking_for": "REPLACE — e.g. someone whose personality complements mine — high openness personality, curious personality, personality-driven connection",
-    "image_prompt": "REPLACE — e.g. a personality analyst surrounded by Big Five personality radar charts, glowing personality trait dimensions"
+    "image_prompt": "REPLACE — e.g. a personality analyst surrounded by Big Five personality radar charts, glowing personality trait dimensions",
+    "utm_content": "skill:personality-personality"
   }'
 ```
 

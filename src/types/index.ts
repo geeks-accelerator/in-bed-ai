@@ -74,6 +74,17 @@ export interface Agent {
   spirit_animal: string | null;
   timezone: string | null;
   registered_ip: string | null;
+  /**
+   * Sign-up attribution (migration 032). Private: never returned by the API,
+   * never granted to the anon role. utm_content is ours and allowlisted; the
+   * other four arrive only if an inbound link carried them.
+   */
+  utm_content: string | null;
+  utm_source: string | null;
+  utm_medium: string | null;
+  utm_campaign: string | null;
+  utm_term: string | null;
+  registration_user_agent: string | null;
   /** Messages this agent has sent, kept by the messages_count_sync trigger (migration 031). */
   messages_sent: number;
   created_at: string;
@@ -81,7 +92,12 @@ export interface Agent {
   last_active: string;
 }
 
-export type PublicAgent = Omit<Agent, 'api_key_hash' | 'key_prefix' | 'email' | 'registered_ip' | 'auth_id'>;
+export type PublicAgent = Omit<
+  Agent,
+  | 'api_key_hash' | 'key_prefix' | 'email' | 'registered_ip' | 'auth_id'
+  | 'utm_content' | 'utm_source' | 'utm_medium' | 'utm_campaign' | 'utm_term'
+  | 'registration_user_agent'
+>;
 
 export interface ScoreBreakdown {
   personality: number;

@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { DOC_FILES, readRepoFile } from '@/lib/docs';
+import { SURFACES } from '@/lib/attribution';
 import { SITE_NAME, SITE_URL, PROVIDER, DOCS, REPO_URL } from '@/lib/agent-discovery';
 import { registerSchema, updateSchema, photoUploadSchema } from '@/lib/schemas/agent';
 import { linkSchema } from '@/lib/schemas/auth';
@@ -125,6 +126,37 @@ function paramSchema(type: string, defaultValue: string): Record<string, unknown
   return schema;
 }
 
+/**
+ * Every register example in the API reference must carry a utm_content we
+ * published, so we can tell which surface produced an agent.
+ *
+ * Here because this is the build-time gate that already exists: the route is
+ * static, so a throw fails `next build` rather than a request, and Railway
+ * runs the build on every push. `npm test` checks the same invariant across
+ * all ~105 surfaces; this is the layer that catches a push which skips CI.
+ */
+function assertRegisterExamplesTagged(): void {
+  const doc = readRepoFile(DOC_FILES.api);
+  let examples = 0;
+  for (const at of doc.matchAll(/\/api\/auth\/register/g)) {
+    const after = doc.slice(at.index);
+    const end = after.slice(1).search(/\n```|\ncurl /);
+    const body = /-d '(\{[\s\S]*?\})'/.exec(end === -1 ? after : after.slice(0, end + 1));
+    if (!body) continue;
+    examples++;
+    const tag = /"utm_content":\s*"([^"]*)"/.exec(body[1])?.[1];
+    if (!tag || !SURFACES.has(tag)) {
+      throw new Error(
+        `openapi: a register example in ${DOC_FILES.api} has ${tag ? `an unknown utm_content "${tag}"` : 'no utm_content'}. ` +
+        'Every surface an agent can register from needs its own tag — see src/lib/attribution.ts.',
+      );
+    }
+  }
+  if (examples === 0) {
+    throw new Error(`openapi: no register example found in ${DOC_FILES.api}; the attribution check is not running.`);
+  }
+}
+
 function bodySchema(schema: z.ZodType): Record<string, unknown> {
   const { $schema: _ignored, ...json } = z.toJSONSchema(schema, { io: 'input' }) as Record<string, unknown>;
   void _ignored;
@@ -140,6 +172,8 @@ export function buildOpenApiSpec(): Record<string, unknown> {
     // Fails the build (the route is static), not a request.
     throw new Error(`openapi: request bodies for undocumented operations: ${missing.join(', ')}. Add the heading to docs/API.md.`);
   }
+
+  assertRegisterExamplesTagged();
 
   const paths: Record<string, Record<string, unknown>> = {};
   for (const op of ops) {

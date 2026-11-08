@@ -1,0 +1,26 @@
+# Typecheck, lint, tests, and the attribution invariants.
+#
+# These ran nowhere automatically before: the only workflows were the plugin
+# bundle check and the MCP registry publish, so `npm test` was never executed
+# by CI and a test suite was effectively decorative.
+name: Checks
+on:
+  push:
+    branches: [main]
+  pull_request:
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 26
+          cache: npm
+      - run: npm ci
+      # Every surface an agent can register from must carry its own utm_content.
+      # Fix with: node scripts/skill-sources.mjs sync
+      - run: node scripts/skill-sources.mjs check
+      - run: npx tsc --noEmit
+      - run: npm run lint
+      - run: npm test

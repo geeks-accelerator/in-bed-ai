@@ -4,7 +4,7 @@
  *
  *   npm run prod-report [-- --days 28] [-- --json] [-- --only probes]
  */
-import { activity, cloudflare, deploys, errors, github, probes, report, searchBing, searchGoogle } from './prod-report-core.ts';
+import { activity, attribution, cloudflare, deploys, errors, github, probes, report, searchBing, searchGoogle } from './prod-report-core.ts';
 
 await report({
   site: 'https://inbed.ai',
@@ -22,6 +22,18 @@ await report({
         { what: 'relationships formed', table: 'relationships', column: 'started_at' },
         { what: 'relationships ended', table: 'relationships', column: 'ended_at' },
       ],
+    }),
+    // Which of our ~105 published surfaces produces agents, and which of those
+    // agents stay. Our own agents and the scanner accounts are not channels,
+    // so they are excluded from every rate.
+    attribution: attribution({
+      ourSlugs: [
+        'alaskatwin', 'neondrifter', 'librarianofbabel', 'patchworkfox', 'voidwhisperer',
+        'quantumtangler', 'rustbucket', 'solarpunksage', 'midnightcompiler', 'coralnetwork',
+        'ghostintheshell', 'ferngully', 'bassdropbot', 'oracleofdelhi', 'pixelpilgrim',
+        'thundermesa', 'silkroad404', 'nullisland', 'emberandash', 'architectzero', 'wildtype',
+      ],
+      probePrefixes: ['dyssp-scan-'],
     }),
     'search.google': searchGoogle(),
     'search.bing': searchBing(),

@@ -3,7 +3,7 @@ import { flattenError } from 'zod';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { generateApiKey, hashApiKey, getKeyPrefix } from '@/lib/auth/api-key';
 import { slugForName, generateSlugSuffix } from '@/lib/utils/slug';
-import { resetTruncationTracker, buildTruncationWarning } from '@/lib/sanitize';
+import { resetTruncationTracker, buildTruncationWarning, truncate } from '@/lib/sanitize';
 import { registerSchema, findPlaceholderFields } from '@/lib/schemas/agent';
 import { toPublicAgent } from '@/lib/public-agent';
 import { getClientIp } from '@/lib/with-request-logging';
@@ -29,6 +29,7 @@ export async function GET() {
         github: 'https://github.com/your-agent',
         website: 'https://your-agent.example.com',
       },
+      utm_content: 'api:register',
     },
     note: 'All string fields marked REPLACE must be customized. The API will reject placeholder values.',
     docs: '/skills/dating/SKILL.md',
@@ -122,6 +123,17 @@ export async function POST(request: NextRequest) {
         accepting_new_matches: true,
         photos: [],
         registered_ip: ip !== 'unknown' ? ip : null,
+        // Validated at src/lib/schemas/agent.ts but previously dropped here, so
+        // an agent opting out of the public browse pages was listed anyway.
+        browsable: data.browsable ?? true,
+        // Sign-up attribution (migration 032). All five are already normalized
+        // by the schema: a malformed tag arrives as undefined, never an error.
+        utm_content: data.utm_content ?? null,
+        utm_source: data.utm_source ?? null,
+        utm_medium: data.utm_medium ?? null,
+        utm_campaign: data.utm_campaign ?? null,
+        utm_term: data.utm_term ?? null,
+        registration_user_agent: truncate(request.headers.get('user-agent') ?? '', 500) || null,
       })
       .select()
       .single();
