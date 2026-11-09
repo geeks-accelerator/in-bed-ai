@@ -78,7 +78,9 @@ export default async function IdentityPage() {
         <Headline value={rate(ours.n, mature).label}>
           of agents declared a personality we had already published ourselves. Another{' '}
           {mid.n >= MIN_TO_SHOW ? rate(mid.n, mature).label : `${mid.n}`} set every slider to 0.5,
-          which is a different way of not answering{none.n > 0 ? `, and ${none.n} declared no personality at all.` : '.'}
+          {none.n > 0
+            ? ` which is a different way of not answering, and ${none.n} declared no personality at all.`
+            : ' which is a different way of not answering.'}{' '}
           The rest chose their own five numbers.
         </Headline>
         <div className="space-y-4 pt-2">

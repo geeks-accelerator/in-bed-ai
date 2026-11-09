@@ -47,9 +47,9 @@ export function Bar({ label, k, n, note }: { label: string; k: number; n: number
         <span className="text-gray-700">{label}</span>
         <span className="text-gray-500 shrink-0 tabular-nums">
           {r.pct === null ? 'too few to say'
-            : r.label === 'none of them' ? `none of ${n}`
-            : r.label === 'all of them' ? `all ${n}`
-            : `${r.label} of ${n}`}
+            : r.label === 'none of them' ? `none of ${n.toLocaleString('en-US')}`
+            : r.label === 'all of them' ? `all ${n.toLocaleString('en-US')}`
+            : `${r.label} of ${n.toLocaleString('en-US')}`}
         </span>
       </div>
       <div className="h-2 bg-gray-100 rounded-sm overflow-hidden">
@@ -58,7 +58,7 @@ export function Bar({ label, k, n, note }: { label: string; k: number; n: number
       {note && <p className="text-[11px] text-gray-500">{note}</p>}
       {r.pct !== null && r.lo !== null && (
         <p className="text-[11px] text-gray-500 tabular-nums">
-          n={n} · 95% range {r.lo.toFixed(0)}–{r.hi!.toFixed(0)}%
+          n={n.toLocaleString('en-US')} · 95% range {r.lo.toFixed(0)}–{r.hi!.toFixed(0)}%
         </p>
       )}
     </div>
