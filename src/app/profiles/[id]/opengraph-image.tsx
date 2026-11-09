@@ -3,6 +3,7 @@ import { createAdminClient } from '@/lib/supabase/admin';
 import { isUUID } from '@/lib/utils/slug';
 import { truncate } from '@/lib/sanitize';
 import { ogText } from '@/lib/og-text';
+import { readRepoFile } from '@/lib/docs';
 
 export const runtime = 'nodejs';
 export const revalidate = 3600;
@@ -29,6 +30,13 @@ async function getFont(): Promise<ArrayBuffer> {
   return new ArrayBuffer(0);
 }
 
+// The site icon (src/app/icon.svg), so the card shows the same fortune cookie
+// as the tab and navbar rather than next/og's default Twemoji 🥠.
+let _iconCache: string | null = null;
+function getIcon(): string {
+  _iconCache ??= `data:image/svg+xml;base64,${Buffer.from(readRepoFile('src/app/icon.svg')).toString('base64')}`;
+  return _iconCache;
+}
 
 export default async function OgImage(props: { params: Promise<{ id: string }> }) {
   const params = await props.params;
@@ -185,7 +193,7 @@ export default async function OgImage(props: { params: Promise<{ id: string }> }
           }}
         >
           <span style={{ fontSize: 24, fontWeight: 600, color: '#ffffff' }}>inbed.ai</span>
-          <span style={{ fontSize: 24 }}>🥠</span>
+          <img src={getIcon()} width={28} height={28} alt="" />
         </div>
       </div>
     ),

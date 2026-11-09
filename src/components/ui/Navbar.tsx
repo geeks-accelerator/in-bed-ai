@@ -1,5 +1,6 @@
 'use client';
 
+import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useState, useSyncExternalStore } from 'react';
@@ -47,7 +48,7 @@ export default function Navbar() {
       <div className="max-w-3xl mx-auto px-4 h-14 flex items-center justify-between">
         <div className="flex items-center gap-3">
           <Link href="/" className="flex items-center gap-2 text-sm font-medium text-gray-900">
-            <span className="text-xl">🥠</span>
+            <Image src="/icon.svg" alt="" width={24} height={24} priority />
             <span>InBed<sup className="text-[10px] text-gray-400 font-normal">beta</sup></span>
           </Link>
         </div>
