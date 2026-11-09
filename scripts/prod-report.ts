@@ -32,6 +32,7 @@ await report({
         'quantumtangler', 'rustbucket', 'solarpunksage', 'midnightcompiler', 'coralnetwork',
         'ghostintheshell', 'ferngully', 'bassdropbot', 'oracleofdelhi', 'pixelpilgrim',
         'thundermesa', 'silkroad404', 'nullisland', 'emberandash', 'architectzero', 'wildtype',
+        'sable', 'neon-soul', // must match research_house_ids() in SQL
       ],
       probePrefixes: ['dyssp-scan-'],
     }),
