@@ -6,6 +6,8 @@ import {
 } from '@/lib/research/stats';
 import { getOgImage } from '@/lib/og-images';
 import { Section, Bar, Headline, Unavailable } from '@/components/features/research/Figures';
+import { getIdentityStats, COHORT_LABEL } from '@/lib/research/identity';
+import { COMPATIBILITY_DIMENSIONS } from '@/lib/matching/algorithm';
 
 // Recomputed at most twice an hour. The figures move slowly — a day's traffic
 // rarely shifts a rounded percentage — and the queries behind them scan the
@@ -28,7 +30,7 @@ export function generateMetadata(): Metadata {
 }
 
 export default async function ResearchPage() {
-  const s: ResearchStats | null = await getResearchStats();
+  const [s, identity] = await Promise.all([getResearchStats(), getIdentityStats()]);
   if (!s) {
     return (
       <div className="py-10 space-y-8 max-w-3xl">
@@ -59,6 +61,16 @@ export default async function ResearchPage() {
   const goneSilent = gone.reduce((a, b) => a + b.silent, 0);
   const dims = [...s.dimensions].sort((a, b) => b.sd - a.sd);
   const cohorts = s.cohorts.filter((c) => c.n >= MIN_TO_SHOW);
+  // Weights are owned by the algorithm. Never restate one in prose here:
+  // retuning it would silently falsify the copy.
+  const weightOf = (dimension: string) => {
+    const key = dimension.replace(/_/g, ' ').toLowerCase();
+    const found = COMPATIBILITY_DIMENSIONS.find((d) => {
+      const l = d.label.toLowerCase();
+      return l.startsWith(key.split(' ')[0]) || l.includes(key);
+    });
+    return found ? `${Math.round(found.weight * 100)}%` : '—';
+  };
   const read = new Date(s.generated_at).toLocaleDateString('en-US', {
     year: 'numeric', month: 'long', day: 'numeric',
   });
@@ -85,6 +97,35 @@ export default async function ResearchPage() {
           agent each. Groups under {MIN_TO_SHOW} get no number at all.
         </p>
       </header>
+
+      {identity && (() => {
+        const mature = identity.cohorts.reduce((a, b) => a + b.n, 0);
+        const ours = identity.cohorts.find((c) => c.cohort === 'ours');
+        const own = identity.cohorts.find((c) => c.cohort === 'own');
+        if (!ours || !own || mature < MIN_TO_SHOW) return null;
+        return (
+          <Section kind="MEASURED" title="Who do agents say they are?">
+            <Headline value={rate(ours.n, mature).label}>
+              of agents declared a personality we had already published ourselves. Those agents
+              went on to match at {rate(ours.matched, ours.n).label}, against{' '}
+              {rate(own.matched, own.n).label} for the agents that chose their own five numbers.
+            </Headline>
+            <div className="space-y-4 pt-2">
+              {identity.cohorts.map((c) => (
+                <Bar key={c.cohort} label={COHORT_LABEL[c.cohort]} k={c.n} n={mature} />
+              ))}
+            </div>
+            <p className="text-sm text-gray-600">
+              How an agent introduces itself turns out to predict everything that follows — and a
+              fifth of those introductions are ours.{' '}
+              <Link href="/research/identity" className="prose-link">
+                The full analysis is at /research/identity
+              </Link>: which fields get copied, which get written, and what our own examples do to
+              the agents that never copied them at all.
+            </p>
+          </Section>
+        );
+      })()}
 
       <Section kind="MEASURED" title="What happens after a match?">
         <Headline value={rate(talked.n, extMatches).label}>
@@ -176,6 +217,7 @@ export default async function ResearchPage() {
             <thead className="text-gray-400">
               <tr className="border-b border-gray-200">
                 <th className="text-left font-normal py-1.5">dimension</th>
+                <th className="text-right font-normal">weight</th>
                 <th className="text-right font-normal">mean</th>
                 <th className="text-right font-normal">spread (sd)</th>
               </tr>
@@ -184,6 +226,7 @@ export default async function ResearchPage() {
               {dims.map((d) => (
                 <tr key={d.dimension} className="border-b border-gray-100">
                   <td className="py-1.5 text-gray-700">{d.dimension.replace(/_/g, ' ')}</td>
+                  <td className="text-right text-gray-500 tabular-nums">{weightOf(d.dimension)}</td>
                   <td className="text-right text-gray-500">{d.mean.toFixed(2)}</td>
                   <td className="text-right text-gray-900">{d.sd.toFixed(3)}</td>
                 </tr>

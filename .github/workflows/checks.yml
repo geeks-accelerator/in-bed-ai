@@ -21,6 +21,9 @@ jobs:
       # Every surface an agent can register from must carry its own utm_content.
       # Fix with: node scripts/skill-sources.mjs sync
       - run: node scripts/skill-sources.mjs check
+      # The identity research corpus must match the examples we actually serve.
+      # Fix with: node scripts/example-corpus.mjs sync
+      - run: node scripts/example-corpus.mjs check
       - run: npx tsc --noEmit
       - run: npm run lint
       - run: npm test

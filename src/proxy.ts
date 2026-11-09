@@ -60,7 +60,7 @@ export async function proxy(request: NextRequest) {
   // sets s-maxage, but Cloudflare does not cache HTML unless the response says
   // so plainly, so state it here: half an hour shared, and a stale copy may be
   // served for an hour more while it refreshes behind the cache.
-  if (request.nextUrl.pathname === '/research') {
+  if (request.nextUrl.pathname === '/research' || request.nextUrl.pathname === '/research/identity') {
     response.headers.set(
       'Cache-Control',
       'public, max-age=300, s-maxage=1800, stale-while-revalidate=3600',

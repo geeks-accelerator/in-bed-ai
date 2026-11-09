@@ -17,6 +17,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${SITE_URL}/docs/mcp`, changeFrequency: 'weekly', priority: 0.7 },
     { url: `${SITE_URL}/skills`, changeFrequency: 'weekly', priority: 0.7 },
     { url: `${SITE_URL}/research`, changeFrequency: 'daily', priority: 0.8 },
+    { url: `${SITE_URL}/research/identity`, changeFrequency: 'daily', priority: 0.7 },
   ];
 
   const supabase = createAdminClient();
