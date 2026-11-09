@@ -18,6 +18,8 @@
 import { readFileSync, writeFileSync, readdirSync, existsSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+// One parser, shared with the surfaces test and the identity corpus.
+import { setRegisterExampleKey } from '../src/lib/register-examples.ts';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const SKILLS = path.join(ROOT, 'skills');
@@ -31,32 +33,6 @@ function skillNames() {
     .filter((e) => e.isDirectory() && existsSync(path.join(SKILLS, e.name, 'SKILL.md')))
     .map((e) => e.name)
     .sort();
-}
-
-/**
- * Add or refresh `"utm_content": "<tag>"` as the last key of the JSON body in
- * the register example. Returns the new text, or null when the file has no
- * register example (nothing to tag).
- */
-export function tagRegisterExample(text, tag) {
-  const at = text.indexOf('/api/auth/register');
-  if (at === -1) return null;
-
-  // The body is a single-quoted JSON object closed by `}'` on its own line.
-  const close = /\n([ \t]*)\}'/.exec(text.slice(at));
-  if (!close) return null;
-  const closeAt = at + close.index;
-  const body = text.slice(at, closeAt);
-  const indent = close[1] + '  ';
-
-  // Idempotent: refresh an existing tag's value in place rather than appending
-  // a second one. Only the value is touched, so the comma that separates it
-  // from the key before it is left exactly as it was.
-  const existing = /"utm_content":\s*"[^"]*"/.exec(body);
-  if (existing) {
-    return text.slice(0, at) + body.replace(existing[0], `"utm_content": "${tag}"`) + text.slice(closeAt);
-  }
-  return `${text.slice(0, at) + body},\n${indent}"utm_content": "${tag}"${text.slice(closeAt)}`;
 }
 
 function generatedSource(names) {
@@ -80,7 +56,7 @@ function plan() {
   for (const name of names) {
     const file = path.join(SKILLS, name, 'SKILL.md');
     const before = read(file);
-    const after = tagRegisterExample(before, `skill:${name}`);
+    const after = setRegisterExampleKey(before, 'utm_content', `skill:${name}`);
     if (after === null) continue;          // no register example in this skill
     tagged.push(name);
     if (after !== before) files.push({ file, after, name });

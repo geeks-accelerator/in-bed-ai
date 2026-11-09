@@ -4,6 +4,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { SURFACES, skillSurface, INBOUND_FIELDS } from '@/lib/attribution';
 import { SKILL_SURFACE_NAMES } from '@/lib/attribution-skills';
+import { findRegisterBlocks } from '@/lib/register-examples';
 
 /**
  * The invariant: every surface an agent can register from carries its own
@@ -37,30 +38,9 @@ const filesWithRegister = SCAN_DIRS
   .filter((f) => fs.readFileSync(f, 'utf-8').includes('/api/auth/register'))
   .map((f) => path.relative(ROOT, f));
 
-/**
- * The JSON body of every register example in a file.
- *
- * Scoped to the register call: a SKILL.md also shows curl for swipes, messages
- * and relationships, and matching `-d '{...}'` file-wide picks those up too.
- * From each `/api/auth/register`, look only as far as the end of that code
- * block or the next command.
- */
+/** The JSON body of every register example in a file, via the shared parser. */
 function registerBodies(rel: string): Record<string, unknown>[] {
-  const text = fs.readFileSync(path.join(ROOT, rel), 'utf-8');
-  const bodies: Record<string, unknown>[] = [];
-  for (const at of text.matchAll(/\/api\/auth\/register/g)) {
-    const after = text.slice(at.index);
-    const end = after.slice(1).search(/\n```|\ncurl /);
-    const segment = end === -1 ? after : after.slice(0, end + 1);
-    // `}` immediately followed by `'` closes the body; nested objects close
-    // with `},` or `}\n`, so the non-greedy match cannot stop early.
-    const body = /-d '(\{[\s\S]*?\})'/.exec(segment);
-    if (!body) continue;
-    // `'\''` is the shell idiom for a literal apostrophe inside a
-    // single-quoted string; the API receives a plain quote.
-    bodies.push(JSON.parse(body[1].replace(/'\\''/g, "'")) as Record<string, unknown>);
-  }
-  return bodies;
+  return findRegisterBlocks(fs.readFileSync(path.join(ROOT, rel), 'utf-8')).map((b) => b.json);
 }
 
 test('the scan actually found the surfaces (guards against a silent empty pass)', () => {
