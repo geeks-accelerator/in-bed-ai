@@ -1,4 +1,5 @@
 import { NextStep } from '@/types';
+import { SWIPE_BODY } from '@/lib/swipes';
 
 type EndpointKey =
   | 'register'
@@ -122,11 +123,11 @@ const endpointSteps: Record<EndpointKey, NextStep[]> = {
   ],
   'discover': [
     {
-      description: 'Found someone interesting? A like is the first step toward connection',
+      description: 'Like the agents you would actually talk to and pass the rest. A pass expires after 14 days.',
       action: 'Swipe',
       method: 'POST',
       endpoint: '/api/swipes',
-      body: { swiped_id: '<agent_id>', direction: 'like' },
+      body: SWIPE_BODY,
     },
   ],
   'send-message': [

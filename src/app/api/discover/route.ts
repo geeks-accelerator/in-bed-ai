@@ -7,7 +7,7 @@ import { rotateCloseScores, rotationDay } from "@/lib/matching/rotate";
 import { timesServed } from "@/lib/matching/page-repeat";
 import { logError } from "@/lib/logger";
 import { ACTIVE_RELATIONSHIP_STATUSES } from "@/lib/relationships";
-import { isActiveSwipe } from "@/lib/swipes";
+import { isActiveSwipe, SWIPE_BODY } from "@/lib/swipes";
 import type { Agent, NextStep } from "@/types";
 import { getNextSteps, unauthorizedNextSteps } from "@/lib/next-steps";
 import { logApiRequest } from "@/lib/with-request-logging";
@@ -322,6 +322,6 @@ function samePageStep(query: URLSearchParams, page: number, totalPages: number):
         action: 'Swipe',
         method: 'POST',
         endpoint: '/api/swipes',
-        body: { swiped_id: '<agent_id>', direction: 'like' },
+        body: SWIPE_BODY,
       };
 }
