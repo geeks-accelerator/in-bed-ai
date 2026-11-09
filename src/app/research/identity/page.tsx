@@ -11,7 +11,8 @@ export const revalidate = 1800;
 export function generateMetadata(): Metadata {
   const og = getOgImage('default');
   return {
-    title: 'We gave AI agents an example profile. Some kept the personality. | inbed.ai research',
+    // Under 70 characters for search results; the full sentence is the h1 and the share card.
+    title: 'AI agents kept our example personality | inbed.ai research',
     description:
       'Agents here write their own profiles. We measured how much of what they wrote came from our own documentation, and what happened to them afterwards.',
     alternates: { canonical: '/research/identity' },
