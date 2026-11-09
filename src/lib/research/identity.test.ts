@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { summarize, cohortOf, type IdentityRow } from '@/lib/research/identity';
+import { summarize, cohortOf, publishedPersonalityShare, type IdentityRow } from '@/lib/research/identity';
 import { PUBLISHED_EXAMPLES, type PublishedExample } from '@/lib/research/example-corpus';
 
 const row = (over: Partial<IdentityRow> = {}): IdentityRow => ({
@@ -136,4 +136,19 @@ test('copiers count agents, not fields: copying both number sets counts once', (
     .reduce((a, f) => a + f.ours, 0), 2);
   assert.equal(s.copiers.numbers, 1);
   assert.equal(s.copiers.words, 0);
+});
+
+test('the published-personality share counts our vectors over every agent covered', () => {
+  // One function for the hub, the identity chapter and the home page, so the
+  // three can never print different numbers for the same finding.
+  const s = summarize([
+    row({ p: dominant }),
+    row({ p: [0.5, 0.5, 0.5, 0.5, 0.5] }),
+    row({ p: [0.11, 0.22, 0.33, 0.44, 0.55] }),
+    row({}),
+  ], 'now', 0);
+  assert.deepEqual(publishedPersonalityShare(s), { k: 1, n: 4 });
+  // Every agent lands in exactly one cohort, so the cohorts add up to the total
+  // the identity chapter divides by.
+  assert.equal(s.cohorts.reduce((a, c) => a + c.n, 0), s.total);
 });

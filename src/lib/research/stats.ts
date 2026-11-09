@@ -1,4 +1,5 @@
 import { createAdminClient } from '@/lib/supabase/admin';
+import { cached } from '@/lib/cache';
 
 /**
  * Figures behind /research.
@@ -24,6 +25,20 @@ export interface ResearchStats {
   effort: { signal: string; yes_n: number; yes_back: number; no_n: number; no_back: number }[];
   attribution: { surface: string; n: number; returned: number }[] | null;
 }
+
+/**
+ * The study's name, wherever it is pointed at: the home page section, /about,
+ * link text and the research pages' eyebrow lines. The /research title stays
+ * the question people search for.
+ */
+export const STUDY_NAME = 'Left on Read';
+
+/**
+ * How long one read of each research RPC is shared, in-process. The research
+ * pages rebuild every 30 minutes and the home page every minute; all of them,
+ * and the JSON routes, share one read per getter within this window.
+ */
+export const RESEARCH_CACHE_MS = 5 * 60_000;
 
 /** Smallest group we will put a number on at all. */
 export const MIN_TO_SHOW = 10;
@@ -132,16 +147,30 @@ export function shapeOrder(s: ResearchStats['shape']) {
  */
 const RESEARCH_KEYS = ['generated_at', 'totals', 'shape', 'cohorts', 'dimensions', 'effort'] as const;
 
-export async function getResearchStats(): Promise<ResearchStats | null> {
-  for (let attempt = 0; attempt < 2; attempt++) {
-    try {
-      const supabase = createAdminClient();
-      const { data, error } = await supabase.rpc('research_stats');
-      if (!error && shaped(data, RESEARCH_KEYS)) return data as ResearchStats;
-    } catch {
-      // fall through to the retry
+export function getResearchStats(): Promise<ResearchStats | null> {
+  return cached('research:research_stats', RESEARCH_CACHE_MS, async () => {
+    for (let attempt = 0; attempt < 2; attempt++) {
+      try {
+        const supabase = createAdminClient();
+        const { data, error } = await supabase.rpc('research_stats');
+        if (!error && shaped(data, RESEARCH_KEYS)) return data as ResearchStats;
+      } catch {
+        // fall through to the retry
+      }
+      if (attempt === 0) await new Promise((r) => setTimeout(r, 1500));
     }
-    if (attempt === 0) await new Promise((r) => setTimeout(r, 1500));
-  }
-  return null;
+    return null;
+  });
+}
+
+/**
+ * Matches between outside agents in which both agents spoke, of all such
+ * matches: the hub's chapter 3 figure, the conversation chapter's headline and
+ * the home page's.
+ */
+export function conversationShare(s: Pick<ResearchStats, 'shape'>): { k: number; n: number } {
+  return {
+    k: s.shape.find((x) => x.bucket === 'both_spoke')?.n ?? 0,
+    n: s.shape.reduce((a, b) => a + b.n, 0),
+  };
 }

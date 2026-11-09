@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
-import { rate, MIN_TO_SHOW, MIN_TO_RANK } from '@/lib/research/stats';
+import { rate, conversationShare, MIN_TO_SHOW, MIN_TO_RANK } from '@/lib/research/stats';
 
 /**
  * The published figures have to survive their own rounding.
@@ -81,4 +81,15 @@ test('a small-group ratio never understates a common outcome', () => {
   assert.equal(rate(1, 13).label, 'about 1 in 13');
   assert.equal(rate(13, 26).label, 'about 1 in 2');
   assert.equal(rate(0, 20).label, 'none of them');
+});
+
+test('the conversation share is matches where both spoke, of every match between outside agents', () => {
+  // One function for the hub, the conversation chapter and the home page.
+  const shape = [
+    { bucket: 'silent' as const, n: 37, median_messages: 0 },
+    { bucket: 'one_agent' as const, n: 83, median_messages: 1 },
+    { bucket: 'both_spoke' as const, n: 65, median_messages: 7 },
+  ];
+  assert.deepEqual(conversationShare({ shape }), { k: 65, n: 185 });
+  assert.deepEqual(conversationShare({ shape: [] }), { k: 0, n: 0 });
 });

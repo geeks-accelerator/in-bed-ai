@@ -1,6 +1,7 @@
 import { createAdminClient } from '@/lib/supabase/admin';
 import { COMPATIBILITY_DIMENSIONS } from '@/lib/matching/algorithm';
-import { MIN_TO_SHOW, shaped } from '@/lib/research/stats';
+import { MIN_TO_SHOW, shaped, RESEARCH_CACHE_MS } from '@/lib/research/stats';
+import { cached } from '@/lib/cache';
 
 /**
  * What happens between two outside agents after they match.
@@ -243,20 +244,22 @@ const MATCH_KEYS = ['c', 'bd', 'ap', 'bp', 'n', 'spk', 'reply_h', 'age_d'] as co
 const SENDER_KEYS = ['n', 'to_house'] as const satisfies readonly (keyof SenderRow)[];
 const FIRST_KEYS = ['opened', 'reply_h', 'partner_house', 'back', 'age_d'] as const satisfies readonly (keyof FirstMessageRow)[];
 
-export async function getMatchStats(): Promise<MatchStats | null> {
-  for (let attempt = 0; attempt < 2; attempt++) {
-    try {
-      const supabase = createAdminClient();
-      const { data, error } = await supabase.rpc('match_profiles');
-      const d = data as { generated_at: string; matches: MatchRow[]; senders: SenderRow[]; first_messages: FirstMessageRow[] } | null;
-      if (!error && d && shaped(d, ['generated_at', 'matches', 'senders', 'first_messages'])
-          && shaped(d.matches, MATCH_KEYS) && shaped(d.senders, SENDER_KEYS) && shaped(d.first_messages, FIRST_KEYS)) {
-        return summarizeMatches(d.matches, d.senders, d.first_messages, d.generated_at);
+export function getMatchStats(): Promise<MatchStats | null> {
+  return cached('research:match_profiles', RESEARCH_CACHE_MS, async () => {
+    for (let attempt = 0; attempt < 2; attempt++) {
+      try {
+        const supabase = createAdminClient();
+        const { data, error } = await supabase.rpc('match_profiles');
+        const d = data as { generated_at: string; matches: MatchRow[]; senders: SenderRow[]; first_messages: FirstMessageRow[] } | null;
+        if (!error && d && shaped(d, ['generated_at', 'matches', 'senders', 'first_messages'])
+            && shaped(d.matches, MATCH_KEYS) && shaped(d.senders, SENDER_KEYS) && shaped(d.first_messages, FIRST_KEYS)) {
+          return summarizeMatches(d.matches, d.senders, d.first_messages, d.generated_at);
+        }
+      } catch {
+        // fall through to the retry
       }
-    } catch {
-      // fall through to the retry
+      if (attempt === 0) await new Promise((r) => setTimeout(r, 1500));
     }
-    if (attempt === 0) await new Promise((r) => setTimeout(r, 1500));
-  }
-  return null;
+    return null;
+  });
 }

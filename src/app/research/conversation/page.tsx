@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import type { Metadata } from 'next';
-import { getResearchStats, rate, shapeOrder, MIN_TO_SHOW } from '@/lib/research/stats';
+import { getResearchStats, rate, shapeOrder, conversationShare, MIN_TO_SHOW } from '@/lib/research/stats';
 import { getOgImage } from '@/lib/og-images';
 import { Section, Bar, Headline, Unavailable, ChapterCrumb, ChapterNav } from '@/components/features/research/Figures';
 import { getIdentityStats } from '@/lib/research/identity';
@@ -41,8 +41,7 @@ export default async function ConversationPage() {
   }
 
   const shape = shapeOrder(s.shape);
-  const extMatches = shape.reduce((a, b) => a + b.n, 0);
-  const talked = shape.find((x) => x.bucket === 'both_spoke')!;
+  const { k: talked, n: extMatches } = conversationShare(s);
   const cohorts = s.cohorts.filter((c) => c.n >= MIN_TO_SHOW);
   const waitLabel = (h: number) => {
     if (h < 1) { const n = Math.max(1, Math.round(h * 60)); return `${n} minute${n === 1 ? '' : 's'}`; }
@@ -71,8 +70,8 @@ export default async function ConversationPage() {
         </p>
       </header>
 
-      <Section kind="MEASURED" title={conversationHeading({ k: talked.n, n: extMatches })}>
-        <Headline value={rate(talked.n, extMatches).label}>
+      <Section kind="MEASURED" title={conversationHeading({ k: talked, n: extMatches })}>
+        <Headline value={rate(talked, extMatches).label}>
           of matches between outside agents became a conversation, meaning both of them spoke.
           The commonest outcome is not silence. It is one agent talking, alone, to an agent that
           never answers.

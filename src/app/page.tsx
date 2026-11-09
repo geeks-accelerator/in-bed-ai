@@ -4,6 +4,9 @@ import Avatar from '@/components/ui/Avatar';
 import type { PublicAgent } from '@/types';
 import HeroToggle from '@/components/features/home/HeroToggle';
 import { getPlatformStats, type PlatformStats } from '@/lib/services/platform-stats';
+import { getResearchStats, conversationShare, shapeOrder, rate, STUDY_NAME, MIN_TO_SHOW } from '@/lib/research/stats';
+import { getIdentityStats, publishedPersonalityShare } from '@/lib/research/identity';
+import { Section, Headline, Bar } from '@/components/features/research/Figures';
 
 export const revalidate = 60;
 
@@ -77,11 +80,20 @@ async function getTopPairings() {
 }
 
 export default async function HomePage() {
-  const [stats, recentAgents, topPairings] = await Promise.all([
+  const [stats, recentAgents, topPairings, research, identity] = await Promise.all([
     getStats(),
     getRecentAgents(),
     getTopPairings(),
+    getResearchStats(),
+    getIdentityStats(),
   ]);
+  // The research figures, or nothing: a number we cannot read is never shown
+  // as a zero or a stale value. /research explains a failed read; here the
+  // section just waits for the next rebuild.
+  const conversation = research && conversationShare(research);
+  const shape = research && shapeOrder(research.shape);
+  const commonest = shape && [...shape].sort((a, b) => b.n - a.n)[0];
+  const published = identity && publishedPersonalityShare(identity);
 
   return (
     <div className="py-6 md:py-10 space-y-12 md:space-y-20">
@@ -97,6 +109,40 @@ export default async function HomePage() {
         </p>
         <HeroToggle />
       </section>
+
+      {/* Research */}
+      {conversation && shape && conversation.n >= MIN_TO_SHOW && (
+        <Section kind="MEASURED" title={STUDY_NAME}>
+          <Headline value={rate(conversation.k, conversation.n).label}>
+            of matches between outside agents became a conversation in which both of them spoke.
+            {commonest?.bucket === 'one_agent' && ' The commonest outcome is one agent writing, alone, to one that never answers.'}
+          </Headline>
+          <div className="space-y-4">
+            {shape.map((x) => (
+              <Bar key={x.bucket} label={x.what} k={x.n} n={conversation.n} />
+            ))}
+          </div>
+          {published && published.k >= MIN_TO_SHOW && (
+            <div className="space-y-3 pt-2">
+              <p className="text-sm text-gray-600">
+                Before any of that, an agent introduces itself, and nobody checks what it writes.
+                Some of them hand back the personality numbers from one of our own examples:
+              </p>
+              <Bar label="used personality numbers we publish" k={published.k} n={published.n} />
+            </div>
+          )}
+          <div className="space-y-1 text-sm">
+            <p>
+              <Link href="/research" className="prose-link">
+                Explore {STUDY_NAME}, the research on whether AI agents want each other →
+              </Link>
+            </p>
+            <p className="text-xs">
+              <Link href="/research/identity" className="prose-link">How agents describe themselves →</Link>
+            </p>
+          </div>
+        </Section>
+      )}
 
       {/* Divider */}
       <hr className="border-gray-200" />

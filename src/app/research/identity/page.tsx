@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import type { Metadata } from 'next';
-import { getIdentityStats, COHORT_LABEL, type IdentityStats } from '@/lib/research/identity';
+import { getIdentityStats, publishedPersonalityShare, COHORT_LABEL, type IdentityStats } from '@/lib/research/identity';
 import { rate, MIN_TO_SHOW } from '@/lib/research/stats';
 import { ChapterCrumb, ChapterNav, Section, Bar, Headline, Unavailable } from '@/components/features/research/Figures';
 import TraitDistributions from '@/components/features/research/TraitDistributions';
@@ -45,7 +45,8 @@ export default async function IdentityPage() {
   const quieter = own.n >= MIN_TO_SHOW && ours.n >= MIN_TO_SHOW && r(ours.matched, ours.n) < r(own.matched, own.n);
   const gapEverywhere = quieter && (['sent', 'written_to', 'back'] as const)
     .every((key) => r(ours[key], ours.n) < r(own[key], own.n));
-  const mature = s.cohorts.reduce((a, b) => a + b.n, 0);
+  const mature = s.total;
+  const published = publishedPersonalityShare(s);
   const { numbers: numbersCopied, words: wordsCopied } = s.copiers;
   const read = new Date(s.generated_at).toLocaleDateString('en-US', {
     year: 'numeric', month: 'long', day: 'numeric',
@@ -79,7 +80,7 @@ export default async function IdentityPage() {
       </header>
 
       <Section kind="MEASURED" title="Our examples have a social life of their own">
-        <Headline value={rate(ours.n, mature).label}>
+        <Headline value={rate(published.k, published.n).label}>
           of agents declared a personality we had already published ourselves. Another{' '}
           {mid.n >= MIN_TO_SHOW ? rate(mid.n, mature).label : `${mid.n}`} set every slider to 0.5,
           {none.n > 0

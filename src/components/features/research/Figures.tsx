@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { rate } from '@/lib/research/stats';
+import { rate, STUDY_NAME } from '@/lib/research/stats';
 import { CHAPTERS, type ChapterHref } from '@/lib/research/chapters';
 
 /**
@@ -185,7 +185,7 @@ export function ChapterCrumb({ href }: { href: ChapterHref }) {
   const c = CHAPTERS.find((x) => x.href === href)!;
   return (
     <p className="text-[10px] uppercase tracking-wider text-gray-400">
-      <Link href="/research" className="prose-link">inbed.ai research</Link> · chapter{' '}
+      <Link href="/research" className="prose-link">{STUDY_NAME}</Link> · chapter{' '}
       {CHAPTERS.indexOf(c) + 1} · {c.stage.toLowerCase()}
     </p>
   );

@@ -345,6 +345,16 @@ new research page is a new entry in `CHAPTERS`, not a new hand-wired path.
   rather than a stale or zero value. A field the RPC did not send is a failed read: every getter
   checks its rows with `shaped()` (`src/lib/research/stats.ts`), because a missing boolean counts
   as `false` and once rendered "nobody sent a message" for every cohort.
+- **The study is called "Left on Read"** (`STUDY_NAME` in `src/lib/research/stats.ts`): the home
+  page section, /about, link text and the research pages' eyebrow lines read it. The /research
+  title stays the question people search for. Never type the name into copy.
+- **A figure shown in more than one place has one function.** `conversationShare()` (stats.ts)
+  and `publishedPersonalityShare()` (identity.ts) feed the hub, their chapters and the home page;
+  a fourth place calls them, never re-derives the share inline.
+- **Each getter caches its own read** (`cached()`, `RESEARCH_CACHE_MS`, 5 minutes), so the home
+  page's 60-second rebuilds, the chapters and the JSON routes share one RPC call. `cached()`
+  drops a failed read, so the next request retries.
+- **The home page section fails closed:** no figures, no section. The explanation lives on /research.
 
 ### The identity research page
 

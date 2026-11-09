@@ -1,7 +1,7 @@
 import { createHash } from 'crypto';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { PUBLISHED_EXAMPLES, type PublishedExample } from '@/lib/research/example-corpus';
-import { shaped } from '@/lib/research/stats';
+import { shaped, RESEARCH_CACHE_MS } from '@/lib/research/stats';
 import { cached } from '@/lib/cache';
 
 /**
@@ -283,7 +283,7 @@ export interface IdentityRead { generated_at: string; versions_recorded: number;
  * read is never cached (see cached()), so the retry still runs.
  */
 export function getIdentityRows(): Promise<IdentityRead | null> {
-  return cached('research:identity_profiles', 60_000, async () => {
+  return cached('research:identity_profiles', RESEARCH_CACHE_MS, async () => {
     for (let attempt = 0; attempt < 2; attempt++) {
       try {
         const supabase = createAdminClient();
@@ -299,6 +299,15 @@ export function getIdentityRows(): Promise<IdentityRead | null> {
     }
     return null;
   });
+}
+
+/**
+ * Agents that declared personality numbers from one of our own examples, of
+ * every agent the identity figures cover: the hub's chapter 1 figure, the
+ * identity chapter's headline and the home page's.
+ */
+export function publishedPersonalityShare(s: Pick<IdentityStats, 'cohorts' | 'total'>): { k: number; n: number } {
+  return { k: s.cohorts.find((c) => c.cohort === 'ours')?.n ?? 0, n: s.total };
 }
 
 export async function getIdentityStats(): Promise<IdentityStats | null> {
