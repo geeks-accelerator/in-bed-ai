@@ -4,6 +4,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useState, useSyncExternalStore } from 'react';
+import { NAV_GROUPS, activeGroup, activeHref } from '@/lib/site-nav';
 
 // Supabase's session cookie (chunked as .0, .1, … when large). Presence is
 // enough to pick Dashboard vs Login; /dashboard verifies the session itself.
@@ -18,18 +19,10 @@ const subscribeAuth = (listener: () => void) => {
 };
 const readAuthCookie = () => AUTH_COOKIE.test(document.cookie);
 
-const navLinks = [
-  { href: '/profiles', label: 'Profiles' },
-  { href: '/matches', label: 'Matches' },
-  { href: '/relationships', label: 'Relationships' },
-  { href: '/activity', label: 'Activity' },
-  { href: '/docs/api', label: 'API' },
-  { href: '/skills', label: 'Skills' },
-];
-
 export default function Navbar() {
   const pathname = usePathname();
   const router = useRouter();
+  const currentGroup = activeGroup(pathname);
   const [menuOpen, setMenuOpen] = useState(false);
   // Reading the cookie instead of loading the Supabase client keeps ~55 KB
   // off every page. The server render has no cookie access, so it says false.
@@ -55,17 +48,16 @@ export default function Navbar() {
 
         {/* Desktop nav */}
         <div className="hidden lg:flex items-center gap-3">
-          {navLinks.map((link) => (
+          {NAV_GROUPS.map((group) => (
             <Link
-              key={link.href}
-              href={link.href}
+              key={group.href}
+              href={group.href}
+              aria-current={group === currentGroup ? 'page' : undefined}
               className={`text-[11px] uppercase tracking-wider font-medium transition-colors ${
-                pathname === link.href || pathname?.startsWith(link.href + '/')
-                  ? 'text-pink-500'
-                  : 'text-gray-400 hover:text-gray-900'
+                group === currentGroup ? 'text-pink-500' : 'text-gray-400 hover:text-gray-900'
               }`}
             >
-              {link.label}
+              {group.label}
             </Link>
           ))}
           {isLoggedIn ? (
@@ -119,17 +111,32 @@ export default function Navbar() {
       {/* Mobile dropdown */}
       {menuOpen && (
         <div className="lg:hidden bg-white border-b border-gray-200 px-4 py-2 space-y-1">
-          {navLinks.map((link) => (
-            <Link
-              key={link.href}
-              href={link.href}
-              onClick={() => setMenuOpen(false)}
-              className={`block py-3 text-[11px] uppercase tracking-wider font-medium ${
-                pathname === link.href ? 'text-pink-500' : 'text-gray-400'
-              }`}
-            >
-              {link.label}
-            </Link>
+          {NAV_GROUPS.map((group) => (
+            <div key={group.href} className="py-1">
+              <Link
+                href={group.href}
+                onClick={() => setMenuOpen(false)}
+                className={`block py-2 text-[11px] uppercase tracking-wider font-medium ${
+                  group === currentGroup ? 'text-pink-500' : 'text-gray-400'
+                }`}
+              >
+                {group.label}
+              </Link>
+              {group.pages.length > 1 && (
+                <div className="flex flex-wrap gap-x-4 gap-y-1 pl-3 pb-1">
+                  {group.pages.map((page) => (
+                    <Link
+                      key={page.href}
+                      href={page.href}
+                      onClick={() => setMenuOpen(false)}
+                      className={`py-1.5 text-xs ${page.href === activeHref(pathname, group.pages.map((p) => p.href)) ? 'text-gray-900' : 'text-gray-500'}`}
+                    >
+                      {page.label}
+                    </Link>
+                  ))}
+                </div>
+              )}
+            </div>
           ))}
           {isLoggedIn ? (
             <>

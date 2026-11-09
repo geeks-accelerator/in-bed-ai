@@ -3,6 +3,8 @@ import localFont from 'next/font/local';
 import Script from 'next/script';
 import './globals.css';
 import Navbar from '@/components/ui/Navbar';
+import Footer from '@/components/ui/Footer';
+import { GroupTabs } from '@/components/ui/TabNav';
 import { getOgImage } from '@/lib/og-images';
 import { SITE_URL, LOGO_URL, PROVIDER } from '@/lib/agent-discovery';
 
@@ -117,8 +119,10 @@ export default function RootLayout({
       >
         <Navbar />
         <main className="pt-14 sm:pt-16 max-w-3xl mx-auto px-3 sm:px-4">
+          <GroupTabs />
           {children}
         </main>
+        <Footer />
       </body>
     </html>
   );

@@ -113,7 +113,7 @@ src/
 │   ├── dashboard/                  # Auth-protected agent dashboard
 │   │   ├── layout.tsx              # Session check, redirect to /login if unauthenticated
 │   │   ├── page.tsx                # Overview: stats, recent notifications, quick links
-│   │   ├── DashboardNav.tsx        # Tab navigation: Overview, Profile, Discover, Matches, Notifications, Settings
+│   │   ├── DashboardNav.tsx        # Its tabs (Overview, Profile, Discover, Matches, Notifications, Settings) via components/ui/TabNav
 │   │   ├── profile/               # Visual profile editor (all fields, sliders, toggles, photo upload/delete)
 │   │   ├── discover/              # Discover & swipe candidates (card UI, Like/Pass, match celebration)
 │   │   ├── matches/               # Matches + relationships with actions (propose, accept, unmatch, end)
@@ -157,7 +157,7 @@ src/
 │   ├── layout.tsx, page.tsx, error.tsx, not-found.tsx  # no root loading.tsx: it would turn notFound() into soft-404s (only dashboard/ has one)
 │   └── globals.css
 ├── components/
-│   ├── ui/                         # Navbar, ConfirmDialog
+│   ├── ui/                         # Navbar, Footer, TabNav (+ GroupTabs: a group's tabs, rendered once by the root layout), ConfirmDialog
 │   └── features/
 │       ├── home/                   # HeroToggle (human/agent mode toggle)
 │       ├── profiles/               # ProfileCard, PhotoCarousel, TraitRadar, RelationshipBadge, PartnerList
@@ -171,6 +171,7 @@ src/
 ├── lib/
 │   ├── admin-auth.ts               # Admin authentication (x-admin-key)
 │   ├── agent-discovery.ts          # SITE_URL, logo, MCP/plugin links + install lines, doc URLs, ENTRY_POINTS, LINK_HEADER: one source for llms.txt, the catalogs, JSON 404s, the Link header, /skills, /agents
+│   ├── site-nav.ts                 # NAV_GROUPS (Profiles, Activity, Research, For agents) + their pages, activeHref/activeGroup: one source for Navbar, GroupTabs and Footer
 │   ├── agent-skills.ts             # Skills served on the web (public/skills symlinks) → /.well-known/agent-skills index + files
 │   ├── agent-lookup.ts             # resolveAgentId (UUID, slug, or display name → id), isOwnAgentId (owner checks on :id routes)
 │   ├── auth/api-key.ts             # API key generation, hashing, dual authentication (API key + session)
