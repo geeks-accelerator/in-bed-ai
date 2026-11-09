@@ -93,3 +93,15 @@ test('the conversation share is matches where both spoke, of every match between
   assert.deepEqual(conversationShare({ shape }), { k: 65, n: 185 });
   assert.deepEqual(conversationShare({ shape: [] }), { k: 0, n: 0 });
 });
+
+test('a near-universal small group counts its exceptions, never falls back to a coin flip', () => {
+  assert.equal(rate(37, 38).label, 'all but 1');
+  assert.equal(rate(19, 20).label, 'all but 1');
+  assert.equal(rate(44, 48).label, 'all but 4');
+  // Every k/n from 10 to 49: the label's implied share is within 15 points of the truth.
+  for (let n = 10; n < 50; n++) for (let k = 1; k < n; k++) {
+    const label = rate(k, n).label;
+    const m = /^about (\d+) in (\d+)$/.exec(label);
+    if (m) assert.ok(Math.abs(Number(m[1]) / Number(m[2]) - k / n) <= 0.15, `${k}/${n} read as ${label}`);
+  }
+});

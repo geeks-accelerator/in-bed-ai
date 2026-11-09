@@ -79,7 +79,7 @@ export function rate(k: number, n: number): Rate {
   const hi = ((centre + margin) / d) * 100;
 
   if (n < MIN_TO_RANK) {
-    const ratio = k === 0 ? 'none of them' : smallRatio(p);
+    const ratio = k === 0 ? 'none of them' : smallRatio(k, n);
     return { pct: p * 100, lo: Math.max(0, lo), hi, k, n, label: ratio, small: true };
   }
   const rounded = n < 200 ? Math.round((p * 100) / 5) * 5 : Math.round(p * 100);
@@ -107,15 +107,20 @@ export function shaped(xs: unknown, keys: readonly string[]): boolean {
 }
 
 /**
- * A proportion as words a reader can hold: "about 2 in 3", "about 1 in 13".
+ * A proportion as words a reader can hold: "about 2 in 3", "about 1 in 13",
+ * "all but 1".
  *
- * Always "1 in N" once understated 12 of 18 as "about 1 in 2" and printed
- * 100% as "about 1 in 1". Rare events keep the "1 in N" form, which is how they
- * are read; anything commoner gets the nearest fraction over 2 to 10.
+ * Always "1 in N" once understated 12 of 18 as "about 1 in 2". The first
+ * replacement had the mirror bug: at 95–99%, every fraction up to tenths
+ * rounds to "all", none qualified, and 37 of 38 fell through to "about 1 in 2".
+ * Rare events keep "1 in N"; near-universal ones count the exceptions; the
+ * rest get the nearest fraction over 2 to 10.
  */
-export function smallRatio(p: number): string {
-  if (p >= 1) return 'all of them';
+export function smallRatio(k: number, n: number): string {
+  const p = k / n;
+  if (k >= n) return 'all of them';
   if (p < 0.15) return `about 1 in ${Math.round(1 / p)}`;
+  if (p > 0.9) return `all but ${n - k}`;
   let best = { a: 1, b: 2, err: Infinity };
   for (let b = 2; b <= 10; b++) {
     const a = Math.round(p * b);
