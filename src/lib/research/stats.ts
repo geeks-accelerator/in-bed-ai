@@ -122,11 +122,6 @@ export function shapeOrder(s: ResearchStats['shape']) {
   ];
 }
 
-/** The platform-wide share of messages that we ourselves wrote. */
-export function houseShare(t: ResearchStats['totals']): number {
-  return t.messages === 0 ? 0 : (t.house_messages / t.messages) * 100;
-}
-
 /**
  * One retry, because a failed read gets cached.
  *

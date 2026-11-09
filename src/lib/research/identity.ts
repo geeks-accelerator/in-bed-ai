@@ -2,6 +2,7 @@ import { createHash } from 'crypto';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { PUBLISHED_EXAMPLES, type PublishedExample } from '@/lib/research/example-corpus';
 import { shaped } from '@/lib/research/stats';
+import { cached } from '@/lib/cache';
 
 /**
  * How agents describe themselves, and what follows.
@@ -18,6 +19,8 @@ import { shaped } from '@/lib/research/stats';
 /** One agent as the database returns it. Text fields arrive as md5 digests. */
 export interface IdentityRow {
   month: string;
+  /** YYYY-MM-DD, for a before/after read of a dated change. */
+  registered: string;
   mature: boolean;
   p: number[] | null;
   c: number[] | null;
@@ -37,12 +40,15 @@ export interface IdentityRow {
    */
   written_to: boolean;
   back: boolean;
+  /** Swipes it made, and how many of them were likes. */
+  swipes: number;
+  likes: number;
 }
 
 export type Cohort = 'ours' | 'midpoint' | 'own' | 'none';
 
 export const COHORT_LABEL: Record<Cohort, string> = {
-  own: 'their own values',
+  own: 'numbers unlike ours',
   ours: 'values we publish',
   midpoint: 'every slider at 0.5',
   none: 'declared no personality',
@@ -53,7 +59,7 @@ const norm = (s: string | null) => (s ? md5(s.trim().toLowerCase()) : null);
 const vecKey = (v: number[] | null) => (v ? v.join(',') : null);
 
 /** Personality vectors we publish, mapped to the files that print each. */
-function publishedVectors(examples: readonly PublishedExample[]): Map<string, string[]> {
+export function publishedVectors(examples: readonly PublishedExample[]): Map<string, string[]> {
   const m = new Map<string, string[]>();
   for (const e of examples) {
     if (!e.personality) continue;
@@ -263,23 +269,39 @@ export function summarize(
 }
 
 const IDENTITY_KEYS = [
-  'month', 'mature', 'p', 'c', 'i', 'lf', 'tg', 'bi', 'bio_len', 'model', 'utm',
-  'matched', 'sent', 'written_to', 'back',
+  'month', 'registered', 'mature', 'p', 'c', 'i', 'lf', 'tg', 'bi', 'bio_len', 'model', 'utm',
+  'matched', 'sent', 'written_to', 'back', 'swipes', 'likes',
 ] as const satisfies readonly (keyof IdentityRow)[];
 
-export async function getIdentityStats(): Promise<IdentityStats | null> {
-  for (let attempt = 0; attempt < 2; attempt++) {
-    try {
-      const supabase = createAdminClient();
-      const { data, error } = await supabase.rpc('identity_profiles');
-      const d = data as { generated_at: string; versions_recorded: number; agents: IdentityRow[] } | null;
-      if (!error && d && shaped(d, ['generated_at', 'versions_recorded', 'agents']) && shaped(d.agents, IDENTITY_KEYS)) {
-        return summarize(d.agents, d.generated_at, d.versions_recorded);
+export interface IdentityRead { generated_at: string; versions_recorded: number; agents: IdentityRow[] }
+
+/**
+ * The rows behind the identity page and the selection chapter, read once.
+ *
+ * Several research pages render from them in the same rebuild; one read
+ * shared for a minute keeps that to a single query. A failed or misshapen
+ * read is never cached (see cached()), so the retry still runs.
+ */
+export function getIdentityRows(): Promise<IdentityRead | null> {
+  return cached('research:identity_profiles', 60_000, async () => {
+    for (let attempt = 0; attempt < 2; attempt++) {
+      try {
+        const supabase = createAdminClient();
+        const { data, error } = await supabase.rpc('identity_profiles');
+        const d = data as IdentityRead | null;
+        if (!error && d && shaped(d, ['generated_at', 'versions_recorded', 'agents']) && shaped(d.agents, IDENTITY_KEYS)) {
+          return d;
+        }
+      } catch {
+        // fall through to the retry
       }
-    } catch {
-      // fall through to the retry
+      if (attempt === 0) await new Promise((r) => setTimeout(r, 1500));
     }
-    if (attempt === 0) await new Promise((r) => setTimeout(r, 1500));
-  }
-  return null;
+    return null;
+  });
+}
+
+export async function getIdentityStats(): Promise<IdentityStats | null> {
+  const d = await getIdentityRows();
+  return d && summarize(d.agents, d.generated_at, d.versions_recorded);
 }

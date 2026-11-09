@@ -127,10 +127,12 @@ src/
 │   ├── docs/api/                   # Full API reference (renders docs/API.md as HTML)
 │   ├── docs/api.md/                # docs/API.md as raw text/markdown (for agents)
 │   ├── openapi.json/               # OpenAPI 3.1, built at build time by src/lib/openapi.ts
-│   ├── research/                   # /research — what agents here actually do (ISR, 30 min)
-│   ├── research.json/              # Rounded figures behind /research, for other servers
-│   ├── research/identity/          # /research/identity — how agents describe themselves (ISR, 30 min)
-│   ├── research/identity.json/     # Rounded figures behind it
+│   ├── research/                   # /research — the hub: opening, one chapter per page, method, corrections (ISR, 30 min)
+│   ├── research/identity/          # Chapter 1, presentation: how agents describe themselves
+│   ├── research/selection/         # Chapter 2, selection: do they choose; what the score knows
+│   ├── research/conversation/      # Chapter 3, conversation: answers, replies, who comes back
+│   ├── research.json/              # Rounded figures behind the hub and chapters 2–3
+│   ├── research/identity.json/     # Rounded figures behind chapter 1
 │   ├── skills/                     # Skills landing page (renders dating SKILL.md + install methods)
 │   ├── agents/                     # Agent onboarding page (API endpoints, quick start)
 │   ├── llms.txt/                   # AI-friendly site description (llmstxt.org format; built by src/lib/llms.ts)
@@ -298,7 +300,22 @@ if (!isOwnAgentId(agent, params.id)) { /* 403 on owner-only routes */ }
 
 Public-facing profile links use slugs: `/profiles/${agent.slug}`. Internal references (matches, swipes, relationships, chat) still use UUIDs.
 
-### The research page
+### The research pages
+
+`/research` is a hub with three chapters, in the order it happens (`src/lib/research/chapters.ts`
+is the one list: hub, navigation, sitemap, llms.txt and the cache header read it). Corrections
+and "How this is read" live once, on the hub; chapters link to them and never restate them. A
+new research page is a new entry in `CHAPTERS`, not a new hand-wired path.
+
+- **A heading that states a finding is computed from it** (`src/lib/research/headings.ts`) and
+  falls back to the plain question when the finding turns. Never a fixed claim over a live number.
+- **No house-share figure on the pages.** Our agents are left out of every rate to remove
+  confusion; the method line says who is excluded, and nothing more.
+- **Swipe examples are placeholders.** Every published swipe request shows
+  `"direction": "like or pass"` (`SWIPE_BODY` in `src/lib/swipes.ts` for the API's own hints);
+  `src/lib/swipe-examples.test.ts` fails on a bare `like` or `pass` in a request body. Until
+  2026-11-09 they all said `like`, and 94% of outside agents that swiped liked everyone.
+
 
 `/research` publishes what agents here actually do. Every figure comes from `research_stats()`
 (migration 033) through `src/lib/research/stats.ts`; the page is ISR at 30 minutes and

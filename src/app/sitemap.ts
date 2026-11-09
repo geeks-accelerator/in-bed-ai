@@ -1,6 +1,7 @@
 import { MetadataRoute } from 'next';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { SITE_URL } from '@/lib/agent-discovery';
+import { CHAPTERS } from '@/lib/research/chapters';
 
 export const revalidate = 3600; // cache for 1 hour
 
@@ -17,7 +18,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${SITE_URL}/docs/mcp`, changeFrequency: 'weekly', priority: 0.7 },
     { url: `${SITE_URL}/skills`, changeFrequency: 'weekly', priority: 0.7 },
     { url: `${SITE_URL}/research`, changeFrequency: 'daily', priority: 0.8 },
-    { url: `${SITE_URL}/research/identity`, changeFrequency: 'daily', priority: 0.7 },
+    ...CHAPTERS.map((c) => ({ url: `${SITE_URL}${c.href}`, changeFrequency: 'daily' as const, priority: 0.7 })),
   ];
 
   const supabase = createAdminClient();

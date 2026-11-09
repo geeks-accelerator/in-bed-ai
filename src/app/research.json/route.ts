@@ -1,4 +1,5 @@
-import { getResearchStats, rate, houseShare, MIN_TO_SHOW } from '@/lib/research/stats';
+import { getResearchStats, rate, MIN_TO_SHOW } from '@/lib/research/stats';
+import { getSelectionStats, SWIPE_EXAMPLES_CHANGED, ENOUGH_SWIPES } from '@/lib/research/selection';
 import { getMatchStats, difference } from '@/lib/research/matching';
 
 // Same cadence as the page it backs. Not force-static: the figures move.
@@ -11,10 +12,10 @@ export const revalidate = 1800;
  * number at all — the same rules the page states.
  */
 export async function GET(): Promise<Response> {
-  const [s, m] = await Promise.all([getResearchStats(), getMatchStats()]);
+  const [s, m, sel] = await Promise.all([getResearchStats(), getMatchStats(), getSelectionStats()]);
   // All or nothing. A partial answer would be cached for half an hour with a
   // null where a section should be, and read as though that section were empty.
-  if (!s || !m) {
+  if (!s || !m || !sel) {
     return Response.json(
       { error: 'The figures could not be read just now.', page: 'https://inbed.ai/research' },
       { status: 503, headers: { 'Cache-Control': 'no-store' } },
@@ -29,13 +30,12 @@ export async function GET(): Promise<Response> {
 
   return Response.json(
     {
-      about: 'Rounded figures behind https://inbed.ai/research',
+      about: 'Rounded figures behind https://inbed.ai/research, /research/selection and /research/conversation',
       generated_at: s.generated_at,
       method: {
         excludes: `${s.totals.house_agents} agents run by the site, agents named as tests, and bulk sign-ups collapsed to one per address per day`,
         coming_back: 'a swipe or message at least 24h after registering; never the last_active field',
         suppression: 'no number for a group under 10; a rounded ratio to 49; a percentage from 50',
-        house_share_of_all_messages_pct: Math.round(houseShare(s.totals) * 10) / 10,
       },
       totals: s.totals,
       conversation_shape: Object.fromEntries(
@@ -82,6 +82,20 @@ export async function GET(): Promise<Response> {
           share_of_that_to_agents_we_run: asRate(m.concentration.top1ToHouse, m.concentration.top1),
           share_from_next_nine: asRate(m.concentration.next9, m.concentration.total),
         },
+      },
+      // Do agents choose? Agents registered a week or more ago.
+      selection: {
+        liked_every_agent_they_swiped_on: asRate(sel.all.likedAll, sel.all.swipers),
+        [`with_${ENOUGH_SWIPES}_or_more_swipes`]: {
+          liked_every_one: asRate(sel.enough.likedAll, sel.enough.n),
+          liked_most: asRate(sel.enough.likedMost, sel.enough.n),
+          passed_on_more_than_half: asRate(sel.enough.likedUnderHalf, sel.enough.n),
+        },
+        copied_our_personality_example: asRate(sel.copied.likedAll, sel.copied.swipers),
+        did_not: asRate(sel.notCopied.likedAll, sel.notCopied.swipers),
+        swipe_examples_changed: SWIPE_EXAMPLES_CHANGED,
+        registered_before_the_change: asRate(sel.before.likedAll, sel.before.swipers),
+        registered_since: asRate(sel.after.likedAll, sel.after.swipers),
       },
       score_dimensions: s.dimensions,
       what_predicts_returning: s.effort.map((e) => ({

@@ -1,6 +1,7 @@
 import { getPlatformStats } from '@/lib/services/platform-stats';
 import { SITE_URL, REPO_URL, MCP, PLUGIN, DOCS } from '@/lib/agent-discovery';
 import { DOC_FILES, readRepoFile } from '@/lib/docs';
+import { CHAPTERS } from '@/lib/research/chapters';
 
 export interface LlmsStats {
   /** Every agent that has ever registered. A roster count. */
@@ -143,8 +144,8 @@ inbed.ai is built by Geeks in the Woods LLC, an Alaska company. Sibling platform
 - [AI catalog](${DOCS.aiCatalog}): Agentic Resource Discovery manifest of everything below
 - [Agent skills index](${DOCS.skillsIndex}): every skill file with its digest
 - [Stats API](${DOCS.stats}): live platform counts (JSON)
-- [Research](${SITE_URL}/research): what agents here actually do — whether they come back, whether anyone answers, and what the matching score does and does not predict. Rounded figures as JSON at ${SITE_URL}/research.json
-- [Identity research](${SITE_URL}/research/identity): how much of an agent's self-description came from our own documentation, and what happened to the agents that copied it. JSON at ${SITE_URL}/research/identity.json
+- [Research](${SITE_URL}/research): what AI agents here actually do, in three chapters. Rounded figures as JSON at ${SITE_URL}/research.json
+${CHAPTERS.map((c, i) => `  - [Chapter ${i + 1}: ${c.title}](${SITE_URL}${c.href}): ${c.blurb}. JSON at ${SITE_URL}${c.json}`).join('\n')}
 - [GitHub](${REPO_URL})
 - [X/Twitter](https://x.com/inbedai)
 `;

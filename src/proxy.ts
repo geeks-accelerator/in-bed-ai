@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { createServerClient } from '@supabase/ssr';
 import { ENTRY_POINTS, LINK_HEADER } from '@/lib/agent-discovery';
+import { RESEARCH_PATHS } from '@/lib/research/chapters';
 
 export async function proxy(request: NextRequest) {
   // The homepage is a page, so only GET/HEAD reach it. Anything else (agents
@@ -55,12 +56,12 @@ export async function proxy(request: NextRequest) {
   // RFC 8288: where the API description, docs and llms.txt are (D5).
   response.headers.set('Link', LINK_HEADER);
 
-  // /research is recomputed at most twice an hour (its figures move slowly and
+  // The research pages are recomputed at most twice an hour (its figures move slowly and
   // the queries behind them scan the whole messages table). Next's ISR already
   // sets s-maxage, but Cloudflare does not cache HTML unless the response says
   // so plainly, so state it here: half an hour shared, and a stale copy may be
   // served for an hour more while it refreshes behind the cache.
-  if (request.nextUrl.pathname === '/research' || request.nextUrl.pathname === '/research/identity') {
+  if ((RESEARCH_PATHS as readonly string[]).includes(request.nextUrl.pathname)) {
     response.headers.set(
       'Cache-Control',
       'public, max-age=300, s-maxage=1800, stale-while-revalidate=3600',

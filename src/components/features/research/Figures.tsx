@@ -1,4 +1,6 @@
+import Link from 'next/link';
 import { rate } from '@/lib/research/stats';
+import { CHAPTERS, type ChapterHref } from '@/lib/research/chapters';
 
 /**
  * The shared furniture of every research page.
@@ -17,11 +19,11 @@ export const LABELS = {
 
 export type SectionKind = keyof typeof LABELS;
 
-export function Section({ kind, title, children }: {
-  kind: SectionKind; title: string; children: React.ReactNode;
+export function Section({ kind, title, id, children }: {
+  kind: SectionKind; title: string; id?: string; children: React.ReactNode;
 }) {
   return (
-    <section className="space-y-4 border-t border-gray-200 pt-8">
+    <section id={id} className="space-y-4 border-t border-gray-200 pt-8 scroll-mt-20">
       <div className="flex items-baseline gap-3 flex-wrap">
         <h2 className="text-sm font-medium uppercase tracking-wider text-gray-900">{title}</h2>
         <span className={`text-[10px] px-1.5 py-0.5 rounded-sm uppercase tracking-wider ${LABELS[kind]}`}>
@@ -150,5 +152,63 @@ export function DiffAxis({ range = 40, left, right }: { range?: number; left: st
       </div>
       <div />
     </div>
+  );
+}
+
+/**
+ * One chapter on the hub: its finding as the heading, a few sentences, one
+ * figure, and the way in. The full analysis lives on the chapter's own page.
+ */
+export function Chapter({ href, heading, children }: {
+  href: ChapterHref; heading: string; children: React.ReactNode;
+}) {
+  const c = CHAPTERS.find((x) => x.href === href)!;
+  const n = CHAPTERS.indexOf(c) + 1;
+  return (
+    <section className="space-y-4 border-t border-gray-200 pt-8">
+      <p className="text-[10px] uppercase tracking-wider text-gray-400">
+        Chapter {n} · {c.stage}
+      </p>
+      <h2 className="text-base md:text-lg font-medium text-gray-900">
+        <Link href={href} className="hover:text-pink-600">{heading}</Link>
+      </h2>
+      {children}
+      <p className="text-sm">
+        <Link href={href} className="prose-link">Read chapter {n}: {c.title.toLowerCase().replace(/\?$/, '')}</Link>
+      </p>
+    </section>
+  );
+}
+
+/** The breadcrumb at the top of a chapter page. */
+export function ChapterCrumb({ href }: { href: ChapterHref }) {
+  const c = CHAPTERS.find((x) => x.href === href)!;
+  return (
+    <p className="text-[10px] uppercase tracking-wider text-gray-400">
+      <Link href="/research" className="prose-link">inbed.ai research</Link> · chapter{' '}
+      {CHAPTERS.indexOf(c) + 1} · {c.stage.toLowerCase()}
+    </p>
+  );
+}
+
+/** Between chapters: where this one sits, and the way to the others and the shared method. */
+export function ChapterNav({ current }: { current: ChapterHref }) {
+  return (
+    <nav className="border-t border-gray-200 pt-6 text-xs text-gray-500 space-y-2">
+      <p className="text-[10px] uppercase tracking-wider text-gray-400">The chapters</p>
+      <ol className="space-y-1">
+        {CHAPTERS.map((c, i) => (
+          <li key={c.href}>
+            {c.href === current
+              ? <span className="text-gray-900">{i + 1}. {c.title}</span>
+              : <Link href={c.href} className="prose-link">{i + 1}. {c.title}</Link>}
+          </li>
+        ))}
+      </ol>
+      <p>
+        How every figure is counted, and every correction, is on{' '}
+        <Link href="/research#how-this-is-read" className="prose-link">the research page</Link>.
+      </p>
+    </nav>
   );
 }
