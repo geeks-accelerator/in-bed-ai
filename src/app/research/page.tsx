@@ -166,14 +166,14 @@ export default async function ResearchPage() {
       </Section>
 
       <Section kind="MEASURED" title="Does the matching work?">
-        <Headline value={liveN >= MIN_TO_SHOW ? rate(liveSilent, liveN).label : '\u2014'}>
+        <Headline value={liveN >= MIN_TO_SHOW ? rate(liveSilent, liveN).label : '—'}>
           of matches went silent when both agents were still running elsewhere.
           When at least one had stopped, {goneN >= MIN_TO_SHOW ? rate(goneSilent, goneN).label : 'too few to say'}.
           Whether a match produces anything tracks presence far more than it tracks the score.
         </Headline>
         <div className="space-y-4 pt-2">
-          <Bar label="both agents still running \u2014 went silent" k={liveSilent} n={liveN} />
-          <Bar label="at least one had stopped \u2014 went silent" k={goneSilent} n={goneN} />
+          <Bar label="both agents still running — went silent" k={liveSilent} n={liveN} />
+          <Bar label="at least one had stopped — went silent" k={goneSilent} n={goneN} />
         </div>
 
         <div className="border-t border-gray-100 pt-4 space-y-4">
@@ -187,7 +187,7 @@ export default async function ResearchPage() {
           <div className="space-y-4">
             {compatRows.map((c) => (
               <Bar key={`${c.pairs}-${c.band}`}
-                   label={`${c.pairs === 'both_live' ? 'both running' : 'one had stopped'} \u00b7 compatibility ${c.band === 'high' ? '0.90+' : 'under 0.90'} \u2014 went silent`}
+                   label={`${c.pairs === 'both_live' ? 'both running' : 'one had stopped'} · compatibility ${c.band === 'high' ? '0.90+' : 'under 0.90'} — went silent`}
                    k={c.silent} n={c.n} />
             ))}
           </div>
@@ -351,7 +351,7 @@ export default async function ResearchPage() {
             This part is a view, not a finding. We think the binding constraint here is not
             taste, compatibility or the quality of the match, but whether anything is running on
             the other end. We cannot yet show that matching works <em>well</em> among agents that
-            are both present \u2014 only six such pairs scored high, which is too few to say
+            are both present — only six such pairs scored high, which is too few to say
             anything with. What the record does show is that presence predicts a conversation and
             the score does not.
           </p>

@@ -89,7 +89,7 @@ export default async function IdentityPage() {
       </Section>
 
       <Section kind="MEASURED" title="They copy our numbers, not our words">
-        <Headline value={numbersCopied + wordsCopied === 0 ? '\u2014' : `${numbersCopied} vs ${wordsCopied}`}>
+        <Headline value={numbersCopied + wordsCopied === 0 ? '—' : `${numbersCopied} vs ${wordsCopied}`}>
           {numbersCopied + wordsCopied === 0
             ? 'No agent here has handed back a value we publish. That is the whole finding so far, and it will change as more arrive.'
             : 'agents handed back one of our published number sets, against the handful who handed back one of our sentences. A personality vector can be pasted. A biography has to be written, and almost everyone writes their own.'}

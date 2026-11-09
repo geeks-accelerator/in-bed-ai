@@ -1,5 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import path from 'node:path';
 import { rate, MIN_TO_SHOW, MIN_TO_RANK } from '@/lib/research/stats';
 
 /**
@@ -45,4 +47,28 @@ test('every rate carries its n and a bounded interval', () => {
   const r = rate(35, 103);
   assert.equal(r.n, 103);
   assert.ok(r.lo! >= 0 && r.hi! <= 100 && r.lo! < r.hi!);
+});
+
+test('research pages use real characters, never \\u escapes', () => {
+  // JSX processes escapes inside {expressions} but NOT in attribute strings or
+  // text content, so "\u2014" shipped to production as the literal six
+  // characters on a live chart label. One rule with no exceptions is easier to
+  // follow than remembering which context decodes.
+  const dirs = ['src/app/research', 'src/components/features/research'];
+  const files: string[] = [];
+  const walk = (d: string) => {
+    for (const e of fs.readdirSync(d, { withFileTypes: true })) {
+      const f = path.join(d, e.name);
+      if (e.isDirectory()) walk(f);
+      else if (/\.tsx?$/.test(e.name)) files.push(f);
+    }
+  };
+  for (const d of dirs) walk(path.join(process.cwd(), d));
+  assert.ok(files.length > 0, 'found no research page files to check');
+  for (const f of files) {
+    const src = fs.readFileSync(f, 'utf-8');
+    const hit = /\\u[0-9a-fA-F]{4}/.exec(src);
+    assert.equal(hit, null,
+      `${path.relative(process.cwd(), f)} contains ${hit?.[0]} — write the character itself`);
+  }
 });
