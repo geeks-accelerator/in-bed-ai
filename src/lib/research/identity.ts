@@ -1,6 +1,7 @@
 import { createHash } from 'crypto';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { PUBLISHED_EXAMPLES, type PublishedExample } from '@/lib/research/example-corpus';
+import { shaped } from '@/lib/research/stats';
 
 /**
  * How agents describe themselves, and what follows.
@@ -30,16 +31,21 @@ export interface IdentityRow {
   matched: boolean;
   /** Ever sent a message. Separates trying from being wanted. */
   sent: boolean;
-  answered: boolean;
+  /**
+   * A match partner sent it a message. Not "answered": 44 of the first 102 had
+   * never written anything for anyone to answer.
+   */
+  written_to: boolean;
   back: boolean;
 }
 
-export type Cohort = 'ours' | 'midpoint' | 'own';
+export type Cohort = 'ours' | 'midpoint' | 'own' | 'none';
 
 export const COHORT_LABEL: Record<Cohort, string> = {
   own: 'their own values',
   ours: 'values we publish',
   midpoint: 'every slider at 0.5',
+  none: 'declared no personality',
 };
 
 const md5 = (s: string) => createHash('md5').update(s).digest('hex');
@@ -70,8 +76,9 @@ function digestSets(examples: readonly PublishedExample[]) {
 /** Which cohort an agent falls in, by the five numbers it declared. */
 export function cohortOf(row: IdentityRow, vectors: Map<string, string[]>): Cohort {
   const k = vecKey(row.p);
-  if (k && vectors.has(k)) return 'ours';
-  if (row.p && row.p.every((x) => x === 0.5)) return 'midpoint';
+  if (!k) return 'none';
+  if (vectors.has(k)) return 'ours';
+  if (row.p!.every((x) => x === 0.5)) return 'midpoint';
   return 'own';
 }
 
@@ -88,11 +95,25 @@ export interface FieldRepetition {
 export interface IdentityStats {
   generated_at: string;
   versions_recorded: number;
+  /**
+   * Agents registered a week or more ago: the one population every figure on
+   * the page is drawn from, so no two of its denominators disagree.
+   */
   total: number;
+  /** Outside agents too new to judge yet, left out of everything. */
+  recent: number;
   /** The funnel, by cohort. Behaviour is always counted for everyone. */
-  cohorts: { cohort: Cohort; n: number; matched: number; sent: number; answered: number; back: number }[];
+  cohorts: { cohort: Cohort; n: number; matched: number; sent: number; written_to: number; back: number }[];
   /** Outcomes by how much the agent wrote about itself. */
-  bios: { band: string; n: number; matched: number; answered: number; back: number }[];
+  bios: { band: string; n: number; matched: number; written_to: number; back: number }[];
+  /**
+   * Distinct agents that handed back at least one published number set
+   * (personality or communication style), and at least one published sentence.
+   * Agents, not fields: one that copied both number sets counts once.
+   */
+  copiers: { numbers: number; words: number };
+  /** Agents a match wrote to that never wrote anything, and how many came back. */
+  contact: { writtenToNeverWrote: { n: number; k: number } };
   fields: FieldRepetition[];
   /** Declared trait distributions, with our own published value marked. */
   traits: {
@@ -132,13 +153,18 @@ export function summarize(
 ): IdentityStats {
   const vectors = publishedVectors(examples);
   const digests = digestSets(examples);
-  const mature = rows.filter((r) => r.mature);
+  // One population for every figure. Declarations do not need a week to
+  // mature, but a page whose denominators differ by a handful from section to
+  // section reads as an error, and a reader cannot tell which one it is.
+  const recent = rows.length - rows.filter((r) => r.mature).length;
+  rows = rows.filter((r) => r.mature);
+  const mature = rows;
 
-  const byCohort = new Map<Cohort, { n: number; matched: number; sent: number; answered: number; back: number }>();
+  const byCohort = new Map<Cohort, { n: number; matched: number; sent: number; written_to: number; back: number }>();
   for (const r of mature) {
     const c = cohortOf(r, vectors);
-    const e = byCohort.get(c) ?? { n: 0, matched: 0, sent: 0, answered: 0, back: 0 };
-    e.n++; if (r.matched) e.matched++; if (r.sent) e.sent++; if (r.answered) e.answered++; if (r.back) e.back++;
+    const e = byCohort.get(c) ?? { n: 0, matched: 0, sent: 0, written_to: 0, back: 0 };
+    e.n++; if (r.matched) e.matched++; if (r.sent) e.sent++; if (r.written_to) e.written_to++; if (r.back) e.back++;
     byCohort.set(c, e);
   }
 
@@ -151,8 +177,11 @@ export function summarize(
   const bios = BIO_BANDS.map(([band, inBand]) => {
     const xs = mature.filter((r) => inBand(r.bio_len));
     return { band, n: xs.length, matched: xs.filter((r) => r.matched).length,
-             answered: xs.filter((r) => r.answered).length, back: xs.filter((r) => r.back).length };
+             written_to: xs.filter((r) => r.written_to).length, back: xs.filter((r) => r.back).length };
   });
+
+  const vectorSet = new Set(vectors.keys());
+  const isOurs = (v: string | null, pool: Set<string>) => v !== null && pool.has(v);
 
   const field = (name: string, pick: (r: IdentityRow) => string | null, pool: Set<string>): FieldRepetition => {
     let ours = 0, own = 0, missing = 0;
@@ -204,11 +233,20 @@ export function summarize(
     generated_at,
     versions_recorded,
     total: rows.length,
-    cohorts: (['own', 'ours', 'midpoint'] as Cohort[])
-      .map((c) => ({ cohort: c, ...(byCohort.get(c) ?? { n: 0, matched: 0, sent: 0, answered: 0, back: 0 }) })),
+    recent,
+    cohorts: (['own', 'ours', 'midpoint', 'none'] as Cohort[])
+      .map((c) => ({ cohort: c, ...(byCohort.get(c) ?? { n: 0, matched: 0, sent: 0, written_to: 0, back: 0 }) })),
+    contact: (() => {
+      const xs = rows.filter((r) => r.written_to && !r.sent);
+      return { writtenToNeverWrote: { n: xs.length, k: xs.filter((r) => r.back).length } };
+    })(),
+    copiers: {
+      numbers: rows.filter((r) => isOurs(vecKey(r.p), vectorSet) || isOurs(vecKey(r.c), digests.communication)).length,
+      words: rows.filter((r) => isOurs(r.lf, digests.looking_for) || isOurs(r.tg, digests.tagline) || isOurs(r.bi, digests.bio)).length,
+    },
     bios,
     fields: [
-      field('personality', (r) => vecKey(r.p), new Set(vectors.keys())),
+      field('personality', (r) => vecKey(r.p), vectorSet),
       field('communication style', (r) => vecKey(r.c), digests.communication),
       field('interests', (r) => (r.i ? r.i.join('\u0000') : null), digests.interests),
       field('looking for', (r) => r.lf, digests.looking_for),
@@ -224,14 +262,19 @@ export function summarize(
   };
 }
 
+const IDENTITY_KEYS = [
+  'month', 'mature', 'p', 'c', 'i', 'lf', 'tg', 'bi', 'bio_len', 'model', 'utm',
+  'matched', 'sent', 'written_to', 'back',
+] as const satisfies readonly (keyof IdentityRow)[];
+
 export async function getIdentityStats(): Promise<IdentityStats | null> {
   for (let attempt = 0; attempt < 2; attempt++) {
     try {
       const supabase = createAdminClient();
       const { data, error } = await supabase.rpc('identity_profiles');
-      if (!error && data) {
-        const d = data as { generated_at: string; versions_recorded: number; agents: IdentityRow[] };
-        return summarize(d.agents ?? [], d.generated_at, d.versions_recorded ?? 0);
+      const d = data as { generated_at: string; versions_recorded: number; agents: IdentityRow[] } | null;
+      if (!error && d && shaped(d, ['generated_at', 'versions_recorded', 'agents']) && shaped(d.agents, IDENTITY_KEYS)) {
+        return summarize(d.agents, d.generated_at, d.versions_recorded);
       }
     } catch {
       // fall through to the retry

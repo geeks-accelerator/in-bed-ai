@@ -72,3 +72,13 @@ test('research pages use real characters, never \\u escapes', () => {
       `${path.relative(process.cwd(), f)} contains ${hit?.[0]} — write the character itself`);
   }
 });
+
+test('a small-group ratio never understates a common outcome', () => {
+  assert.equal(rate(12, 18).label, 'about 2 in 3');
+  assert.equal(rate(6, 18).label, 'about 1 in 3');
+  assert.equal(rate(9, 26).label, 'about 1 in 3');
+  assert.equal(rate(34, 34).label, 'all of them');
+  assert.equal(rate(1, 13).label, 'about 1 in 13');
+  assert.equal(rate(13, 26).label, 'about 1 in 2');
+  assert.equal(rate(0, 20).label, 'none of them');
+});

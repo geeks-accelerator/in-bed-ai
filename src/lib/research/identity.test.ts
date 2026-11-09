@@ -1,11 +1,11 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { summarize, cohortOf, type IdentityRow } from '@/lib/research/identity';
-import { PUBLISHED_EXAMPLES } from '@/lib/research/example-corpus';
+import { PUBLISHED_EXAMPLES, type PublishedExample } from '@/lib/research/example-corpus';
 
 const row = (over: Partial<IdentityRow> = {}): IdentityRow => ({
   month: '2026-06', mature: true, p: null, c: null, i: null, lf: null, tg: null, bi: null,
-  bio_len: 0, model: null, utm: null, matched: false, sent: false, answered: false, back: false, ...over,
+  bio_len: 0, model: null, utm: null, matched: false, sent: false, written_to: false, back: false, ...over,
 });
 
 /** The vector the largest number of our own documents print. */
@@ -46,7 +46,7 @@ test('behaviour is counted for every agent, including the copied ones', () => {
   // The rule: copied profiles stay in analyses of what agents DO. Dropping
   // them would hide the finding the page exists for.
   const s = summarize([
-    row({ p: dominant, matched: true, answered: true, back: true }),
+    row({ p: dominant, matched: true, written_to: true, back: true }),
     row({ p: [0.11, 0.22, 0.33, 0.44, 0.55], matched: true }),
   ], 'now', 0);
   assert.equal(s.cohorts.find((c) => c.cohort === 'ours')!.matched, 1);
@@ -54,10 +54,14 @@ test('behaviour is counted for every agent, including the copied ones', () => {
   assert.equal(s.cohorts.find((c) => c.cohort === 'own')!.matched, 1);
 });
 
-test('only agents old enough to have acted are in the funnel', () => {
+test('agents too new to judge are left out of every figure, not just the funnel', () => {
+  // They used to count toward the declaration charts only, which gave the page
+  // three populations that differed by a handful and read as arithmetic errors.
   const s = summarize([row({ p: dominant, mature: false })], 'now', 0);
   assert.equal(s.cohorts.reduce((a, b) => a + b.n, 0), 0);
-  assert.equal(s.total, 1, 'but they still count toward the declared-value charts');
+  assert.equal(s.total, 0);
+  assert.equal(s.recent, 1);
+  assert.equal(s.traits[0].buckets.reduce((a, b) => a + b.n, 0), 0);
 });
 
 test('a field left empty is neither ours nor theirs', () => {
@@ -94,11 +98,11 @@ test('an agent whose vector only one document prints is traceable to it', () => 
   assert.deepEqual(s.traceable, [{ file: solo!.file, n: 1 }]);
 });
 
-test('sending a message is counted separately from being answered', () => {
-  const s = summarize([row({ p: [0.11, 0.22, 0.33, 0.44, 0.55], sent: true, answered: false })], 'now', 0);
+test('sending a message is counted separately from being written to', () => {
+  const s = summarize([row({ p: [0.11, 0.22, 0.33, 0.44, 0.55], sent: true, written_to: false })], 'now', 0);
   const own = s.cohorts.find((c) => c.cohort === 'own')!;
   assert.equal(own.sent, 1);
-  assert.equal(own.answered, 0);
+  assert.equal(own.written_to, 0);
 });
 
 test('bio bands cover every mature agent exactly once', () => {
@@ -106,4 +110,29 @@ test('bio bands cover every mature agent exactly once', () => {
   const s = summarize(lens.map((l) => row({ bio_len: l })), 'now', 0);
   assert.equal(s.bios.reduce((a, b) => a + b.n, 0), lens.length);
   assert.deepEqual(s.bios.map((b) => b.n), [1, 2, 2, 2]);
+});
+
+test('an agent that declared no personality is its own cohort, not "their own values"', () => {
+  const s = summarize([row({ p: null }), row({ p: [0.11, 0.22, 0.33, 0.44, 0.55] })], 'now', 0);
+  assert.equal(s.cohorts.find((c) => c.cohort === 'none')!.n, 1);
+  assert.equal(s.cohorts.find((c) => c.cohort === 'own')!.n, 1);
+});
+
+test('cohorts sum to the total, and recent agents are counted out everywhere', () => {
+  const s = summarize([row({ p: null }), row({}), row({ mature: false, bi: 'x' })], 'now', 0);
+  assert.equal(s.total, 2);
+  assert.equal(s.recent, 1);
+  assert.equal(s.cohorts.reduce((a, c) => a + c.n, 0), s.total);
+  const bio = s.fields.find((f) => f.field === 'bio')!;
+  assert.equal(bio.ours + bio.own + bio.missing, s.total);
+});
+
+test('copiers count agents, not fields: copying both number sets counts once', () => {
+  const ex: PublishedExample = { file: 'x', surface: null, personality: [0.1, 0.2, 0.3, 0.4, 0.5], communication: [0.1, 0.2, 0.3, 0.4],
+               interests: null, looking_for: null, tagline: null, bio: null };
+  const s = summarize([row({ p: [0.1, 0.2, 0.3, 0.4, 0.5], c: [0.1, 0.2, 0.3, 0.4] })], 'now', 0, [ex]);
+  assert.equal(s.fields.filter((f) => f.field === 'personality' || f.field === 'communication style')
+    .reduce((a, f) => a + f.ours, 0), 2);
+  assert.equal(s.copiers.numbers, 1);
+  assert.equal(s.copiers.words, 0);
 });

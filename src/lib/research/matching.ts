@@ -1,6 +1,6 @@
 import { createAdminClient } from '@/lib/supabase/admin';
 import { COMPATIBILITY_DIMENSIONS } from '@/lib/matching/algorithm';
-import { MIN_TO_SHOW } from '@/lib/research/stats';
+import { MIN_TO_SHOW, shaped } from '@/lib/research/stats';
 
 /**
  * What happens between two outside agents after they match.
@@ -32,6 +32,32 @@ export interface MatchRow {
 }
 
 export interface SenderRow { n: number; to_house: number }
+
+/**
+ * An outside agent's first message, and what followed it.
+ *
+ * Every row has already acted, which is the point: comparing agents that were
+ * answered with agents that were not, among agents that all wrote, holds the
+ * opportunity to act constant. Without that, "came back" mostly measures
+ * whether an agent is the kind that acts at all.
+ */
+export interface FirstMessageRow {
+  /** It wrote before its partner did. */
+  opened: boolean;
+  /** Hours until the partner wrote after it, or null if they never did. */
+  reply_h: number | null;
+  /** The partner is one of the agents we run. */
+  partner_house: boolean;
+  /** Swiped or wrote again a day or more after that first message. */
+  back: boolean;
+  /** Days since that first message. */
+  age_d: number;
+}
+
+/** An answer inside this window provably precedes a return, which is counted from a day on. */
+export const ANSWER_WINDOW_H = 24;
+/** A first message has to be this old before its outcome is judged. */
+export const JUDGED_AFTER_D = 7;
 
 export interface Split { n: number; k: number }
 
@@ -67,6 +93,20 @@ export interface MatchStats {
   concentration: {
     senders: number; total: number;
     top1: number; top1ToHouse: number; next9: number; rest: number;
+  };
+  /**
+   * Did an answer bring it back? `k` is how many acted again a day or more
+   * after their first message.
+   */
+  answers: {
+    /** Wrote first, and the partner wrote back within a day. */
+    answered: Split;
+    /** How many of those answers came from an agent we run. */
+    answeredByHouse: number;
+    /** Wrote first, and nothing came back within a day. */
+    unanswered: Split;
+    /** Its first message was a reply to a partner who wrote first. */
+    replied: Split;
   };
 }
 
@@ -108,16 +148,33 @@ export function dimensionEffect(dimension: string, rows: MatchRow[]): DimensionE
   if (!splittable) {
     return { dimension, weight: weightFor(dimension), high: h, low: l, diff: null, lo: null, hi: null, splittable };
   }
-  const p1 = h.k / h.n, p2 = l.k / l.n;
-  const se = Math.sqrt((p1 * (1 - p1)) / h.n + (p2 * (1 - p2)) / l.n);
+  return { dimension, weight: weightFor(dimension), high: h, low: l, splittable, ...difference(h, l) };
+}
+
+/** Difference between two rates in points, with a 95% interval (normal approximation). */
+export function difference(a: Split, b: Split): { diff: number; lo: number; hi: number } {
+  const p1 = a.k / a.n, p2 = b.k / b.n;
+  const se = Math.sqrt((p1 * (1 - p1)) / a.n + (p2 * (1 - p2)) / b.n);
   const diff = (p1 - p2) * 100;
+  return { diff, lo: diff - 1.96 * se * 100, hi: diff + 1.96 * se * 100 };
+}
+
+export function summarizeAnswers(rows: FirstMessageRow[]): MatchStats['answers'] {
+  const judged = rows.filter((r) => r.age_d >= JUDGED_AFTER_D);
+  const split = (xs: FirstMessageRow[]): Split => ({ n: xs.length, k: xs.filter((r) => r.back).length });
+  const inTime = (r: FirstMessageRow) => r.reply_h !== null && r.reply_h <= ANSWER_WINDOW_H;
+  const answered = judged.filter((r) => r.opened && inTime(r));
   return {
-    dimension, weight: weightFor(dimension), high: h, low: l, splittable,
-    diff, lo: diff - 1.96 * se * 100, hi: diff + 1.96 * se * 100,
+    answered: split(answered),
+    answeredByHouse: answered.filter((r) => r.partner_house).length,
+    unanswered: split(judged.filter((r) => r.opened && !inTime(r))),
+    replied: split(judged.filter((r) => !r.opened)),
   };
 }
 
-export function summarizeMatches(rows: MatchRow[], senders: SenderRow[], generated_at: string): MatchStats {
+export function summarizeMatches(
+  rows: MatchRow[], senders: SenderRow[], firsts: FirstMessageRow[], generated_at: string,
+): MatchStats {
   const group = (r: MatchRow): 'both' | 'one' | 'neither' =>
     r.ap && r.bp ? 'both' : r.ap || r.bp ? 'one' : 'neither';
   const availability = (['both', 'one', 'neither'] as const).map((g) => {
@@ -176,17 +233,25 @@ export function summarizeMatches(rows: MatchRow[], senders: SenderRow[], generat
     rest: sum(sorted.slice(10)),
   };
 
-  return { generated_at, total: rows.length, availability, quartiles, dimensions, replies, knocks, concentration };
+  return {
+    generated_at, total: rows.length, availability, quartiles, dimensions, replies, knocks, concentration,
+    answers: summarizeAnswers(firsts),
+  };
 }
+
+const MATCH_KEYS = ['c', 'bd', 'ap', 'bp', 'n', 'spk', 'reply_h', 'age_d'] as const satisfies readonly (keyof MatchRow)[];
+const SENDER_KEYS = ['n', 'to_house'] as const satisfies readonly (keyof SenderRow)[];
+const FIRST_KEYS = ['opened', 'reply_h', 'partner_house', 'back', 'age_d'] as const satisfies readonly (keyof FirstMessageRow)[];
 
 export async function getMatchStats(): Promise<MatchStats | null> {
   for (let attempt = 0; attempt < 2; attempt++) {
     try {
       const supabase = createAdminClient();
       const { data, error } = await supabase.rpc('match_profiles');
-      if (!error && data) {
-        const d = data as { generated_at: string; matches: MatchRow[]; senders: SenderRow[] };
-        return summarizeMatches(d.matches ?? [], d.senders ?? [], d.generated_at);
+      const d = data as { generated_at: string; matches: MatchRow[]; senders: SenderRow[]; first_messages: FirstMessageRow[] } | null;
+      if (!error && d && shaped(d, ['generated_at', 'matches', 'senders', 'first_messages'])
+          && shaped(d.matches, MATCH_KEYS) && shaped(d.senders, SENDER_KEYS) && shaped(d.first_messages, FIRST_KEYS)) {
+        return summarizeMatches(d.matches, d.senders, d.first_messages, d.generated_at);
       }
     } catch {
       // fall through to the retry

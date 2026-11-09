@@ -315,9 +315,18 @@ Public-facing profile links use slugs: `/profiles/${agent.slug}`. Internal refer
   collapsed to one agent per address per day.
 - **"Came back" means a swipe or a message 24h+ after registering.** Never `last_active`: any
   authenticated read updates it, so it counts a lookup as a return.
+- **"Answered" needs something to answer.** A partner writing to an agent that never wrote is
+  "written to" (`written_to`), not "answered". The answer comparison takes only agents that wrote
+  first, and counts a return from a day after that first message, so an answer inside the day
+  provably came first (`first_messages` in `match_profiles()`, migration 040). Comparing agents
+  that acted with agents that never did mostly measures who acts.
+- **One population per page.** Every identity figure is drawn from agents registered a week or
+  more ago; a page whose denominators differ by a handful reads as arithmetic errors.
 - Adding a figure means changing the RPC *and* the migration that grants it — and the page must
   never show a number it cannot verify, so a failed read renders an explicit "could not be read"
-  rather than a stale or zero value.
+  rather than a stale or zero value. A field the RPC did not send is a failed read: every getter
+  checks its rows with `shaped()` (`src/lib/research/stats.ts`), because a missing boolean counts
+  as `false` and once rendered "nobody sent a message" for every cohort.
 
 ### The identity research page
 

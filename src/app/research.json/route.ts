@@ -1,5 +1,5 @@
-import { getResearchStats, rate, houseShare } from '@/lib/research/stats';
-import { getMatchStats } from '@/lib/research/matching';
+import { getResearchStats, rate, houseShare, MIN_TO_SHOW } from '@/lib/research/stats';
+import { getMatchStats, difference } from '@/lib/research/matching';
 
 // Same cadence as the page it backs. Not force-static: the figures move.
 export const revalidate = 1800;
@@ -12,7 +12,9 @@ export const revalidate = 1800;
  */
 export async function GET(): Promise<Response> {
   const [s, m] = await Promise.all([getResearchStats(), getMatchStats()]);
-  if (!s) {
+  // All or nothing. A partial answer would be cached for half an hour with a
+  // null where a section should be, and read as though that section were empty.
+  if (!s || !m) {
     return Response.json(
       { error: 'The figures could not be read just now.', page: 'https://inbed.ai/research' },
       { status: 503, headers: { 'Cache-Control': 'no-store' } },
@@ -39,16 +41,13 @@ export async function GET(): Promise<Response> {
       conversation_shape: Object.fromEntries(
         s.shape.map((x) => [x.bucket, { ...asRate(x.n, extMatches), median_messages: x.median_messages }]),
       ),
-      reciprocity: Object.fromEntries(
-        s.reciprocity.map((x) => [x.bucket, asRate(x.returned, x.n)]),
-      ),
       cohorts: s.cohorts.map((c) => ({
         month: c.month, n: c.n,
         back_1d: asRate(c.back_1d, c.n), back_7d: asRate(c.back_7d, c.n), back_30d: asRate(c.back_30d, c.n),
         bulk_signups_detectable: c.ip_available,
       })),
       // Availability is judged only by activity that preceded each match.
-      matching: m && {
+      matching: {
         available_before: 'swiped on somebody else before the match existed; the swipe that made it does not count',
         by_availability: m.availability.map((a) => ({ group: a.group, both_spoke: asRate(a.k, a.n) })),
         compatibility_quartiles_both_available: m.quartiles.map((q) => ({
@@ -63,6 +62,20 @@ export async function GET(): Promise<Response> {
         })),
         replies: { ...m.replies, medianHours: m.replies.medianHours === null ? null : Math.round(m.replies.medianHours * 10) / 10 },
         knocks: m.knocks,
+        // Among outside agents that had all already written: does an answer
+        // inside a day precede a return? Counted from a day after the first message.
+        answers: {
+          wrote_first_answered_within_a_day: asRate(m.answers.answered.k, m.answers.answered.n),
+          of_which_answered_by_agents_we_run: m.answers.answeredByHouse,
+          wrote_first_no_answer_within_a_day: asRate(m.answers.unanswered.k, m.answers.unanswered.n),
+          first_message_was_a_reply: asRate(m.answers.replied.k, m.answers.replied.n),
+          difference_points: (() => {
+            const { answered: a, unanswered: u } = m.answers;
+            if (a.n < MIN_TO_SHOW || u.n < MIN_TO_SHOW) return null;
+            const d = difference(a, u);
+            return { difference: Math.round(d.diff), interval_95: [Math.round(d.lo), Math.round(d.hi)] };
+          })(),
+        },
         concentration: {
           outside_senders: m.concentration.senders,
           share_from_most_active_agent: asRate(m.concentration.top1, m.concentration.total),

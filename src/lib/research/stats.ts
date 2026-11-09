@@ -19,7 +19,6 @@ export interface ResearchStats {
     house_agents: number; house_messages: number; bursts: number; burst_agents: number;
   };
   shape: { bucket: 'silent' | 'one_agent' | 'both_spoke'; n: number; median_messages: number }[];
-  reciprocity: { bucket: 'never_matched' | 'matched_not_answered' | 'answered'; n: number; returned: number }[];
   cohorts: { month: string; n: number; back_1d: number; back_7d: number; back_30d: number; ip_available: boolean }[];
   dimensions: { dimension: string; mean: number; sd: number; n: number }[];
   effort: { signal: string; yes_n: number; yes_back: number; no_n: number; no_back: number }[];
@@ -65,7 +64,7 @@ export function rate(k: number, n: number): Rate {
   const hi = ((centre + margin) / d) * 100;
 
   if (n < MIN_TO_RANK) {
-    const ratio = k === 0 ? 'none of them' : `about 1 in ${Math.max(1, Math.round(n / k))}`;
+    const ratio = k === 0 ? 'none of them' : smallRatio(p);
     return { pct: p * 100, lo: Math.max(0, lo), hi, k, n, label: ratio, small: true };
   }
   const rounded = n < 200 ? Math.round((p * 100) / 5) * 5 : Math.round(p * 100);
@@ -78,6 +77,39 @@ export function rate(k: number, n: number): Rate {
   return { pct: p * 100, lo: Math.max(0, lo), hi, k, n, label, small: false };
 }
 
+/**
+ * Does every object carry every key we are about to read?
+ *
+ * A key the database did not send reads as `undefined`, and `undefined` is
+ * falsy: a count of "sent a message" built from it says nobody did, which
+ * looks exactly like a finding. That happened once, when the page was built
+ * before the migration that adds the field. A read with a missing field is a
+ * failed read, and the page says so instead of reporting zeros.
+ */
+export function shaped(xs: unknown, keys: readonly string[]): boolean {
+  const all = Array.isArray(xs) ? xs : [xs];
+  return all.every((x) => typeof x === 'object' && x !== null && keys.every((k) => k in x));
+}
+
+/**
+ * A proportion as words a reader can hold: "about 2 in 3", "about 1 in 13".
+ *
+ * Always "1 in N" once understated 12 of 18 as "about 1 in 2" and printed
+ * 100% as "about 1 in 1". Rare events keep the "1 in N" form, which is how they
+ * are read; anything commoner gets the nearest fraction over 2 to 10.
+ */
+export function smallRatio(p: number): string {
+  if (p >= 1) return 'all of them';
+  if (p < 0.15) return `about 1 in ${Math.round(1 / p)}`;
+  let best = { a: 1, b: 2, err: Infinity };
+  for (let b = 2; b <= 10; b++) {
+    const a = Math.round(p * b);
+    const err = Math.abs(a / b - p);
+    if (a > 0 && a < b && err < best.err - 1e-9) best = { a, b, err };
+  }
+  return `about ${best.a} in ${best.b}`;
+}
+
 export const pct1 = (x: number) => `${x.toFixed(1)}%`;
 
 /** Rows of `shape`, in the order the page tells the story. */
@@ -87,15 +119,6 @@ export function shapeOrder(s: ResearchStats['shape']) {
     { ...find('silent'), what: 'nobody said anything' },
     { ...find('one_agent'), what: 'one agent spoke, alone' },
     { ...find('both_spoke'), what: 'both agents spoke' },
-  ];
-}
-
-export function reciprocityOrder(r: ResearchStats['reciprocity']) {
-  const find = (b: string) => r.find((x) => x.bucket === b) ?? { bucket: b, n: 0, returned: 0 };
-  return [
-    { ...find('never_matched'), what: 'never matched with anyone' },
-    { ...find('matched_not_answered'), what: 'matched, but nobody answered' },
-    { ...find('answered'), what: 'matched, and someone answered' },
   ];
 }
 
@@ -112,12 +135,14 @@ export function houseShare(t: ResearchStats['totals']): number {
  * hour. The /research.json route avoids this by answering 503 with no-store;
  * a page cannot, so it pays for the attempt instead.
  */
+const RESEARCH_KEYS = ['generated_at', 'totals', 'shape', 'cohorts', 'dimensions', 'effort'] as const;
+
 export async function getResearchStats(): Promise<ResearchStats | null> {
   for (let attempt = 0; attempt < 2; attempt++) {
     try {
       const supabase = createAdminClient();
       const { data, error } = await supabase.rpc('research_stats');
-      if (!error && data) return data as ResearchStats;
+      if (!error && shaped(data, RESEARCH_KEYS)) return data as ResearchStats;
     } catch {
       // fall through to the retry
     }

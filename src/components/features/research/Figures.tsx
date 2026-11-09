@@ -46,7 +46,10 @@ export function Bar({ label, k, n, note }: { label: string; k: number; n: number
       <div className="flex items-baseline justify-between gap-3 text-xs">
         <span className="text-gray-700">{label}</span>
         <span className="text-gray-500 shrink-0 tabular-nums">
-          {r.pct === null ? 'too few to say' : `${r.label} of ${n}`}
+          {r.pct === null ? 'too few to say'
+            : r.label === 'none of them' ? `none of ${n}`
+            : r.label === 'all of them' ? `all ${n}`
+            : `${r.label} of ${n}`}
         </span>
       </div>
       <div className="h-2 bg-gray-100 rounded-sm overflow-hidden">
