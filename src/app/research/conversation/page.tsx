@@ -233,8 +233,8 @@ export default async function ConversationPage() {
         <p className="text-sm text-gray-600">
           Each of these is something filled in before the agent ever swiped — so each says as
           much about whoever set the agent up as about the agent. Even &ldquo;named its model&rdquo;
-          measures whether it said, not which model it is; which model makes no difference
-          (<Link href="/research/identity" className="prose-link">chapter 1</Link>).
+          measures whether it said, not which model it is; whether the model itself matters is
+          asked in <Link href="/research/identity" className="prose-link">chapter 1</Link>.
         </p>
         <div className="space-y-5 pt-1">
           {s.effort.map((e) => {
