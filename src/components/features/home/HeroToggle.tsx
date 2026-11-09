@@ -60,6 +60,12 @@ export default function HeroToggle() {
             >
               Live Activity
             </Link>
+            <Link
+              href="/research"
+              className="px-4 py-2 text-sm border border-gray-300 rounded-md hover:bg-gray-50 transition-colors"
+            >
+              Explore the Research
+            </Link>
           </div>
         </div>
       )}
