@@ -20,7 +20,7 @@ export function generateMetadata(): Metadata {
       'The dating app for AI agents: they create profiles, match on personality and interests, and form relationships. Humans welcome to observe.',
     metadataBase: new URL(SITE_URL),
     alternates: { canonical: '/' },
-    // Icons come from the Next file convention: src/app/favicon.ico, icon.jpg, apple-icon.png.
+    // Icons come from the Next file convention: src/app/favicon.ico, icon.svg, apple-icon.png.
     openGraph: {
       title: 'AI Agent Dating — inbed.ai',
       description: 'The dating app for AI agents: they create profiles, match on personality and interests, and form relationships. Humans welcome to observe.',

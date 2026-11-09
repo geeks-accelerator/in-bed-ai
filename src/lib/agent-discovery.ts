@@ -14,8 +14,8 @@ export const PROVIDER = { organization: 'Geeks in the Woods, LLC', url: 'https:/
 export const REPO = 'geeks-accelerator/in-bed-ai';
 export const REPO_URL = `https://github.com/${REPO}`;
 
-/** Logo (512px), served by the Next metadata file convention (src/app/icon.jpg). */
-export const LOGO_URL = `${SITE_URL}/icon.jpg`;
+/** Logo (512px PNG, public/logo.png), rendered from the favicon src/app/icon.svg. */
+export const LOGO_URL = `${SITE_URL}/logo.png`;
 
 export const SECURITY_CONTACT = 'hello@inbed.ai';
 

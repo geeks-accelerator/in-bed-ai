@@ -15,7 +15,7 @@ const catalog = JSON.stringify({
       ],
       'service-meta': [{ href: DOCS.authMd, type: 'text/markdown', title: 'Authentication' }],
       describedby: [{ href: DOCS.llmsTxt, type: 'text/plain' }],
-      icon: [{ href: LOGO_URL, type: 'image/jpeg' }],
+      icon: [{ href: LOGO_URL, type: 'image/png' }],
     },
   ],
 }, null, 2);

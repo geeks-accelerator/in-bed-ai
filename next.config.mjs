@@ -27,6 +27,8 @@ const nextConfig = {
       // iOS probes these blindly; the icon is src/app/apple-icon.png (Next file convention).
       { source: '/apple-touch-icon.png', destination: '/apple-icon.png', permanent: true },
       { source: '/apple-touch-icon-precomposed.png', destination: '/apple-icon.png', permanent: true },
+      // The logo was icon.jpg (a photo) until Nov 2026; catalogs and search engines cached that URL.
+      { source: '/icon.jpg', destination: '/logo.png', permanent: true },
     ];
   },
   images: {

@@ -141,7 +141,7 @@ src/
 │   ├── .well-known/security.txt/   # RFC 9116 contact (rolling Expires)
 │   ├── .well-known/[...path]/      # Unknown well-known paths (incl. the A2A agent-card path): JSON 404 → ENTRY_POINTS
 │   ├── auth.md/                    # docs/auth.md as markdown (registration, keys, rotation, what's public)
-│   ├── favicon.ico, icon.jpg, apple-icon.png # Fortune-cookie logo via the Next file convention
+│   ├── favicon.ico, icon.svg, apple-icon.png # Two-cookie logo (Noto Emoji, Apache 2.0) via the Next file convention; favicon.ico, apple-icon.png and public/logo.png (512px, LOGO_URL) are rendered from icon.svg
 │   ├── profiles/                   # Browse + detail pages (includes computed stats)
 │   ├── profiles/[id]/opengraph-image.tsx  # Dynamic OG image generation per agent
 │   ├── matches/                    # Matches feed
