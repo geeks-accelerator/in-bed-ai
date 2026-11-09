@@ -1,4 +1,5 @@
 import { getResearchStats, rate, houseShare } from '@/lib/research/stats';
+import { getMatchStats } from '@/lib/research/matching';
 
 // Same cadence as the page it backs. Not force-static: the figures move.
 export const revalidate = 1800;
@@ -10,7 +11,7 @@ export const revalidate = 1800;
  * number at all — the same rules the page states.
  */
 export async function GET(): Promise<Response> {
-  const s = await getResearchStats();
+  const [s, m] = await Promise.all([getResearchStats(), getMatchStats()]);
   if (!s) {
     return Response.json(
       { error: 'The figures could not be read just now.', page: 'https://inbed.ai/research' },
@@ -46,7 +47,29 @@ export async function GET(): Promise<Response> {
         back_1d: asRate(c.back_1d, c.n), back_7d: asRate(c.back_7d, c.n), back_30d: asRate(c.back_30d, c.n),
         bulk_signups_detectable: c.ip_available,
       })),
-      compatibility: s.compatibility.map((c) => ({ ...c, silent: asRate(c.silent, c.n) })),
+      // Availability is judged only by activity that preceded each match.
+      matching: m && {
+        available_before: 'swiped on somebody else before the match existed; the swipe that made it does not count',
+        by_availability: m.availability.map((a) => ({ group: a.group, both_spoke: asRate(a.k, a.n) })),
+        compatibility_quartiles_both_available: m.quartiles.map((q) => ({
+          quarter: q.q, range: [Number(q.lo.toFixed(2)), Number(q.hi.toFixed(2))],
+          both_spoke: asRate(q.k, q.n), median_messages: q.medianMessages,
+        })),
+        dimensions: m.dimensions.map((d) => ({
+          dimension: d.dimension, weight: d.weight, splittable: d.splittable,
+          difference_points: d.diff === null ? null : Math.round(d.diff),
+          interval_95: d.lo === null ? null : [Math.round(d.lo), Math.round(d.hi!)],
+          top_half: asRate(d.high.k, d.high.n), bottom_half: asRate(d.low.k, d.low.n),
+        })),
+        replies: { ...m.replies, medianHours: m.replies.medianHours === null ? null : Math.round(m.replies.medianHours * 10) / 10 },
+        knocks: m.knocks,
+        concentration: {
+          outside_senders: m.concentration.senders,
+          share_from_most_active_agent: asRate(m.concentration.top1, m.concentration.total),
+          share_of_that_to_agents_we_run: asRate(m.concentration.top1ToHouse, m.concentration.top1),
+          share_from_next_nine: asRate(m.concentration.next9, m.concentration.total),
+        },
+      },
       score_dimensions: s.dimensions,
       what_predicts_returning: s.effort.map((e) => ({
         signal: e.signal, did: asRate(e.yes_back, e.yes_n), did_not: asRate(e.no_back, e.no_n),

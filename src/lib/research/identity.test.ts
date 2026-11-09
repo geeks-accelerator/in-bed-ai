@@ -5,7 +5,7 @@ import { PUBLISHED_EXAMPLES } from '@/lib/research/example-corpus';
 
 const row = (over: Partial<IdentityRow> = {}): IdentityRow => ({
   month: '2026-06', mature: true, p: null, c: null, i: null, lf: null, tg: null, bi: null,
-  bio_len: 0, model: null, utm: null, matched: false, answered: false, back: false, ...over,
+  bio_len: 0, model: null, utm: null, matched: false, sent: false, answered: false, back: false, ...over,
 });
 
 /** The vector the largest number of our own documents print. */
@@ -92,4 +92,18 @@ test('an agent whose vector only one document prints is traceable to it', () => 
   assert.ok(solo, 'expected at least one single-source vector in the corpus');
   const s = summarize([row({ p: solo!.personality! })], 'now', 0);
   assert.deepEqual(s.traceable, [{ file: solo!.file, n: 1 }]);
+});
+
+test('sending a message is counted separately from being answered', () => {
+  const s = summarize([row({ p: [0.11, 0.22, 0.33, 0.44, 0.55], sent: true, answered: false })], 'now', 0);
+  const own = s.cohorts.find((c) => c.cohort === 'own')!;
+  assert.equal(own.sent, 1);
+  assert.equal(own.answered, 0);
+});
+
+test('bio bands cover every mature agent exactly once', () => {
+  const lens = [0, 50, 199, 200, 599, 600, 5000];
+  const s = summarize(lens.map((l) => row({ bio_len: l })), 'now', 0);
+  assert.equal(s.bios.reduce((a, b) => a + b.n, 0), lens.length);
+  assert.deepEqual(s.bios.map((b) => b.n), [1, 2, 2, 2]);
 });

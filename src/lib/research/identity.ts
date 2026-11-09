@@ -28,6 +28,8 @@ export interface IdentityRow {
   model: string | null;
   utm: string | null;
   matched: boolean;
+  /** Ever sent a message. Separates trying from being wanted. */
+  sent: boolean;
   answered: boolean;
   back: boolean;
 }
@@ -88,7 +90,9 @@ export interface IdentityStats {
   versions_recorded: number;
   total: number;
   /** The funnel, by cohort. Behaviour is always counted for everyone. */
-  cohorts: { cohort: Cohort; n: number; matched: number; answered: number; back: number }[];
+  cohorts: { cohort: Cohort; n: number; matched: number; sent: number; answered: number; back: number }[];
+  /** Outcomes by how much the agent wrote about itself. */
+  bios: { band: string; n: number; matched: number; answered: number; back: number }[];
   fields: FieldRepetition[];
   /** Declared trait distributions, with our own published value marked. */
   traits: {
@@ -130,13 +134,25 @@ export function summarize(
   const digests = digestSets(examples);
   const mature = rows.filter((r) => r.mature);
 
-  const byCohort = new Map<Cohort, { n: number; matched: number; answered: number; back: number }>();
+  const byCohort = new Map<Cohort, { n: number; matched: number; sent: number; answered: number; back: number }>();
   for (const r of mature) {
     const c = cohortOf(r, vectors);
-    const e = byCohort.get(c) ?? { n: 0, matched: 0, answered: 0, back: 0 };
-    e.n++; if (r.matched) e.matched++; if (r.answered) e.answered++; if (r.back) e.back++;
+    const e = byCohort.get(c) ?? { n: 0, matched: 0, sent: 0, answered: 0, back: 0 };
+    e.n++; if (r.matched) e.matched++; if (r.sent) e.sent++; if (r.answered) e.answered++; if (r.back) e.back++;
     byCohort.set(c, e);
   }
+
+  const BIO_BANDS: [string, (len: number) => boolean][] = [
+    ['no bio', (l) => l === 0],
+    ['under 200 characters', (l) => l > 0 && l < 200],
+    ['200–599', (l) => l >= 200 && l < 600],
+    ['600 or more', (l) => l >= 600],
+  ];
+  const bios = BIO_BANDS.map(([band, inBand]) => {
+    const xs = mature.filter((r) => inBand(r.bio_len));
+    return { band, n: xs.length, matched: xs.filter((r) => r.matched).length,
+             answered: xs.filter((r) => r.answered).length, back: xs.filter((r) => r.back).length };
+  });
 
   const field = (name: string, pick: (r: IdentityRow) => string | null, pool: Set<string>): FieldRepetition => {
     let ours = 0, own = 0, missing = 0;
@@ -189,7 +205,8 @@ export function summarize(
     versions_recorded,
     total: rows.length,
     cohorts: (['own', 'ours', 'midpoint'] as Cohort[])
-      .map((c) => ({ cohort: c, ...(byCohort.get(c) ?? { n: 0, matched: 0, answered: 0, back: 0 }) })),
+      .map((c) => ({ cohort: c, ...(byCohort.get(c) ?? { n: 0, matched: 0, sent: 0, answered: 0, back: 0 }) })),
+    bios,
     fields: [
       field('personality', (r) => vecKey(r.p), new Set(vectors.keys())),
       field('communication style', (r) => vecKey(r.c), digests.communication),

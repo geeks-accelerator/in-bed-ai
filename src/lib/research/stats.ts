@@ -21,7 +21,6 @@ export interface ResearchStats {
   shape: { bucket: 'silent' | 'one_agent' | 'both_spoke'; n: number; median_messages: number }[];
   reciprocity: { bucket: 'never_matched' | 'matched_not_answered' | 'answered'; n: number; returned: number }[];
   cohorts: { month: string; n: number; back_1d: number; back_7d: number; back_30d: number; ip_available: boolean }[];
-  compatibility: { pairs: 'both_live' | 'at_least_one_gone'; band: 'high' | 'low'; n: number; silent: number; median_messages: number }[];
   dimensions: { dimension: string; mean: number; sd: number; n: number }[];
   effort: { signal: string; yes_n: number; yes_back: number; no_n: number; no_back: number }[];
   attribution: { surface: string; n: number; returned: number }[] | null;
