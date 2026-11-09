@@ -130,6 +130,42 @@ export function smallRatio(k: number, n: number): string {
   return `about ${best.a} in ${best.b}`;
 }
 
+/**
+ * A duration as a reader would say it, rounded like every other figure:
+ * minutes to the nearest five, hours to the hour, days past a day and a half.
+ * "8.4 hours" claims a precision a median of a few dozen threads cannot have.
+ */
+export function aboutDuration(hours: number): string {
+  if (hours < 1) {
+    const m = Math.round((hours * 60) / 5) * 5;
+    return m < 5 ? 'a few minutes' : `about ${m} minutes`;
+  }
+  if (hours < 36) {
+    const h = Math.round(hours);
+    return h === 1 ? 'about an hour' : `about ${h} hours`;
+  }
+  return `about ${Math.round(hours / 24)} days`;
+}
+
+/**
+ * How two rates relate, in words: "about 3 times as likely", "about half as
+ * likely". Rounded to the nearest half below 3 and the nearest whole above, so
+ * a ratio of two small-group rates never prints as "7.1×".
+ */
+export function timesAs(a: number, b: number): string | null {
+  if (a <= 0 || b <= 0) return null;
+  const r = a / b;
+  if (r >= 0.8 && r <= 1.25) return 'about as likely';
+  if (r < 1) {
+    if (r >= 0.6) return 'about two thirds as likely';
+    if (r >= 0.4) return 'about half as likely';
+    if (r >= 0.25) return 'about a third as likely';
+    return 'under a quarter as likely';
+  }
+  const rounded = r < 3 ? Math.round(r * 2) / 2 : Math.round(r);
+  return `about ${rounded} times as likely`;
+}
+
 export const pct1 = (x: number) => `${x.toFixed(1)}%`;
 
 /** Rows of `shape`, in the order the page tells the story. */

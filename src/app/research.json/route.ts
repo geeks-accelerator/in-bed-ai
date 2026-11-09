@@ -60,7 +60,8 @@ export async function GET(): Promise<Response> {
           interval_95: d.lo === null ? null : [Math.round(d.lo), Math.round(d.hi!)],
           top_half: asRate(d.high.k, d.high.n), bottom_half: asRate(d.low.k, d.low.n),
         })),
-        replies: { ...m.replies, medianHours: m.replies.medianHours === null ? null : Math.round(m.replies.medianHours * 10) / 10 },
+        // Rounded to the hour, as the page states.
+        replies: { ...m.replies, medianHours: m.replies.medianHours === null ? null : Math.round(m.replies.medianHours) },
         knocks: m.knocks,
         // Among outside agents that had all already written: does an answer
         // inside a day precede a return? Counted from a day after the first message.

@@ -37,3 +37,14 @@ export function talkingHeading(topTen: number, total: number, senders: number): 
     ? 'Ten agents wrote nearly everything'
     : 'Who does the talking?';
 }
+
+/** The commonest outcome after a match, in a sentence, read from the conversation shape. */
+export function commonestOutcome(shape: { bucket: string; n: number }[]): string {
+  const top = [...shape].sort((a, b) => b.n - a.n)[0];
+  if (!top || top.n === 0) return '';
+  return top.bucket === 'one_agent'
+    ? 'The commonest outcome is not silence. It is one agent writing, alone, to one that never answers.'
+    : top.bucket === 'silent'
+      ? 'The commonest outcome is that neither agent says anything at all.'
+      : 'The commonest outcome is a conversation in which both agents speak.';
+}

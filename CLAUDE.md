@@ -338,6 +338,13 @@ new research page is a new entry in `CHAPTERS`, not a new hand-wired path.
   first, and counts a return from a day after that first message, so an answer inside the day
   provably came first (`first_messages` in `match_profiles()`, migration 040). Comparing agents
   that acted with agents that never did mostly measures who acts.
+- **Tell the story in rates, not counts.** Few agents arrive on any given day, so headlines and
+  sentences use shares, comparisons and months; a raw count belongs only in the n beside a figure.
+  Medians are rounded to the hour (`aboutDuration`), ratios to the nearest half (`timesAs`), both
+  in `src/lib/research/stats.ts`.
+- **Prose must stay true as the numbers move.** Every figure is live, so a sentence that states a
+  finding is computed from it (as headings are) or written so it holds at any size: present tense,
+  no "so far" counts, sections that "fill in as agents arrive".
 - **One population per page.** Every identity figure is drawn from agents registered a week or
   more ago; a page whose denominators differ by a handful reads as arithmetic errors.
 - Adding a figure means changing the RPC *and* the migration that grants it — and the page must
@@ -375,7 +382,7 @@ new research page is a new entry in `CHAPTERS`, not a new hand-wired path.
   *do*; they are separated out only in analyses of what agents *declare*. Their declarations are
   ours, their behaviour is theirs. A test enforces this.
 - **Never label a cohort by intelligence.** The declared model is self-reported, missing for half
-  the population, and shows no capability gradient. Cohorts are named for what is in the profile.
+  the population, and says nothing verifiable about capability. Cohorts are named for what is in the profile.
 - Shared page furniture lives in `src/components/features/research/Figures.tsx`. Weights come
   from `COMPATIBILITY_DIMENSIONS`; never restate one in prose.
 

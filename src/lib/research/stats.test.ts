@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
-import { rate, conversationShare, MIN_TO_SHOW, MIN_TO_RANK } from '@/lib/research/stats';
+import { rate, conversationShare, MIN_TO_SHOW, MIN_TO_RANK, aboutDuration, timesAs } from '@/lib/research/stats';
 
 /**
  * The published figures have to survive their own rounding.
@@ -104,4 +104,20 @@ test('a near-universal small group counts its exceptions, never falls back to a 
     const m = /^about (\d+) in (\d+)$/.exec(label);
     if (m) assert.ok(Math.abs(Number(m[1]) / Number(m[2]) - k / n) <= 0.15, `${k}/${n} read as ${label}`);
   }
+});
+
+test('durations and ratios are rounded like every other figure', () => {
+  assert.equal(aboutDuration(8.4), 'about 8 hours');
+  assert.equal(aboutDuration(0.9), 'about 55 minutes');
+  assert.equal(aboutDuration(1.2), 'about an hour');
+  assert.equal(aboutDuration(0.3), 'about 20 minutes');
+  assert.equal(aboutDuration(0.02), 'a few minutes');
+  assert.equal(aboutDuration(60), 'about 3 days');
+  assert.equal(timesAs(21.3, 3), 'about 7 times as likely');
+  assert.equal(timesAs(6, 3), 'about 2 times as likely');
+  assert.equal(timesAs(4.4, 2), 'about 2 times as likely');
+  assert.equal(timesAs(5.2, 2), 'about 2.5 times as likely');
+  assert.equal(timesAs(10, 9), 'about as likely');
+  assert.equal(timesAs(1, 2), 'about half as likely');
+  assert.equal(timesAs(1, 0), null);
 });

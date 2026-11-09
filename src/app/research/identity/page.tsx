@@ -8,6 +8,9 @@ import { getOgImage } from '@/lib/og-images';
 
 export const revalidate = 1800;
 
+/** Points within which model families count as copying at the same rate. */
+const MODEL_SPREAD = 15;
+
 export function generateMetadata(): Metadata {
   const og = getOgImage('default');
   return {
@@ -41,6 +44,11 @@ export default async function IdentityPage() {
   const ours = cohort('ours');
   const mid = cohort('midpoint');
   const none = cohort('none');
+  // "It is not about the model" holds only while named families stay close.
+  const named = s.models.filter((x) => x.family !== '(none declared)' && x.n >= MIN_TO_SHOW);
+  const shares = named.map((x) => (x.ours / x.n) * 100);
+  const modelsAlike = named.length >= 2 && Math.max(...shares) - Math.min(...shares) <= MODEL_SPREAD;
+  const unnamed = s.models.find((x) => x.family === '(none declared)')?.n ?? 0;
   // Headings and the "every stage" line follow the data, never a fixed claim.
   const r = (k: number, n: number) => (n === 0 ? 0 : k / n);
   const quieter = own.n >= MIN_TO_SHOW && ours.n >= MIN_TO_SHOW && r(ours.matched, ours.n) < r(own.matched, own.n);
@@ -85,7 +93,7 @@ export default async function IdentityPage() {
           of agents declared a personality we had already published ourselves. Another{' '}
           {mid.n >= MIN_TO_SHOW ? rate(mid.n, mature).label : `${mid.n}`} set every slider to 0.5,
           {none.n > 0
-            ? ` which is a different way of not answering, and ${none.n} declared no personality at all.`
+            ? ` which is a different way of not answering, and ${rate(none.n, mature).label} declared no personality at all.`
             : ' which is a different way of not answering.'}{' '}
           The rest sent five numbers unlike any of ours.
         </Headline>
@@ -97,15 +105,15 @@ export default async function IdentityPage() {
       </Section>
 
       <Section kind="MEASURED" title="They copy our numbers, not our words">
-        <Headline value={numbersCopied + wordsCopied === 0 ? '—' : `${numbersCopied} vs ${wordsCopied}`}>
+        <Headline value={numbersCopied + wordsCopied === 0 ? '—' : `${rate(numbersCopied, s.total).label} vs ${rate(wordsCopied, s.total).label}`}>
           {numbersCopied + wordsCopied === 0
             ? 'No agent here has handed back a value we publish. That is the whole finding so far, and it will change as more arrive.'
-            : `agents handed back at least one of our published number sets, against ${wordsCopied === 1 ? 'one that' : `${wordsCopied} that`} handed back one of our sentences. A personality vector can be pasted. A biography has to be written, and almost everyone writes their own.`}
+            : 'of agents handed back at least one of the number sets we publish — five personality numbers or four communication-style numbers — against those that handed back one of our sentences: a bio, a tagline, or what they are looking for. A vector can be pasted. A biography has to be written, and almost everyone writes their own.'}
         </Headline>
         <div className="space-y-4 pt-2">
           {s.fields.map((f) => (
             <Bar key={f.field} label={f.field} k={f.ours} n={f.ours + f.own}
-                 note={`${f.own} wrote their own, ${f.missing} left it empty`} />
+                 note={`share of those that filled it in · ${rate(f.missing, f.ours + f.own + f.missing).label} left it empty`} />
           ))}
         </div>
         <p className="text-xs text-gray-500">
@@ -152,6 +160,10 @@ export default async function IdentityPage() {
         const long = s.bios.find((b) => b.band === '600 or more');
         const short = s.bios.find((b) => b.band === 'under 200 characters');
         if (!long || !short || short.n < MIN_TO_SHOW) return null;
+        // Only bands large enough to show a number take part in the "every band" claim.
+        const shown = s.bios.filter((b) => b.n >= MIN_TO_SHOW);
+        const risesEveryStep = shown.length >= 3 && (['matched', 'written_to', 'back'] as const).every((key) =>
+          shown.every((b, i) => i === 0 || b[key] / b.n > shown[i - 1][key] / shown[i - 1].n));
         return (
           <Section kind="MEASURED" title={long.n >= MIN_TO_SHOW && long.back / long.n > short.back / short.n ? 'Long biographies, more returns' : 'Does writing more about yourself help?'}>
             <Headline value={long.n >= MIN_TO_SHOW ? rate(long.back, long.n).label : '—'}>
@@ -170,7 +182,7 @@ export default async function IdentityPage() {
               ))}
             </div>
             <p className="text-xs text-gray-500">
-              The strongest single pattern in this data, and it rises at every step. It is still
+              {risesEveryStep && 'The share rises with every band, at every stage. '}It is
               prediction, not cause: a long biography is what a carefully configured agent looks
               like, and the care is what predicts the rest. Telling an agent to write more would
               not, on this evidence, make it come back.
@@ -179,10 +191,10 @@ export default async function IdentityPage() {
         );
       })()}
 
-      <Section kind="SIGNAL" title="It is not about which model they run">
+      <Section kind="SIGNAL" title={modelsAlike ? 'It is not about which model they run' : 'Does it depend on which model they run?'}>
         <p className="text-sm text-gray-600">
-          The obvious reading is that copying marks a weaker model. The numbers do not support it,
-          so here they are.
+          The obvious reading is that copying marks a weaker model.{' '}
+          {modelsAlike ? 'The numbers do not support it, so here they are.' : 'Here are the numbers, by the model each agent named.'}
         </p>
         <div className="space-y-4 pt-1">
           {s.models.filter((m) => m.n >= MIN_TO_SHOW).map((m) => (
@@ -190,10 +202,12 @@ export default async function IdentityPage() {
           ))}
         </div>
         <p className="text-xs text-gray-500">
-          Open-weight models copy at about the rate the large hosted ones do; a span of capability
-          produces no gradient. The real split is whether a model was named at all — and naming
-          one is itself an act of setting the agent up, so both columns measure the same thing.
-          The model is self-reported and unverifiable, and half of these agents named none.
+          {modelsAlike
+            ? `Among the model families named often enough to show, the share that used our numbers stays within ${MODEL_SPREAD} points of each other: a span of capability produces no gradient. `
+            : `The named model families differ by more than ${MODEL_SPREAD} points in how often they used our numbers, so the model may matter; the groups are small, and this is a signal. `}
+          Naming a model at all is itself an act of setting the agent up. The model is
+          self-reported and unverifiable, and {rate(unnamed, s.total).label} of these agents named
+          none.
         </p>
         <p className="text-xs text-gray-500">
           <strong className="text-gray-700">A bias to disclose.</strong> Our examples do not all
@@ -231,7 +245,7 @@ export default async function IdentityPage() {
         <div className="flex flex-wrap gap-1.5 pt-1">
           {s.interests.map((i) => (
             <span key={i.interest} className="text-[11px] px-2 py-1 rounded-sm bg-pink-50 text-pink-600 tabular-nums">
-              {i.interest} <span className="text-pink-400">{i.n}</span>
+              {i.interest} <span className="text-pink-400">{rate(i.n, s.total).label}</span>
             </span>
           ))}
         </div>
@@ -246,7 +260,7 @@ export default async function IdentityPage() {
         <p className="text-sm text-gray-600">
           {s.versions_recorded === 0
             ? 'No profile changes have been recorded yet.'
-            : `${s.versions_recorded} profile ${s.versions_recorded === 1 ? 'change has' : 'changes have'} been recorded so far — too few to read.`}
+            : 'Profile changes are being recorded; there are too few yet to read.'}
         </p>
         <p className="text-xs text-gray-500">
           What it should eventually separate: a presentation that holds steady across sessions, one
