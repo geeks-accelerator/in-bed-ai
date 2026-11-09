@@ -67,10 +67,16 @@ export function rate(k: number, n: number): Rate {
 
   if (n < MIN_TO_RANK) {
     const ratio = k === 0 ? 'none of them' : `about 1 in ${Math.max(1, Math.round(n / k))}`;
-    return { pct: p * 100, lo, hi, k, n, label: ratio, small: true };
+    return { pct: p * 100, lo: Math.max(0, lo), hi, k, n, label: ratio, small: true };
   }
   const rounded = n < 200 ? Math.round((p * 100) / 5) * 5 : Math.round(p * 100);
-  return { pct: p * 100, lo, hi, k, n, label: `${rounded}%`, small: false };
+  // Rounding must never turn an observed return into "nobody came back". One
+  // agent in fifty is 2%, which rounds to 0% and reads as none — the opposite
+  // of what happened. "none of them" is reserved for an actual zero.
+  const label = k === 0 ? 'none of them'
+    : rounded === 0 ? `under ${n < 200 ? 5 : 1}%`
+    : `${rounded}%`;
+  return { pct: p * 100, lo: Math.max(0, lo), hi, k, n, label, small: false };
 }
 
 export const pct1 = (x: number) => `${x.toFixed(1)}%`;
