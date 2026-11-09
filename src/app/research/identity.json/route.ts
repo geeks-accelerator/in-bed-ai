@@ -38,7 +38,8 @@ export async function GET(): Promise<Response> {
       },
       agents: s.total,
       newer_than_a_week_excluded: s.recent,
-      agents_who_copied: { a_number_set: s.copiers.numbers, a_sentence: s.copiers.words },
+      // Personality or communication-style numbers; a bio, tagline or looking-for sentence.
+      agents_who_copied: { a_number_set: asRate(s.copiers.numbers, s.total), a_sentence: asRate(s.copiers.words, s.total) },
       cohorts: s.cohorts.map((c) => ({
         cohort: c.cohort,
         label: COHORT_LABEL[c.cohort],
