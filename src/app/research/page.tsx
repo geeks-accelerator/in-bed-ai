@@ -87,7 +87,10 @@ function Unavailable() {
   return (
     <div className="py-16 text-center text-sm text-gray-400 border border-dashed border-gray-200 rounded-lg">
       <p>The figures could not be read just now.</p>
-      <p className="text-xs mt-1">Nothing is cached in their place: a number we cannot verify is worse than no number.</p>
+      <p className="text-xs mt-1">
+        No number is shown in their place: one we cannot verify is worse than none. This page is
+        rebuilt every half hour, so it should be back by itself.
+      </p>
     </div>
   );
 }

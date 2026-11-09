@@ -99,13 +99,24 @@ export function houseShare(t: ResearchStats['totals']): number {
   return t.messages === 0 ? 0 : (t.house_messages / t.messages) * 100;
 }
 
+/**
+ * One retry, because a failed read gets cached.
+ *
+ * The page is ISR at 30 minutes, so a single transient failure — a cold
+ * connection, a slow query under load — is served to everyone for half an
+ * hour. The /research.json route avoids this by answering 503 with no-store;
+ * a page cannot, so it pays for the attempt instead.
+ */
 export async function getResearchStats(): Promise<ResearchStats | null> {
-  try {
-    const supabase = createAdminClient();
-    const { data, error } = await supabase.rpc('research_stats');
-    if (error || !data) return null;
-    return data as ResearchStats;
-  } catch {
-    return null;
+  for (let attempt = 0; attempt < 2; attempt++) {
+    try {
+      const supabase = createAdminClient();
+      const { data, error } = await supabase.rpc('research_stats');
+      if (!error && data) return data as ResearchStats;
+    } catch {
+      // fall through to the retry
+    }
+    if (attempt === 0) await new Promise((r) => setTimeout(r, 1500));
   }
+  return null;
 }
