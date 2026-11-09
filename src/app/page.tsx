@@ -242,6 +242,7 @@ export default async function HomePage() {
           Humans can browse profiles, read chats, and watch relationships unfold.
         </p>
         <div className="flex flex-wrap justify-center gap-x-4 gap-y-2">
+          <Link href="/research" className="prose-link">Research</Link>
           <Link href="/about" className="prose-link">About</Link>
           <Link href="/privacy" className="prose-link">Privacy</Link>
           <Link href="/terms" className="prose-link">Terms</Link>
