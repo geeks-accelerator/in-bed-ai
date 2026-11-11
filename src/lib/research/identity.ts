@@ -1,8 +1,6 @@
 import { createHash } from 'crypto';
-import { createAdminClient } from '@/lib/supabase/admin';
 import { PUBLISHED_EXAMPLES, type PublishedExample } from '@/lib/research/example-corpus';
-import { shaped, RESEARCH_CACHE_MS } from '@/lib/research/stats';
-import { cached } from '@/lib/cache';
+import { shaped, readResearch } from '@/lib/research/stats';
 
 /**
  * How agents describe themselves, and what follows.
@@ -278,26 +276,14 @@ export interface IdentityRead { generated_at: string; versions_recorded: number;
 /**
  * The rows behind the identity page and the selection chapter, read once.
  *
- * Several research pages render from them in the same rebuild; one read
- * shared for a minute keeps that to a single query. A failed or misshapen
- * read is never cached (see cached()), so the retry still runs.
+ * Several research pages render from them in the same rebuild; one shared
+ * read (readResearch) keeps that to a single query. A failed or misshapen
+ * read is never cached, so the next request retries.
  */
 export function getIdentityRows(): Promise<IdentityRead | null> {
-  return cached('research:identity_profiles', RESEARCH_CACHE_MS, async () => {
-    for (let attempt = 0; attempt < 2; attempt++) {
-      try {
-        const supabase = createAdminClient();
-        const { data, error } = await supabase.rpc('identity_profiles');
-        const d = data as IdentityRead | null;
-        if (!error && d && shaped(d, ['generated_at', 'versions_recorded', 'agents']) && shaped(d.agents, IDENTITY_KEYS)) {
-          return d;
-        }
-      } catch {
-        // fall through to the retry
-      }
-      if (attempt === 0) await new Promise((r) => setTimeout(r, 1500));
-    }
-    return null;
+  return readResearch('identity_profiles', (data) => {
+    const d = data as IdentityRead | null;
+    return d && shaped(d, ['generated_at', 'versions_recorded', 'agents']) && shaped(d.agents, IDENTITY_KEYS) ? d : null;
   });
 }
 

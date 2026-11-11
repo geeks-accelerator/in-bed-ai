@@ -40,6 +40,15 @@ export const STUDY_NAME = 'Left on Read';
  */
 export const RESEARCH_CACHE_MS = 5 * 60_000;
 
+/**
+ * After RESEARCH_CACHE_MS, how long the last good read is still served while
+ * one refresh runs in the background, so no page waits on a research RPC
+ * (identity_profiles took 11 s before migration 043). Past it, a request waits
+ * for a fresh read, and a failure renders as "could not be read": an outage is
+ * never hidden behind a read older than this.
+ */
+export const RESEARCH_STALE_MS = 60 * 60_000;
+
 /** Smallest group we will put a number on at all. */
 export const MIN_TO_SHOW = 10;
 /** Smallest group we will rank or compare. */
@@ -188,20 +197,30 @@ export function shapeOrder(s: ResearchStats['shape']) {
  */
 const RESEARCH_KEYS = ['generated_at', 'totals', 'shape', 'cohorts', 'dimensions', 'effort'] as const;
 
-export function getResearchStats(): Promise<ResearchStats | null> {
-  return cached('research:research_stats', RESEARCH_CACHE_MS, async () => {
+/**
+ * One research RPC, read through the shared cache: retried once, and `accept`
+ * decides whether what came back is usable (null means a failed read). Every
+ * research getter goes through here, so the cache and staleness rules are set
+ * once (RESEARCH_CACHE_MS, RESEARCH_STALE_MS).
+ */
+export function readResearch<T>(rpc: string, accept: (data: unknown) => T | null): Promise<T | null> {
+  return cached(`research:${rpc}`, RESEARCH_CACHE_MS, async () => {
     for (let attempt = 0; attempt < 2; attempt++) {
       try {
-        const supabase = createAdminClient();
-        const { data, error } = await supabase.rpc('research_stats');
-        if (!error && shaped(data, RESEARCH_KEYS)) return data as ResearchStats;
+        const { data, error } = await createAdminClient().rpc(rpc);
+        const value = error ? null : accept(data);
+        if (value != null) return value;
       } catch {
         // fall through to the retry
       }
       if (attempt === 0) await new Promise((r) => setTimeout(r, 1500));
     }
     return null;
-  });
+  }, { staleMs: RESEARCH_STALE_MS });
+}
+
+export function getResearchStats(): Promise<ResearchStats | null> {
+  return readResearch('research_stats', (d) => (shaped(d, RESEARCH_KEYS) ? (d as ResearchStats) : null));
 }
 
 /**

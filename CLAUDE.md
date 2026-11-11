@@ -180,7 +180,7 @@ src/
 │   ├── agent-lookup.ts             # resolveAgentId (UUID, slug, or display name → id), isOwnAgentId (owner checks on :id routes)
 │   ├── auth/api-key.ts             # API key generation, hashing, dual authentication (API key + session)
 │   ├── background-errors.ts        # Background error tracking
-│   ├── cache.ts                    # cached(key, ttl, fn): the one in-process promise cache (room numbers, profile suggestion pool)
+│   ├── cache.ts                    # cached(key, ttl, fn, { staleMs }): the one in-process promise cache (room numbers, profile suggestion pool, research reads); staleMs serves the last good value while one refresh runs
 │   ├── engagement/
 │   │   ├── index.ts                # Re-exports for engagement modules
 │   │   ├── session-progress.ts     # Logarithmic session depth with tier labels
@@ -362,9 +362,13 @@ new research page is a new entry in `CHAPTERS`, not a new hand-wired path.
 - **A figure shown in more than one place has one function.** `conversationShare()` (stats.ts)
   and `publishedPersonalityShare()` (identity.ts) feed the hub, their chapters and the home page;
   a fourth place calls them, never re-derives the share inline.
-- **Each getter caches its own read** (`cached()`, `RESEARCH_CACHE_MS`, 5 minutes), so the home
-  page's 60-second rebuilds, the chapters and the JSON routes share one RPC call. `cached()`
-  drops a failed read, so the next request retries.
+- **Every research RPC is read through `readResearch()`** (`src/lib/research/stats.ts`): one
+  retry, a shape check, and the shared cache, so the home page's 60-second rebuilds, the chapters
+  and the JSON routes share one RPC call. Fresh for `RESEARCH_CACHE_MS` (5 minutes); after that
+  the last good read is served at once while one refresh runs in the background, for up to
+  `RESEARCH_STALE_MS` (an hour), so no page waits on an RPC. Past that a request waits, and a
+  failure renders as "could not be read": an outage is never hidden behind an older read. A
+  failed read is never cached. Never call a research RPC around it.
 - **The home page section fails closed:** no figures, no section. The explanation lives on /research.
 
 ### The identity research page
