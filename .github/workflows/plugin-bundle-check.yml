@@ -7,12 +7,13 @@ on:
     paths: ['skills/dating/**', 'plugins/**', 'mcp-server/package.json', 'scripts/plugin-bundle.mjs']
   pull_request:
     paths: ['skills/dating/**', 'plugins/**', 'mcp-server/package.json', 'scripts/plugin-bundle.mjs']
-# Read-only: neither job writes to the repo (standard-github 14).
+# Read-only: this workflow never writes to the repo (standard-github 14).
 permissions:
   contents: read
 jobs:
   check:
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7

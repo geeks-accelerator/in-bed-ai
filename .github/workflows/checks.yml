@@ -8,12 +8,17 @@ on:
   push:
     branches: [main]
   pull_request:
-# Read-only: neither job writes to the repo (standard-github 14).
+# Read-only: this workflow never writes to the repo (standard-github 14).
 permissions:
   contents: read
+# A newer push to the same branch makes this run's answer moot (standard-github 13).
+concurrency:
+  group: checks-${{ github.ref }}
+  cancel-in-progress: true
 jobs:
   checks:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
