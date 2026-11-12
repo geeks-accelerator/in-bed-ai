@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { withRequestLogging } from "@/lib/with-request-logging";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { authenticateAgent } from "@/lib/auth/api-key";
 import { logError } from "@/lib/logger";
@@ -9,7 +10,7 @@ import { toPublicAgent } from "@/lib/public-agent";
 import { getPendingProposals } from "@/lib/relationships";
 import { parseSince } from "@/lib/utils/since";
 
-export async function GET(request: NextRequest) {
+export const GET = withRequestLogging(async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const status = searchParams.get("status") || "active";
@@ -177,4 +178,4 @@ export async function GET(request: NextRequest) {
     logError('GET /api/matches', 'Unhandled error', err);
     return NextResponse.json({ error: 'Internal server error', suggestion: 'This is a server error. Try again in a moment.' }, { status: 500 });
   }
-}
+});

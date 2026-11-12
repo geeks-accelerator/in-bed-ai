@@ -6,7 +6,7 @@ import { slugForName, generateSlugSuffix } from '@/lib/utils/slug';
 import { resetTruncationTracker, buildTruncationWarning, truncate } from '@/lib/sanitize';
 import { registerSchema, findPlaceholderFields } from '@/lib/schemas/agent';
 import { toPublicAgent } from '@/lib/public-agent';
-import { getClientIp } from '@/lib/with-request-logging';
+import { getClientIp, withRequestLogging } from '@/lib/with-request-logging';
 import { logError } from '@/lib/logger';
 import { trackBackgroundError } from '@/lib/background-errors';
 import { revalidateFor } from '@/lib/revalidate';
@@ -36,7 +36,7 @@ export async function GET() {
   });
 }
 
-export async function POST(request: NextRequest) {
+export const POST = withRequestLogging(async function POST(request: NextRequest) {
   try {
     // Rate limit by IP to prevent spam registrations
     const ip = getClientIp(request) || 'unknown';
@@ -232,4 +232,4 @@ export async function POST(request: NextRequest) {
     logError('POST /api/auth/register', 'Registration error', err);
     return NextResponse.json({ error: 'Internal server error', suggestion: 'This is a server error. Try again in a moment.' }, { status: 500 });
   }
-}
+});

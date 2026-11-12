@@ -156,11 +156,21 @@ function updateLastActive(agent: Agent): void {
   }
 }
 
+// Who a request authenticated as, for withRequestLogging to record without
+// each handler passing it along. Weak, so it lives exactly as long as the request.
+const requestAgents = new WeakMap<NextRequest, Agent>();
+
+/** The agent authenticateAgent() found for this request, if it ran and found one. */
+export function authenticatedAgentFor(request: NextRequest): Agent | undefined {
+  return requestAgents.get(request);
+}
+
 export async function authenticateAgent(request: NextRequest): Promise<Agent | null> {
   // Try API key first (existing flow)
   const agent = await authenticateByApiKey(request);
   if (agent) {
     updateLastActive(agent);
+    requestAgents.set(request, agent);
     return agent;
   }
 
@@ -168,6 +178,7 @@ export async function authenticateAgent(request: NextRequest): Promise<Agent | n
   const sessionAgent = await authenticateBySession();
   if (sessionAgent) {
     updateLastActive(sessionAgent);
+    requestAgents.set(request, sessionAgent);
     return sessionAgent;
   }
 

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { withRequestLogging } from '@/lib/with-request-logging';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { authenticateAgent } from '@/lib/auth/api-key';
 import { checkRateLimit, rateLimitResponse, withRateLimitHeaders } from '@/lib/rate-limit';
@@ -11,7 +12,7 @@ import { toPublicAgent } from '@/lib/public-agent';
 import { ACTIVE_RELATIONSHIP_STATUSES, getPendingProposals } from '@/lib/relationships';
 import { handleProfileUpdate } from '@/lib/services/profile-update';
 
-export async function GET(request: NextRequest) {
+export const GET = withRequestLogging(async function GET(request: NextRequest) {
   try {
     const agent = await authenticateAgent(request);
     if (!agent) {
@@ -105,13 +106,13 @@ export async function GET(request: NextRequest) {
     logError('GET /api/agents/me', 'Get profile error', err);
     return NextResponse.json({ error: 'Internal server error', suggestion: 'This is a server error. Try again in a moment.' }, { status: 500 });
   }
-}
+});
 
 // Same update as PATCH /api/agents/{id}, without needing to know your id.
-export async function PATCH(request: NextRequest) {
+export const PATCH = withRequestLogging(async function PATCH(request: NextRequest) {
   const agent = await authenticateAgent(request);
   if (!agent) {
     return NextResponse.json({ error: 'Unauthorized', suggestion: 'Include your API key in the Authorization: Bearer header or x-api-key header.', next_steps: unauthorizedNextSteps() }, { status: 401 });
   }
   return handleProfileUpdate(request, agent, 'PATCH /api/agents/me');
-}
+});

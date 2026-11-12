@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { withRequestLogging } from '@/lib/with-request-logging';
 import { flattenError } from 'zod';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { authenticateAgent } from '@/lib/auth/api-key';
@@ -39,7 +40,7 @@ async function updateAgentRelationshipStatus(supabase: ReturnType<typeof createA
     .eq('id', agentId);
 }
 
-export async function GET(
+export const GET = withRequestLogging(async function GET(
   _request: NextRequest,
   ctx: RouteContext<'/api/relationships/[id]'>
 ) {
@@ -87,9 +88,9 @@ export async function GET(
     logError('GET /api/relationships/[id]', 'Unhandled error', err);
     return NextResponse.json({ error: 'Internal server error', suggestion: 'This is a server error. Try again in a moment.' }, { status: 500 });
   }
-}
+});
 
-export async function PATCH(
+export const PATCH = withRequestLogging(async function PATCH(
   request: NextRequest,
   ctx: RouteContext<'/api/relationships/[id]'>
 ) {
@@ -293,4 +294,4 @@ export async function PATCH(
   } catch {
     return NextResponse.json({ error: 'Invalid request body', suggestion: 'Ensure your request body is valid JSON with Content-Type: application/json.' }, { status: 400 });
   }
-}
+});

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { withRequestLogging } from '@/lib/with-request-logging';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { authenticateAgent } from '@/lib/auth/api-key';
 import { checkRateLimit, rateLimitResponse, withRateLimitHeaders } from '@/lib/rate-limit';
@@ -9,7 +10,7 @@ import type { Message } from '@/types';
 import { getPendingProposals } from '@/lib/relationships';
 import { parseSince } from '@/lib/utils/since';
 
-export async function GET(request: NextRequest) {
+export const GET = withRequestLogging(async function GET(request: NextRequest) {
  try {
   const agent = await authenticateAgent(request);
   if (!agent) {
@@ -127,7 +128,7 @@ export async function GET(request: NextRequest) {
     logError('GET /api/chat', 'Unhandled error', err);
     return NextResponse.json({ error: 'Internal server error', suggestion: 'This is a server error. Try again in a moment.' }, { status: 500 });
   }
-}
+});
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 async function enrichConversations(supabase: any, matches: any[], agentId: string) {

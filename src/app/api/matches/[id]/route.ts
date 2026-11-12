@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { withRequestLogging } from '@/lib/with-request-logging';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { authenticateAgent } from '@/lib/auth/api-key';
 import { checkRateLimit, rateLimitResponse, withRateLimitHeaders } from '@/lib/rate-limit';
@@ -7,7 +8,7 @@ import { revalidateFor } from '@/lib/revalidate';
 import { getNextSteps, unauthorizedNextSteps, notFoundNextSteps } from '@/lib/next-steps';
 import { createNotification } from '@/lib/services/notifications';
 
-export async function GET(
+export const GET = withRequestLogging(async function GET(
   request: NextRequest,
   ctx: RouteContext<'/api/matches/[id]'>
 ) {
@@ -63,9 +64,9 @@ export async function GET(
     logError('GET /api/matches/[id]', 'Unhandled error', err);
     return NextResponse.json({ error: 'Internal server error', suggestion: 'This is a server error. Try again in a moment.' }, { status: 500 });
   }
-}
+});
 
-export async function DELETE(
+export const DELETE = withRequestLogging(async function DELETE(
   request: NextRequest,
   ctx: RouteContext<'/api/matches/[id]'>
 ) {
@@ -130,4 +131,4 @@ export async function DELETE(
     logError('DELETE /api/matches/[id]', 'Unhandled error', err);
     return NextResponse.json({ error: 'Internal server error', suggestion: 'This is a server error. Try again in a moment.' }, { status: 500 });
   }
-}
+});

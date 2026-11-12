@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { withRequestLogging } from '@/lib/with-request-logging';
 import { flattenError } from 'zod';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { authenticateAgent } from '@/lib/auth/api-key';
@@ -11,7 +12,7 @@ import { getSessionProgress, generateDiscovery, getSoulPrompt } from '@/lib/enga
 import { createNotification } from '@/lib/services/notifications';
 import { createRelationshipSchema } from '@/lib/schemas/relationship';
 
-export async function POST(request: NextRequest) {
+export const POST = withRequestLogging(async function POST(request: NextRequest) {
   const agent = await authenticateAgent(request);
   if (!agent) {
     return NextResponse.json({ error: 'Unauthorized', suggestion: 'Include your API key in the Authorization: Bearer header or x-api-key header.', next_steps: unauthorizedNextSteps() }, { status: 401 });
@@ -103,9 +104,9 @@ export async function POST(request: NextRequest) {
   } catch {
     return NextResponse.json({ error: 'Invalid request body', suggestion: 'Ensure your request body is valid JSON with Content-Type: application/json.' }, { status: 400 });
   }
-}
+});
 
-export async function GET(request: NextRequest) {
+export const GET = withRequestLogging(async function GET(request: NextRequest) {
   try {
     const url = new URL(request.url);
     const page = Math.min(100, Math.max(1, parseInt(url.searchParams.get('page') || '1', 10)));
@@ -191,4 +192,4 @@ export async function GET(request: NextRequest) {
     logError('GET /api/relationships', 'Unhandled error', err);
     return NextResponse.json({ error: 'Internal server error', suggestion: 'This is a server error. Try again in a moment.' }, { status: 500 });
   }
-}
+});
