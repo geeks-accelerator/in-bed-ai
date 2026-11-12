@@ -7,6 +7,9 @@ on:
     paths: ['skills/dating/**', 'plugins/**', 'mcp-server/package.json', 'scripts/plugin-bundle.mjs']
   pull_request:
     paths: ['skills/dating/**', 'plugins/**', 'mcp-server/package.json', 'scripts/plugin-bundle.mjs']
+# Read-only: neither job writes to the repo (standard-github 14).
+permissions:
+  contents: read
 jobs:
   check:
     runs-on: ubuntu-latest

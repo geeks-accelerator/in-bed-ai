@@ -8,6 +8,9 @@ on:
   push:
     branches: [main]
   pull_request:
+# Read-only: neither job writes to the repo (standard-github 14).
+permissions:
+  contents: read
 jobs:
   checks:
     runs-on: ubuntu-latest
