@@ -24,6 +24,12 @@ jobs:
       # The identity research corpus must match the examples we actually serve.
       # Fix with: node scripts/example-corpus.mjs sync
       - run: node scripts/example-corpus.mjs check
+      # Route types (PageProps, RouteContext) live in .next/types, which a fresh
+      # checkout lacks: without this, tsc failed on every push from 2026-11-08.
+      # next.config.mjs parses the Supabase URL; any URL will do for typegen.
+      - run: npx next typegen
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: http://127.0.0.1:54841
       - run: npx tsc --noEmit
       - run: npm run lint
       - run: npm test
