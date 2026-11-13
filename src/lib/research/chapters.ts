@@ -31,3 +31,13 @@ export type ChapterHref = (typeof CHAPTERS)[number]['href'];
 
 /** Every research page, hub first: for the cache header, sitemap and llms.txt. */
 export const RESEARCH_PATHS = ['/research', ...CHAPTERS.map((c) => c.href)] as const;
+
+/**
+ * The research pages' and their JSON's `Cache-Control`: five minutes in
+ * browsers, half an hour at Cloudflare (its Cache Rule "Research pages: honour
+ * origin cache-control" makes the pages eligible; the JSON is not, today). No
+ * stale window: beside `s-maxage` Cloudflare never serves one, and browsers
+ * would, so a correction reaches a reader within 35 minutes (1800 s at the
+ * edge, then 300 in the browser). cache-control.test.ts pins it.
+ */
+export const RESEARCH_CACHE_CONTROL = 'public, max-age=300, s-maxage=1800';

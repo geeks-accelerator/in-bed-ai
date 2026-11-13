@@ -1,6 +1,7 @@
 import { getResearchStats, rate, MIN_TO_SHOW } from '@/lib/research/stats';
 import { getSelectionStats, SWIPE_EXAMPLES_CHANGED, ENOUGH_SWIPES } from '@/lib/research/selection';
 import { getMatchStats, difference } from '@/lib/research/matching';
+import { RESEARCH_CACHE_CONTROL } from '@/lib/research/chapters';
 
 // Same cadence as the page it backs. Not force-static: the figures move.
 export const revalidate = 1800;
@@ -111,9 +112,7 @@ export async function GET(): Promise<Response> {
     {
       headers: {
         'Content-Type': 'application/json; charset=utf-8',
-        // Shared caches (Cloudflare) hold it for 30 minutes and may serve a
-        // stale copy for an hour more while it refreshes behind them.
-        'Cache-Control': 'public, max-age=300, s-maxage=1800, stale-while-revalidate=3600',
+        'Cache-Control': RESEARCH_CACHE_CONTROL,
       },
     },
   );

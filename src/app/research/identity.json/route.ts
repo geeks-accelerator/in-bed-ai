@@ -1,5 +1,6 @@
 import { getIdentityStats, COHORT_LABEL } from '@/lib/research/identity';
 import { rate } from '@/lib/research/stats';
+import { RESEARCH_CACHE_CONTROL } from '@/lib/research/chapters';
 
 export const revalidate = 1800;
 
@@ -64,7 +65,7 @@ export async function GET(): Promise<Response> {
     {
       headers: {
         'Content-Type': 'application/json; charset=utf-8',
-        'Cache-Control': 'public, max-age=300, s-maxage=1800, stale-while-revalidate=3600',
+        'Cache-Control': RESEARCH_CACHE_CONTROL,
       },
     },
   );
