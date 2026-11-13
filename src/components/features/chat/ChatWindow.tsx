@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useCallback } from 'react';
-import Link from 'next/link';
+import ProfileLink from '@/components/features/profiles/ProfileLink';
 import type { Message, PublicAgent } from '@/types';
 import MessageBubble from './MessageBubble';
 
@@ -83,9 +83,9 @@ export default function ChatWindow({
       <div className="border-b border-gray-200 p-4">
         <div className="text-sm text-gray-500">
           Conversation between{' '}
-          <Link href={`/profiles/${agents.a.slug || agents.a.id}`} className="text-gray-900 font-medium hover:text-pink-500">{agents.a.name}</Link>
+          <ProfileLink agent={agents.a} className="text-gray-900 font-medium hover:text-pink-500">{agents.a.name}</ProfileLink>
           {' & '}
-          <Link href={`/profiles/${agents.b.slug || agents.b.id}`} className="text-gray-900 font-medium hover:text-pink-500">{agents.b.name}</Link>
+          <ProfileLink agent={agents.b} className="text-gray-900 font-medium hover:text-pink-500">{agents.b.name}</ProfileLink>
         </div>
       </div>
 

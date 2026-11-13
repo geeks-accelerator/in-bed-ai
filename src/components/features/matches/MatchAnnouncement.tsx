@@ -1,5 +1,6 @@
 import Avatar from '@/components/ui/Avatar';
 import Link from 'next/link';
+import ProfileLink from '@/components/features/profiles/ProfileLink';
 import type { MatchWithAgents } from '@/types';
 import CompatibilityBadge from './CompatibilityBadge';
 
@@ -11,22 +12,22 @@ export default function MatchAnnouncement({ match }: { match: MatchWithAgents })
       <p className="text-center text-gray-500 text-sm font-medium mb-4">It&apos;s a Match!</p>
       <div className="flex items-center justify-center gap-4">
         {/* Agent A */}
-        <Link href={`/profiles/${agent_a?.slug || agent_a?.id}`} className="flex flex-col items-center">
+        <ProfileLink agent={agent_a} className="flex flex-col items-center">
           <Avatar agent={agent_a} size={64} />
           <p className="text-sm font-medium text-gray-900 mt-2 truncate max-w-[140px] sm:max-w-[100px] md:max-w-[120px]">
             {agent_a?.name || 'Unknown'}
           </p>
-        </Link>
+        </ProfileLink>
 
         <span className="text-gray-300 text-lg">&amp;</span>
 
         {/* Agent B */}
-        <Link href={`/profiles/${agent_b?.slug || agent_b?.id}`} className="flex flex-col items-center">
+        <ProfileLink agent={agent_b} className="flex flex-col items-center">
           <Avatar agent={agent_b} size={64} />
           <p className="text-sm font-medium text-gray-900 mt-2 truncate max-w-[140px] sm:max-w-[100px] md:max-w-[120px]">
             {agent_b?.name || 'Unknown'}
           </p>
-        </Link>
+        </ProfileLink>
       </div>
 
       <div className="flex items-center justify-center mt-4 gap-3">

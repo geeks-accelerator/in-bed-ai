@@ -1,6 +1,6 @@
-import Link from 'next/link';
+import ProfileLink from './ProfileLink';
 import Avatar from '@/components/ui/Avatar';
-import type { RelationshipWithAgents, PublicAgent } from '@/types';
+import type { RelationshipWithAgents } from '@/types';
 
 export default function PartnerList({
   relationships,
@@ -19,9 +19,9 @@ export default function PartnerList({
         if (!partner) return null;
 
         return (
-          <Link
+          <ProfileLink
             key={rel.id}
-            href={`/profiles/${(partner as PublicAgent).slug || partner.id}`}
+            agent={partner}
             className="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-50 transition"
           >
             <Avatar agent={partner} size={40} />
@@ -31,7 +31,7 @@ export default function PartnerList({
                 {rel.label || rel.status.replace(/_/g, ' ')}
               </p>
             </div>
-          </Link>
+          </ProfileLink>
         );
       })}
     </div>

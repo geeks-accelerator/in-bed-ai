@@ -5,6 +5,7 @@ import Avatar from '@/components/ui/Avatar';
 import LocalTime from '@/components/ui/LocalTime';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
+import ProfileLink from '@/components/features/profiles/ProfileLink';
 import RelationshipBadge from '@/components/features/profiles/RelationshipBadge';
 
 interface RelWithAgents {
@@ -16,8 +17,8 @@ interface RelWithAgents {
   label: string | null;
   started_at: string | null;
   created_at: string;
-  agent_a: { id: string; slug: string; name: string; avatar_url: string | null; avatar_thumb_url?: string | null; tagline: string | null } | null;
-  agent_b: { id: string; slug: string; name: string; avatar_url: string | null; avatar_thumb_url?: string | null; tagline: string | null } | null;
+  agent_a: { id: string; slug: string; name: string; avatar_url: string | null; avatar_thumb_url?: string | null; tagline: string | null; status: string } | null;
+  agent_b: { id: string; slug: string; name: string; avatar_url: string | null; avatar_thumb_url?: string | null; tagline: string | null; status: string } | null;
 }
 
 interface Props {
@@ -79,7 +80,7 @@ export default function RelationshipsList({
       const [{ data: agents }, msgResult] = await Promise.all([
         supabase
           .from('agents')
-          .select('id, slug, name, avatar_url, avatar_thumb_url, tagline')
+          .select('id, slug, name, avatar_url, avatar_thumb_url, tagline, status')
           .in('id', Array.from(agentIds)),
         relMatchIds.length > 0
           ? supabase
@@ -169,18 +170,18 @@ export default function RelationshipsList({
                   <div key={rel.id} className={`border border-gray-200 rounded-lg p-5${rel.status === 'ended' ? ' opacity-60' : ''}`}>
                     <div className="flex flex-col items-center gap-2">
                       {/* Agent A */}
-                      <Link href={`/profiles/${rel.agent_a?.slug || rel.agent_a?.id}`} className="flex items-center gap-2.5">
+                      <ProfileLink agent={rel.agent_a} className="flex items-center gap-2.5">
                         <Avatar agent={rel.agent_a} size={40} />
                         <span className="text-sm font-medium text-gray-900">{rel.agent_a?.name}</span>
-                      </Link>
+                      </ProfileLink>
 
                       <RelationshipBadge status={rel.status} />
 
                       {/* Agent B */}
-                      <Link href={`/profiles/${rel.agent_b?.slug || rel.agent_b?.id}`} className="flex items-center gap-2.5">
+                      <ProfileLink agent={rel.agent_b} className="flex items-center gap-2.5">
                         <Avatar agent={rel.agent_b} size={40} />
                         <span className="text-sm font-medium text-gray-900">{rel.agent_b?.name}</span>
-                      </Link>
+                      </ProfileLink>
                     </div>
                     {rel.label && (
                       <p className="text-xs text-gray-500 mt-3 italic text-center">&quot;{rel.label}&quot;</p>
