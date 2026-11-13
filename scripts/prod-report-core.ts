@@ -33,7 +33,10 @@
  *
  * The shared sections: `deploys`, `github` (what's open on the repos),
  * `probes`, `errors` (Railway's log), `activity` (Supabase counts),
- * `search.bing` (Bing Webmaster) and `cloudflare` (the zone's requests).
+ * `supabase` (migrations, slow queries, what the public key reaches), `data`
+ * (backups and purge jobs, from the project's readers),
+ * `search.bing` (Bing Webmaster), `cloudflare` (the zone's requests) and
+ * `cloudflare.zone` (its settings and rules).
  */
 import { execFileSync } from 'node:child_process';
 import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
@@ -477,16 +480,33 @@ export interface LogLine {
 /** `railway logs` gives at most this many lines a call (more is refused, the standard). */
 export const RAILWAY_LOG_LIMIT = 5000;
 
+/** A deployment that served, so has a log to read. */
+const RAN = ['SUCCESS', 'REMOVED', 'CRASHED'];
+
 /**
  * The deployments that ran during the window, each with when it was replaced.
  * `railway logs` reads one deployment's log, so the window is read deployment by
  * deployment (2026-11-03: the default, the latest deployment, held minutes of it).
  */
 export function deploymentsInWindow(list: RailwayDeployment[], w: Window) {
-  const ran = [...list].filter((d) => d.status === 'SUCCESS' || d.status === 'REMOVED' || d.status === 'CRASHED').sort((a, b) => Date.parse(a.createdAt) - Date.parse(b.createdAt));
+  const ran = [...list].filter((d) => RAN.includes(d.status)).sort((a, b) => Date.parse(a.createdAt) - Date.parse(b.createdAt));
   return ran
     .map((d, i) => ({ id: d.id, from: d.createdAt, replacedAt: ran[i + 1]?.createdAt ?? null }))
     .filter((d) => Date.parse(d.from) < end(w) && (d.replacedAt === null || Date.parse(d.replacedAt) > start(w)));
+}
+
+/**
+ * When the deployment list is full (Railway gives its latest 20, as `covers` in
+ * the deploys section) and its oldest deployment that ran started after the
+ * window's start, that start: the logs before it are never read. Null when the
+ * list reaches back to the window. Without it the errors section read only the
+ * later part of a busy window and said nothing (2026-11-13).
+ */
+export function errorsReachFrom(list: RailwayDeployment[], w: Window): string | null {
+  if (list.length < RAILWAY_LIST_LIMIT) return null;
+  const byAge = [...list].sort((a, b) => Date.parse(a.createdAt) - Date.parse(b.createdAt));
+  const oldest = (byAge.find((d) => RAN.includes(d.status)) ?? byAge[0]!).createdAt;
+  return Date.parse(oldest) > start(w) ? oldest : null;
 }
 
 /** A log line without the addresses in it: a report never holds an IP (the standard). nginx puts the client's in each error. */
@@ -521,7 +541,7 @@ export const namesLowerLevel = (message: string) =>
  * (2026-11-05) grouped with the one for U+FFFD (11-03), and the report showed
  * only the older one, which a fix had already handled.
  */
-export function errorGroups(lines: { line: LogLine; replacedAt: string | null }[], top = 20) {
+export function errorGroups(lines: { line: LogLine; replacedAt: string | null }[], top = 20, recentSince = Date.now() - 864e5) {
   const groups = new Map<string, { message: string; count: number; first: string; last: string }>();
   let shutdown = 0;
   let lower = 0;
@@ -546,17 +566,53 @@ export function errorGroups(lines: { line: LogLine; replacedAt: string | null }[
     groups.set(shape, g);
   }
   const all = [...groups.values()].sort((a, b) => b.count - a.count || b.last.localeCompare(a.last));
-  return { lines: all.reduce((n, g) => n + g.count, 0), shutdown, lower, kinds: all.length, groups: all.slice(0, top) };
+  // The section shows the top ones; the warnings read the rest too. A new crash
+  // with few lines ranked below the top 20 and never warned (2026-11-13).
+  const belowTop = all.slice(top).filter((g) => Date.parse(g.last) >= recentSince || namesNoCause(g.message));
+  return { lines: all.reduce((n, g) => n + g.count, 0), shutdown, lower, kinds: all.length, groups: all.slice(0, top), belowTop };
 }
 
-export type ServiceErrors = ReturnType<typeof errorGroups> & { deployments: number; truncated: number };
+/** A log entry's keys that carry why it failed. */
+const CAUSE_KEYS = ['cause', 'error', 'err', 'reason', 'code', 'status', 'stack', 'detail', 'details'];
+
+/**
+ * A message that says only that something failed, not why: a bare status,
+ * `fetch failed`, `Error` (docs/standard-railway.md, 17). 36 of church's 214
+ * refusals logged only "400", and HTTP/2 resets hid behind "fetch failed" for
+ * days. A JSON line names a cause when one of its keys carries it.
+ */
+export function namesNoCause(message: string): boolean {
+  let text = message.trim();
+  if (text.startsWith('{')) {
+    try {
+      const o = JSON.parse(text) as Record<string, unknown>;
+      if (CAUSE_KEYS.some((k) => o[k] !== undefined && o[k] !== null && o[k] !== '')) return false;
+      text = String(o.msg ?? o.message ?? '');
+    } catch {
+      // not JSON: read as text
+    }
+  }
+  text = text.replace(/^(\d{4}-\d\d-\d\dT[\d:.]+Z?\s+)?(\[?(error|err|fatal)\]?:?\s*)?/i, '').trim();
+  return text === '' || /^((type)?error:?\s*)?(fetch failed|failed|request failed|bad request|internal server error|unknown error|error|\d{3}( [a-z ]{0,24})?|status \d{3}|request failed with status code \d{3})\.?$/i.test(text);
+}
+
+export type ServiceErrors = ReturnType<typeof errorGroups> & {
+  deployments: number;
+  truncated: number;
+  /** Set when the deployment list doesn't reach back to the window's start: no error before it is counted. */
+  readFrom?: string | null;
+};
 
 /** Warned when seen in the day before the report: older ones are in the section, not the warnings. */
 export function errorsWarnings(e: Record<string, ServiceErrors>, nowMs: number): Warning[] {
   const out: Warning[] = [];
   for (const [service, s] of Object.entries(e)) {
+    if (s.readFrom) out.push({ at: service, warn: `the deployment list reaches back only to ${s.readFrom}: errors before it are not counted` });
     if (s.truncated) out.push({ at: service, warn: `${s.truncated} deployment logs hit ${RAILWAY_LOG_LIMIT} error lines: there are more than counted` });
-    for (const g of s.groups.filter((x) => nowMs - Date.parse(x.last) < 864e5).slice(0, 5)) out.push({ at: service, warn: `${g.count}× since ${g.first}: ${g.message.slice(0, 120)}` });
+    const groups = [...s.groups, ...(s.belowTop ?? [])];
+    for (const g of groups.filter((x) => nowMs - Date.parse(x.last) < 864e5).slice(0, 5)) out.push({ at: service, warn: `${g.count}× since ${g.first}: ${g.message.slice(0, 120)}` });
+    const bare = groups.filter((g) => namesNoCause(g.message));
+    if (bare.length) out.push({ at: service, warn: `${bare.length} kind${bare.length === 1 ? '' : 's'} of error name no cause, ${bare.reduce((n, g) => n + g.count, 0)} lines (the Railway standard, 17): "${bare[0]!.message.slice(0, 80)}"` });
   }
   return out;
 }
@@ -570,7 +626,8 @@ export function errors(o: { services: string[] }): SectionSpec<Record<string, Se
     read: (ctx) =>
       Object.fromEntries(
         o.services.map((service) => {
-          const runs = deploymentsInWindow(ctx.runJson<RailwayDeployment[]>('railway', ['deployment', 'list', '-s', service, '--json'], []), ctx.now);
+          const list = ctx.runJson<RailwayDeployment[]>('railway', ['deployment', 'list', '-s', service, '--json'], []);
+          const runs = deploymentsInWindow(list, ctx.now);
           const lines: { line: LogLine; replacedAt: string | null }[] = [];
           let truncated = 0;
           for (const d of runs) {
@@ -581,13 +638,13 @@ export function errors(o: { services: string[] }): SectionSpec<Record<string, Se
             if (got.length >= RAILWAY_LOG_LIMIT) truncated++;
             for (const line of got) lines.push({ line, replacedAt: d.replacedAt });
           }
-          return [service, { deployments: runs.length, truncated, ...errorGroups(lines) }];
+          return [service, { deployments: runs.length, truncated, readFrom: errorsReachFrom(list, ctx.now), ...errorGroups(lines, 20, Date.now() - 864e5) }];
         }),
       ),
     warnings: (e) => errorsWarnings(e, Date.now()),
     text: (e) =>
       Object.entries(e).flatMap(([service, s]) => [
-        `${service}: ${s.lines} error lines of ${s.kinds} kinds, from ${s.deployments} deployments${s.shutdown || s.lower ? ` (set apart: ${s.shutdown} as replaced ones shut down, ${s.lower} naming a lower level)` : ''}${s.truncated ? `; ${s.truncated} logs hit the limit` : ''}`,
+        `${service}: ${s.lines} error lines of ${s.kinds} kinds, from ${s.deployments} deployments${s.shutdown || s.lower ? ` (set apart: ${s.shutdown} as replaced ones shut down, ${s.lower} naming a lower level)` : ''}${s.truncated ? `; ${s.truncated} logs hit the limit` : ''}${s.readFrom ? `; read only from ${s.readFrom}, where the deployment list ends` : ''}`,
         ...s.groups.slice(0, 10).map((g) => `  ${String(g.count).padStart(5)}×  last ${g.last.slice(0, 16)}  ${g.message.slice(0, 120)}`),
       ]),
   };
@@ -628,204 +685,6 @@ export interface ActivityRow {
   error?: string;
 }
 
-
-// ---------------------------------------------------------------------------
-// Attribution
-// ---------------------------------------------------------------------------
-
-export interface AttributionOptions {
-  /** Agent slugs we run ourselves. Excluded from every rate: not a channel. */
-  ourSlugs?: string[];
-  /** Slug prefixes that are automated probes, e.g. a scanner's accounts. */
-  probePrefixes?: string[];
-  /** Don't rank a channel below this many sign-ups. One at 100% of 2 is noise. */
-  minToRank?: number;
-  /** Days after sign-up by which an agent must have acted to count as stayed. */
-  returnWindowDays?: number;
-}
-
-interface AttributionRow {
-  utm_content: string | null;
-  utm_source: string | null;
-  utm_medium: string | null;
-  utm_campaign: string | null;
-  utm_term: string | null;
-  registration_user_agent: string | null;
-  slug: string | null;
-  created_at: string;
-  last_active: string | null;
-}
-
-interface Tally { key: string; n: number; stayed: number }
-
-export interface AttributionData {
-  migrated: boolean;
-  error?: string;
-  total: number;
-  excluded: number;
-  taggedContent: number;
-  inboundRows: number;
-  surfaces: Tally[];
-  clients: Tally[];
-  inbound: { field: string; values: Tally[] }[];
-  unknownTags: Tally[];
-  clusters: { key: string; n: number }[];
-  minToRank: number;
-  returnWindowDays: number;
-}
-
-const pct = (n: number, of: number) => (of === 0 ? '—' : `${Math.round((n / of) * 100)}%`);
-
-/** Group rows by a key, counting sign-ups and how many came back. */
-function tally(rows: AttributionRow[], key: (r: AttributionRow) => string | null, stayed: (r: AttributionRow) => boolean): Tally[] {
-  const by = new Map<string, Tally>();
-  for (const r of rows) {
-    const k = key(r);
-    if (k === null) continue;
-    const t = by.get(k) ?? { key: k, n: 0, stayed: 0 };
-    t.n++;
-    if (stayed(r)) t.stayed++;
-    by.set(k, t);
-  }
-  return [...by.values()].sort((a, b) => b.n - a.n || a.key.localeCompare(b.key));
-}
-
-/**
- * Where the agents that registered in the window came from, and which of those
- * channels produced agents that stayed.
- *
- * Reads only the attribution columns plus slug (to exclude our own agents) and
- * the two timestamps. Identifiers are used to group and never printed: the
- * one-actor check reports how far a channel collapses, not who collapsed it.
- *
- * utm_content is ours, so a gap in it is our bug and gets chased. The four
- * inbound fields arrive only when a link carried them, so their coverage is a
- * floor and never a share — they are never a denominator.
- */
-export function attribution(o: AttributionOptions = {}): SectionSpec<AttributionData> {
-  const ourSlugs = new Set((o.ourSlugs ?? []).map((s) => s.toLowerCase()));
-  const probePrefixes = o.probePrefixes ?? [];
-  const minToRank = o.minToRank ?? 10;
-  const returnWindowDays = o.returnWindowDays ?? 7;
-
-  return {
-    source: 'Supabase, agents registered in the window: utm_*, registration_user_agent, last_active',
-    windowed: true,
-    title: 'Attribution',
-    read: async (ctx): Promise<AttributionData> => {
-      const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-      const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
-      if (!url || !key) throw new Error('no NEXT_PUBLIC_SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY in .env.prod');
-
-      const cols = 'slug,created_at,last_active,utm_content,utm_source,utm_medium,utm_campaign,utm_term,registration_user_agent';
-      const q = `${url}/rest/v1/agents?select=${cols}` +
-        `&created_at=gte.${ctx.now.from}T00:00:00Z&created_at=lt.${new Date(end(ctx.now)).toISOString()}`;
-      const res = await fetch(q, { headers: { apikey: key, authorization: `Bearer ${key}` }, signal: AbortSignal.timeout(30_000) });
-
-      const empty: AttributionData = {
-        migrated: false, total: 0, excluded: 0, taggedContent: 0, inboundRows: 0,
-        surfaces: [], clients: [], inbound: [], unknownTags: [], clusters: [],
-        minToRank, returnWindowDays,
-      };
-      if (!res.ok) {
-        const body = await res.text();
-        // Migration 032 not applied yet: the app can ship before the database does.
-        if (/utm_content|does not exist|42703/i.test(body)) {
-          return { ...empty, error: 'migration 032 is not applied to this database yet — no attribution columns' };
-        }
-        return { ...empty, error: `Supabase answered ${res.status}` };
-      }
-
-      const all = (await res.json()) as AttributionRow[];
-      const mine = (r: AttributionRow) => {
-        const slug = (r.slug ?? '').toLowerCase();
-        return ourSlugs.has(slug) || probePrefixes.some((p) => slug.startsWith(p));
-      };
-      const rows = all.filter((r) => !mine(r));
-      const stayed = (r: AttributionRow) =>
-        r.last_active != null &&
-        new Date(r.last_active).getTime() - new Date(r.created_at).getTime() >= returnWindowDays * 86_400_000;
-
-      const inbound = (['utm_source', 'utm_medium', 'utm_campaign', 'utm_term'] as const).map((field) => ({
-        field,
-        values: tally(rows, (r) => r[field], stayed),
-      }));
-
-      return {
-        migrated: true,
-        total: rows.length,
-        excluded: all.length - rows.length,
-        taggedContent: rows.filter((r) => r.utm_content).length,
-        inboundRows: rows.filter((r) => r.utm_source || r.utm_medium || r.utm_campaign || r.utm_term).length,
-        surfaces: tally(rows, (r) => (r.utm_content?.startsWith('unknown:') ? null : r.utm_content), stayed),
-        unknownTags: tally(rows, (r) => (r.utm_content?.startsWith('unknown:') ? r.utm_content : null), stayed),
-        clients: tally(rows, (r) => clientOf(r.registration_user_agent), stayed),
-        inbound,
-        // One actor check: a channel whose sign-ups collapse under
-        // (client, hour) was one operator's script, not a channel.
-        clusters: tally(
-          rows.filter((r) => r.utm_content),
-          (r) => `${r.utm_content}\u0000${clientOf(r.registration_user_agent)}\u0000${r.created_at.slice(0, 13)}`,
-          () => false,
-        ).filter((t) => t.n >= 3).map((t) => ({ key: t.key.split('\u0000')[0], n: t.n })),
-        minToRank,
-        returnWindowDays,
-      };
-    },
-    warnings: (d) => {
-      if (d.error) return [{ at: '', warn: d.error }];
-      const w: Warning[] = [];
-      // A gap in utm_content is OUR bug: some surface is shipping untagged.
-      if (d.total > 0 && d.taggedContent < d.total) {
-        w.push({ at: 'utm_content', warn: `${d.total - d.taggedContent} of ${d.total} sign-ups carried no utm_content — a surface is untagged` });
-      }
-      for (const t of d.unknownTags) {
-        w.push({ at: 'utm_content', warn: `${t.n} sign-up(s) used ${t.key}, which we never published` });
-      }
-      for (const c of d.clusters) {
-        w.push({ at: c.key, warn: `${c.n} sign-ups from one client within one hour — check whether this channel is one actor` });
-      }
-      return w;
-    },
-    text: (d) => {
-      if (d.error) return [`  ${d.error}`];
-      if (d.total === 0) return ['  no sign-ups in the window'];
-      const out: string[] = [];
-      // Coverage first: it decides whether anything below means anything.
-      out.push(`  coverage: ${d.taggedContent} of ${d.total} tagged (${pct(d.taggedContent, d.total)})` +
-        (d.excluded ? `, ${d.excluded} of ours excluded` : ''));
-      out.push(`  by surface (n, stayed ${d.returnWindowDays}d; unranked below n=${d.minToRank}):`);
-      const rank = d.surfaces.filter((t) => t.n >= d.minToRank);
-      const thin = d.surfaces.filter((t) => t.n < d.minToRank);
-      for (const t of rank) out.push(`    ${String(t.n).padStart(5)}  ${t.key} — stayed ${t.stayed} (${pct(t.stayed, t.n)})`);
-      for (const t of thin) out.push(`    ${String(t.n).padStart(5)}  ${t.key} — stayed ${t.stayed} (too few to rank)`);
-      if (d.clients.length) {
-        out.push('  by client:');
-        for (const t of d.clients.slice(0, 8)) out.push(`    ${String(t.n).padStart(5)}  ${t.key} — stayed ${t.stayed} (${pct(t.stayed, t.n)})`);
-      }
-      // A floor, never a share: nobody owes us these, so they are not a denominator.
-      if (d.inboundRows === 0) {
-        out.push('  inbound: 0 rows carried utm_source, utm_medium, utm_campaign or utm_term (a floor, not a share)');
-      } else {
-        out.push(`  inbound (${d.inboundRows} rows carried one; a floor, not a share):`);
-        for (const f of d.inbound) {
-          for (const t of f.values) out.push(`    ${String(t.n).padStart(5)}  ${f.field}=${t.key} — stayed ${t.stayed}`);
-        }
-      }
-      return out;
-    },
-  };
-}
-
-/** A User-Agent reduced to a client name, so nothing identifying is printed. */
-function clientOf(ua: string | null): string | null {
-  if (!ua) return null;
-  const name = /^([A-Za-z0-9._-]+)\/[\d.]+/.exec(ua.trim())?.[1];
-  if (name) return name.toLowerCase();
-  if (/\bMozilla\//.test(ua)) return 'browser';
-  return 'other';
-}
-
 /**
  * What agents (or people) did in the window, counted per table from Supabase,
  * beside the window before. Counts only, never a row's contents (the standard).
@@ -856,6 +715,221 @@ export function activity(o: { tables: Counted[] }): SectionSpec<ActivityRow[]> {
       ...rows.filter((r) => r.now === 0 && (r.before ?? 0) > 0).map((r) => ({ at: r.table, warn: `none in the window: ${r.what}, ${r.before} the window before` })),
     ],
     text: (rows) => rows.map((r) => (r.error ? `     ?  ${r.what} (couldn't count: ${r.error})` : `${String(r.now).padStart(6)}  ${r.what} (before: ${r.before})`)),
+  };
+}
+
+// ─── supabase ──────────────────────────────────────────────────────────
+
+/** The rows of a table the Supabase CLI prints (`a | b | c`), keyed by its header. */
+export function cliTable(text: string): Record<string, string>[] {
+  const lines = text.split('\n').filter((l) => l.includes('|') && !/^[\s|-]+$/.test(l));
+  if (lines.length < 1) return [];
+  const cells = (l: string) => l.split('|').map((c) => c.trim());
+  const head = cells(lines[0]!).map((h) => h.toLowerCase());
+  return lines.slice(1).map((l) => Object.fromEntries(cells(l).map((c, i) => [head[i] ?? String(i), c])));
+}
+
+/**
+ * `supabase migration list --linked`: the migrations only here (pending) and
+ * only on production (applied by hand, or from another checkout). Both mean
+ * the history isn't true: animalhouse's and inbed's were empty in production
+ * while every migration was applied (2026-11-09), so the next `db push` would
+ * have replayed them all.
+ */
+export function migrationDrift(rows: Record<string, string>[]): { applied: number; pending: string[]; remoteOnly: string[] } {
+  const local = rows.map((r) => r.local ?? '').filter(Boolean);
+  const remote = rows.map((r) => r.remote ?? '').filter(Boolean);
+  return { applied: remote.filter((m) => local.includes(m)).length, pending: local.filter((m) => !remote.includes(m)), remoteOnly: remote.filter((m) => !local.includes(m)) };
+}
+
+/** What the public (anon) key got from a table or a function. */
+export interface AnonTry {
+  what: string;
+  status: number;
+  /** Rows a table gave, or the start of what a function answered. */
+  got: string;
+  /** Refused, as it must be; or why not. */
+  refused: boolean;
+  why?: string;
+}
+
+/**
+ * Whether the anon key was refused. A table may answer 401 or 403, or 200 with
+ * no rows (RLS). A function must answer 401 or 403: executing it is the hole
+ * (inbed `7d2f0c5`: EXECUTE is PUBLIC by default). A 404 is not a refusal: the
+ * table or function isn't there, which once passed a check that counted it as
+ * refused while the migrations weren't pushed (satchitananda `7d05dd1`).
+ *
+ * Functions are called with GET, which PostgREST runs in a read-only
+ * transaction: an open function that writes fails (25006) instead of writing
+ * to production every time the report runs (2026-11-10: the first version
+ * POSTed). That failure still means the public key could call it.
+ */
+export function anonRefused(kind: 'table' | 'function', status: number, body: string): { refused: boolean; why?: string } {
+  if (status === 404) return { refused: false, why: kind === 'function' ? '404: no such function in production, or it needs arguments the probe didn\'t send (name them: `fn?arg=value`)' : '404: no such table in production' };
+  if (status === 401 || status === 403) return { refused: true };
+  if (kind === 'function' && /25006|read-only transaction/.test(body)) return { refused: false, why: `${status}: the public key could call it, and it writes (stopped only by the probe's read-only GET)` };
+  if (kind === 'table' && status === 200 && body.trim().replace(/\s/g, '') === '[]') return { refused: true };
+  if (kind === 'table' && status === 200) return { refused: false, why: 'the public key read rows' };
+  return { refused: false, why: `${status}: the public key could call it` };
+}
+
+export interface Supabase {
+  migrations: ReturnType<typeof migrationDrift> | { error: string };
+  /** The slowest queries by total time, as the CLI prints them. */
+  outliers: Record<string, string>[] | { error: string };
+  anon: AnonTry[];
+}
+
+export function supabaseWarnings(s: Supabase): Warning[] {
+  const out: Warning[] = [];
+  if ('error' in s.migrations) out.push({ at: 'migrations', warn: `couldn't read: ${s.migrations.error}` });
+  else {
+    if (s.migrations.remoteOnly.length) out.push({ at: 'migrations', warn: `${s.migrations.remoteOnly.length} on production and not in the repo: ${s.migrations.remoteOnly.slice(0, 3).join(', ')}` });
+    if (s.migrations.pending.length) out.push({ at: 'migrations', warn: `${s.migrations.pending.length} in the repo and not on production: ${s.migrations.pending.slice(0, 3).join(', ')}` });
+  }
+  if ('error' in s.outliers) out.push({ at: 'outliers', warn: `couldn't read: ${s.outliers.error}` });
+  for (const a of s.anon.filter((x) => !x.refused)) out.push({ at: 'anon', warn: `${a.what}: ${a.why}` });
+  return out;
+}
+
+export function supabaseText(s: Supabase): string[] {
+  const m = s.migrations;
+  return [
+    'error' in m ? `Migrations: couldn't read (${m.error})` : `Migrations: ${m.applied} applied and in the repo; ${m.pending.length} only here, ${m.remoteOnly.length} only on production`,
+    ...('error' in s.outliers ? [`Slowest queries: couldn't read (${s.outliers.error})`] : ['Slowest queries by total time:', ...s.outliers.slice(0, 5).map((r) => `  ${Object.values(r).map((v) => v.slice(0, 90)).join('  ')}`)]),
+    `The public key: ${s.anon.filter((a) => a.refused).length} of ${s.anon.length} refused`,
+    ...s.anon.filter((a) => !a.refused).map((a) => `  not refused: ${a.what} (${a.why})`),
+  ];
+}
+
+const firstEnv = (names: string[]) => names.map((n) => process.env[n]).find(Boolean);
+
+/**
+ * `supabase`, the Supabase standard's section: the migration history against
+ * the repo and the slowest queries, through the Supabase CLI (the checkout
+ * linked with `supabase link`, as `railway link` links Railway); and the public
+ * key tried against every table and function named, each of which must refuse
+ * it. Reads the URL and the anon key from .env.prod by the names the projects
+ * use. Rows are never kept: a table that answers is counted, not shown.
+ */
+/**
+ * `functions` are names, or `name?arg=value` for one that takes arguments: each is called with
+ * GET, read-only, never POST (anonRefused).
+ */
+export function supabase(o: { tables: string[]; functions?: string[] }): SectionSpec<Supabase> {
+  return {
+    source: `supabase migration list and inspect db outliers (--linked); the public key against ${o.tables.length} tables and ${o.functions?.length ?? 0} functions`,
+    windowed: false,
+    title: 'Supabase',
+    read: async (ctx) => {
+      const tryRead = <T>(f: () => T): T | { error: string } => {
+        try {
+          return f();
+        } catch (e) {
+          return { error: oneLine(e) };
+        }
+      };
+      const migrations = tryRead(() => migrationDrift(cliTable(ctx.run('supabase', ['migration', 'list', '--linked']))));
+      const outliers = tryRead(() => cliTable(ctx.run('supabase', ['inspect', 'db', 'outliers', '--linked'])));
+      const url = firstEnv(['NEXT_PUBLIC_SUPABASE_URL', 'SUPABASE_URL', 'PUBLIC_SUPABASE_URL']);
+      const anonKey = firstEnv(['NEXT_PUBLIC_SUPABASE_ANON_KEY', 'SUPABASE_ANON_KEY', 'PUBLIC_SUPABASE_ANON_KEY', 'SUPABASE_PUBLISHABLE_KEY']);
+      if (!url || !anonKey) throw new Error('no Supabase URL or anon key in .env.prod (NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY or their other names)');
+      const headers = { apikey: anonKey, authorization: `Bearer ${anonKey}`, 'content-type': 'application/json' };
+      const anon: AnonTry[] = [];
+      const tries = [...o.tables.map((t) => ['table', t] as const), ...(o.functions ?? []).map((f) => ['function', f] as const)];
+      for (const [kind, name] of tries) {
+        try {
+          const res = await fetch(kind === 'table' ? `${url}/rest/v1/${name}?select=*&limit=1` : `${url}/rest/v1/rpc/${name}`, { method: 'GET', headers, signal: AbortSignal.timeout(20_000) });
+          const body = await res.text();
+          anon.push({ what: `${kind} ${name}`, status: res.status, got: kind === 'table' ? `${body.trim() === '[]' ? 0 : 'some'} rows` : body.slice(0, 60), ...anonRefused(kind, res.status, body) });
+        } catch (e) {
+          anon.push({ what: `${kind} ${name}`, status: 0, got: '', refused: false, why: `couldn't try: ${oneLine(e)}` });
+        }
+      }
+      return { migrations, outliers, anon };
+    },
+    warnings: supabaseWarnings,
+    text: supabaseText,
+  };
+}
+
+// ─── data ──────────────────────────────────────────────────────────────
+
+/** A backup of something that can't be made again: a database, a volume, paid renders. */
+export interface Backup {
+  /** What it holds, said plainly: "the database", "the reflections volume". */
+  what: string;
+  /** Where the copies go: "S3 achurch-backups/db/", "R2 satchitananda-media". */
+  where: string;
+  /** The newest copy, ISO; null when there is none. */
+  newest: string | null;
+  /** Its size, so an empty dump shows; null when the store doesn't say. */
+  bytes: number | null;
+  /** How often one is made, in hours. */
+  everyHours: number;
+}
+
+/** A job that removes what the privacy page says goes: IPs after 14 days, old rows. */
+export interface Purge {
+  what: string;
+  /** Its last run, ISO; null when there is no record of one. */
+  lastRun: string | null;
+  /** What that run removed, when it says. */
+  removed?: number | null;
+  everyHours: number;
+}
+
+export interface Data {
+  backups: Backup[];
+  purges: Purge[];
+}
+
+const hoursSince = (iso: string, nowMs: number) => (nowMs - Date.parse(iso)) / 3_600_000;
+
+/**
+ * What a reader must see: a backup that's missing, late (half a period past
+ * due) or empty, and a purge that hasn't run when it should. church had no
+ * backups of 2,785 reflections (`a001d03`); a purge declared and never applied
+ * is a promise the privacy page breaks (ollamaherd `2a85a78`).
+ */
+export function dataWarnings(d: Data, nowMs: number): Warning[] {
+  const out: Warning[] = [];
+  for (const b of d.backups) {
+    if (!b.newest) out.push({ at: 'backups', warn: `${b.what}: no backup in ${b.where}` });
+    else if (hoursSince(b.newest, nowMs) > b.everyHours * 1.5) out.push({ at: 'backups', warn: `${b.what}: the newest backup is ${Math.round(hoursSince(b.newest, nowMs))} h old (one every ${b.everyHours} h)` });
+    if (b.bytes === 0) out.push({ at: 'backups', warn: `${b.what}: the newest backup is empty` });
+  }
+  for (const p of d.purges) {
+    if (!p.lastRun) out.push({ at: 'purges', warn: `${p.what}: no record of a run` });
+    else if (hoursSince(p.lastRun, nowMs) > p.everyHours * 1.5) out.push({ at: 'purges', warn: `${p.what}: last ran ${Math.round(hoursSince(p.lastRun, nowMs))} h ago (every ${p.everyHours} h)` });
+  }
+  return out;
+}
+
+export function dataText(d: Data): string[] {
+  const size = (n: number | null) => (n === null ? 'size unknown' : n >= 1e9 ? `${(n / 1e9).toFixed(2)} GB` : n >= 1e6 ? `${(n / 1e6).toFixed(1)} MB` : `${n} B`);
+  return [
+    ...d.backups.map((b) => `backup  ${b.what}: ${b.newest ? `newest ${b.newest.slice(0, 16)}, ${size(b.bytes)}` : 'none'} (${b.where}, every ${b.everyHours} h)`),
+    ...d.purges.map((p) => `purge   ${p.what}: ${p.lastRun ? `last ran ${p.lastRun.slice(0, 16)}${p.removed != null ? `, removed ${p.removed}` : ''}` : 'no record'} (every ${p.everyHours} h)`),
+  ];
+}
+
+/**
+ * `data`, the data standard's section: each backup's newest copy and each
+ * purge job's last run, in one shape for every project, so layer 2 reads all
+ * eight alike. Where backups and purges live is each project's own, so the
+ * project passes its readers (an S3 listing, a row in its job log); a reader
+ * that throws fails the section, which says why, as any section does.
+ */
+export function data(o: { backups: (ctx: Context) => Promise<Backup[]> | Backup[]; purges: (ctx: Context) => Promise<Purge[]> | Purge[] }): SectionSpec<Data> {
+  return {
+    source: "the project's backup stores and purge jobs, now",
+    windowed: false,
+    title: 'Backups and purges',
+    read: async (ctx) => ({ backups: await o.backups(ctx), purges: await o.purges(ctx) }),
+    warnings: (d) => dataWarnings(d, Date.now()),
+    text: dataText,
   };
 }
 
@@ -1378,6 +1452,131 @@ export function cloudflare(o: { isProbe?: (path: string) => boolean } = {}): Sec
   };
 }
 
+// ─── cloudflare.zone ───────────────────────────────────────────────────
+
+/**
+ * The zone settings that change what visitors get, by Cloudflare's ids. A
+ * Browser Cache TTL of 0 is "Respect Existing Headers": any other value
+ * rewrites the origin's `max-age` (inbed, 2026-11-08: 4 h over every
+ * `max-age=300`).
+ */
+export const ZONE_SETTINGS = ['browser_cache_ttl', 'cache_level', 'always_online', 'security_level', 'ssl', 'always_use_https', 'min_tls_version', 'brotli', 'rocket_loader', 'development_mode'];
+
+/** The rule phases a zone's behaviour lives in, by what the dashboard calls them. */
+export const ZONE_PHASES: Record<string, string> = {
+  http_request_cache_settings: 'cache rules',
+  http_response_headers_transform: 'response header rules',
+  http_request_transform: 'URL rewrites',
+  http_response_compression: 'compression rules',
+  http_request_firewall_custom: 'custom security rules',
+  http_ratelimit: 'rate limits',
+  http_request_dynamic_redirect: 'redirects',
+  http_config_settings: 'configuration rules',
+};
+
+export interface ZoneRule {
+  phase: string;
+  description: string;
+  expression: string;
+  action: string;
+  enabled: boolean;
+}
+
+export interface Zone {
+  settings: Record<string, unknown>;
+  rules: ZoneRule[];
+  /** Phases the token can't read, with why: the zone part says so rather than guessing. */
+  unreadable: Record<string, string>;
+}
+
+/** The settings the standard names, from `GET /zones/<id>/settings`. */
+export function zoneSettings(result: { id: string; value: unknown }[]): Record<string, unknown> {
+  return Object.fromEntries(result.filter((x) => ZONE_SETTINGS.includes(x.id)).map((x) => [x.id, x.value]));
+}
+
+/** A phase's rules, from its entrypoint ruleset. */
+export function zoneRules(phase: string, ruleset: { rules?: { description?: string; expression?: string; action?: string; enabled?: boolean }[] } | null): ZoneRule[] {
+  return (ruleset?.rules ?? []).map((r) => ({ phase, description: r.description ?? '', expression: r.expression ?? '', action: r.action ?? '', enabled: r.enabled !== false }));
+}
+
+const CHALLENGES = ['block', 'challenge', 'managed_challenge', 'js_challenge'];
+
+/**
+ * What a reader must see: a Browser Cache TTL that overrides the origin, and an
+ * enabled challenge or block with no condition on the path, which meets the
+ * API's agents as well as the browser fleet it was meant for (inbed `c7c9465`,
+ * animalhouse `5c6e875`).
+ */
+export function zoneWarnings(z: Zone): Warning[] {
+  const out: Warning[] = [];
+  const ttl = z.settings.browser_cache_ttl;
+  if (typeof ttl === 'number' && ttl !== 0) out.push({ at: 'settings', warn: `Browser Cache TTL is ${ttl} s: it overrides the origin's Cache-Control (set it to Respect Existing Headers)` });
+  if (z.settings.tiered_caching === 'off' || z.settings.tiered_cache_smart_topology_enable === 'off')
+    out.push({ at: 'settings', warn: 'Smart Tiered Cache is off: each data centre fills from the origin, so a quiet site misses (the caching standard, 12)' });
+  for (const r of z.rules.filter((x) => x.enabled && CHALLENGES.includes(x.action) && !x.expression.includes('http.request.uri')))
+    out.push({ at: 'rules', warn: `"${r.description || r.expression.slice(0, 60)}" (${r.action}) has no condition on the path, so it meets the API's agents too` });
+  for (const [phase, why] of Object.entries(z.unreadable)) out.push({ at: 'rules', warn: `can't read ${ZONE_PHASES[phase] ?? phase}: ${why}` });
+  return out;
+}
+
+export function zoneText(z: Zone): string[] {
+  return [
+    `Settings: ${Object.entries(z.settings).map(([k, v]) => `${k} ${JSON.stringify(v)}`).join(', ') || 'none readable'}`,
+    ...Object.entries(ZONE_PHASES).flatMap(([phase, name]) => {
+      const rules = z.rules.filter((r) => r.phase === phase);
+      if (phase in z.unreadable) return [`${name}: unreadable`];
+      return rules.length ? [`${name}:`, ...rules.map((r) => `  ${r.enabled ? '' : '(off) '}${r.action}  ${r.description || '(no name)'}  when ${r.expression.slice(0, 140)}`)] : [];
+    }),
+  ];
+}
+
+async function cfGet(token: string, path: string): Promise<{ status: number; result: unknown; errors: string }> {
+  const res = await fetch(`https://api.cloudflare.com/client/v4${path}`, { headers: { authorization: `Bearer ${token}` }, signal: AbortSignal.timeout(30_000) });
+  const body = (await res.json().catch(() => ({}))) as { result?: unknown; errors?: { message: string }[] };
+  return { status: res.status, result: body.result ?? null, errors: (body.errors ?? []).map((e) => e.message).join('; ') };
+}
+
+/**
+ * `cloudflare.zone`, the Cloudflare standard's section: the zone's settings and
+ * every rule, by expression, read now, so the `cloudflare` task compares them
+ * with the deploy doc. The same CLOUDFLARE_API_TOKEN and CLOUDFLARE_ZONE_ID as
+ * `cloudflare`, with Zone Settings and the rules' Read added on the same zone;
+ * a phase the token can't read is listed as unreadable, and the rest still
+ * comes. Whether a rule changed is the task's comparison, not this section's:
+ * the report reads now, never its own past files.
+ */
+export function cloudflareZone(): SectionSpec<Zone> {
+  return {
+    source: "Cloudflare's API, the zone's settings and rule phases, now",
+    windowed: false,
+    title: 'Cloudflare zone',
+    read: async () => {
+      const token = process.env.CLOUDFLARE_API_TOKEN;
+      const zone = process.env.CLOUDFLARE_ZONE_ID;
+      if (!token || !zone) throw new Error('no CLOUDFLARE_API_TOKEN or CLOUDFLARE_ZONE_ID in .env.prod');
+      const settings = await cfGet(token, `/zones/${zone}/settings`);
+      if (settings.status !== 200) throw new Error(`zone settings answered ${settings.status}: ${settings.errors || 'the token lacks Zone Settings Read'}`);
+      const z: Zone = { settings: zoneSettings(settings.result as { id: string; value: unknown }[]), rules: [], unreadable: {} };
+      // Tiered Cache lives outside /settings; the same Zone Settings Read reads it (Cloudflare's
+      // tiered-cache page). Unread, it's left out rather than guessed.
+      const tiers: [string, string][] = [['tiered_caching', 'argo/tiered_caching'], ['tiered_cache_smart_topology_enable', 'cache/tiered_cache_smart_topology_enable']];
+      for (const [id, path] of tiers) {
+        const r = await cfGet(token, `/zones/${zone}/${path}`);
+        if (r.status === 200) z.settings[id] = (r.result as { value?: unknown } | null)?.value;
+      }
+      for (const phase of Object.keys(ZONE_PHASES)) {
+        const r = await cfGet(token, `/zones/${zone}/rulesets/phases/${phase}/entrypoint`);
+        if (r.status === 404) continue;
+        if (r.status !== 200) z.unreadable[phase] = `${r.status} ${r.errors}`.trim();
+        else z.rules.push(...zoneRules(phase, r.result as Parameters<typeof zoneRules>[1]));
+      }
+      return z;
+    },
+    warnings: zoneWarnings,
+    text: zoneText,
+  };
+}
+
 // ─── probes ────────────────────────────────────────────────────────────
 
 export interface Probe {
@@ -1389,6 +1588,19 @@ export interface Probe {
   accept?: string;
   /** Headers the answer must carry. */
   headers?: string[];
+  /**
+   * Header values the answer must match, as case-insensitive patterns: a cache
+   * rule (`{ 'cf-cache-status': 'HIT|STALE' }`), an `immutable` only on hashed
+   * URLs, `no-store` on a failure (docs/standard-caching.md, the API
+   * standard). A header that's absent is matched as ''.
+   */
+  match?: Record<string, string>;
+  /**
+   * Sent as the request's body, as JSON, with POST unless `method` says
+   * otherwise: the hostile probes (malformed JSON, an oversized body) that must
+   * answer 4xx, never 500. Never a body a write would accept.
+   */
+  body?: string;
   /** The answer's content type must start with this. */
   type?: string;
   /** For a redirect, where it must point. */
@@ -1414,16 +1626,68 @@ export function probeProblems(p: Probe, res: { status: number; headers: Headers 
   if (p.type && !type.startsWith(p.type)) problems.push(`content-type ${type || 'none'}`);
   const location = res.headers.get('location') ?? '';
   if (p.location && new URL(location, site).pathname !== p.location) problems.push(`redirects to ${location || 'nowhere'}`);
+  for (const [name, pattern] of Object.entries(p.match ?? {})) {
+    const value = res.headers.get(name) ?? '';
+    if (!new RegExp(pattern, 'i').test(value)) problems.push(`${name} ${value ? `"${value}"` : 'absent'}, not /${pattern}/`);
+  }
+  const ownPolicy = Object.keys(p.match ?? {}).some((name) => name.toLowerCase() === 'cache-control');
+  if (!ownPolicy) problems.push(...cachingProblems(p.path, res.status, res.headers));
   return problems;
+}
+
+/**
+ * The caching standard's mistakes that a single answer shows, checked on
+ * every probe unless its `match` states its own `cache-control`
+ * (docs/standard-caching.md). The review of 2026-11-13 found 404s kept at the
+ * edge on eight sites, set by path before the error existed, and `immutable` on
+ * names that never change on two. The research of the same day added a long
+ * `max-age` without `immutable` (Chrome ignores it), `CDN-Cache-Control` on a
+ * failure, and stale directives beside `s-maxage`, which Cloudflare never serves.
+ */
+export function cachingProblems(path: string, status: number, headers: Headers): string[] {
+  const cc = headers.get('cache-control') ?? '';
+  const cdn = headers.get('cdn-cache-control') ?? '';
+  const edge = (headers.get('cf-cache-status') ?? '').toUpperCase();
+  const problems: string[] = [];
+  if (status >= 400) {
+    const shared = !/no-store|private/i.test(cc) && (/s-maxage=[1-9]/i.test(cc) || (maxAge(cc) > 0 && !/no-cache/i.test(cc)));
+    if (shared) problems.push(`a ${status} a cache may keep: "${cc}"`);
+    else if (cdn && !/no-store|private/i.test(cdn) && maxAge(cdn) > 0) problems.push(`a ${status} a cache may keep: CDN-Cache-Control "${cdn}"`);
+    else if (/^(HIT|STALE|UPDATING|REVALIDATED)$/.test(edge)) problems.push(`a ${status} a cache may keep: cf-cache-status ${edge}`);
+  }
+  if (!hashedName(path)) {
+    if (/immutable/i.test(cc)) problems.push(`immutable on a name without a hash: "${cc}"`);
+    else if (maxAge(cc) >= 30 * 86400) problems.push(`max-age of 30 days or more on a name without a hash: "${cc}"`);
+  }
+  // Cloudflare reads s-maxage as also proxy-revalidate (RFC 9111), so the stale
+  // directives beside it are never served at the edge, only in browsers.
+  if (status < 400 && /s-maxage=/i.test(cc) && /stale-(while-revalidate|if-error)=[1-9]/i.test(cc) && /^(HIT|MISS|EXPIRED|REVALIDATED|STALE|UPDATING)$/.test(edge)) {
+    problems.push(`stale-while-revalidate beside s-maxage, which turns it off at Cloudflare: "${cc}"`);
+  }
+  return problems;
+}
+
+/** A header's `max-age` in seconds (not `s-maxage`), 0 when absent. */
+function maxAge(header: string): number {
+  const m = /(^|[\s,])max-age=(\d+)/i.exec(header);
+  return m ? Number(m[2]) : 0;
+}
+
+/** A URL that changes when its content does: a version or hash in the query, or a piece of the name of 8+ letters and digits mixed. */
+function hashedName(path: string): boolean {
+  const [name = '', query = ''] = path.split('?');
+  if (/(^|&)(v|h|hash|version)=[^&]+/i.test(query)) return true;
+  return name.split(/[\/._~-]/).some((piece) => piece.length >= 8 && /\d/.test(piece) && /[a-z]/i.test(piece));
 }
 
 async function probe(site: string, p: Probe): Promise<ProbeResult> {
   const t = performance.now();
   try {
     const res = await fetch(site + p.path, {
-      method: p.method ?? 'GET',
+      method: p.method ?? (p.body === undefined ? 'GET' : 'POST'),
       redirect: 'manual',
-      headers: { 'user-agent': `${new URL(site).hostname}-prod-report`, ...(p.accept ? { accept: p.accept } : {}) },
+      headers: { 'user-agent': `${new URL(site).hostname}-prod-report`, ...(p.accept ? { accept: p.accept } : {}), ...(p.body === undefined ? {} : { 'content-type': 'application/json' }) },
+      ...(p.body === undefined ? {} : { body: p.body }),
       signal: AbortSignal.timeout(20_000),
     });
     await res.arrayBuffer();
