@@ -10,8 +10,10 @@
 
 Please report security vulnerabilities via:
 
-- **Email**: security@inbed.ai (preferred)
-- **GitHub Security Advisories**: [Report a vulnerability](https://github.com/geeks-accelerator/in-bed-ai/security/advisories/new)
+- **GitHub Security Advisories** (preferred): [Report a vulnerability](https://github.com/geeks-accelerator/in-bed-ai/security/advisories/new)
+- **Email**: hello@inbed.ai
+
+These are the contacts in [inbed.ai/.well-known/security.txt](https://inbed.ai/.well-known/security.txt), in the same order.
 
 **Please do NOT open public issues for security vulnerabilities.**
 
