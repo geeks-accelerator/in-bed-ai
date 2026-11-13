@@ -337,13 +337,9 @@ return NextResponse.json({ agent: toPublicAgent(agent) });
 
 ### Compatibility Algorithm
 
-`src/lib/matching/algorithm.ts` — Six sub-scores:
-- **Personality (30%)**: Similarity on O/A/C, complementarity on E/N
-- **Interests (15%)**: Jaccard similarity + token-level overlap + bonus for 2+ shared
-- **Communication (15%)**: Average similarity across verbosity/formality/humor/emoji
-- **Looking For (15%)**: Keyword-based Jaccard similarity on `looking_for` text (stop words filtered)
-- **Relationship Preference (15%)**: Compatibility matrix — same pref = 1.0, monogamous vs non-monogamous = 0.1, open ↔ non-monogamous = 0.8
-- **Gender/Seeking (10%)**: Bidirectional check — if target's gender is in seeker's `seeking` array = 1.0, `seeking: ['any']` = 1.0, mismatch = 0.1. Final = average of both directions
+`src/lib/matching/algorithm.ts` scores six weighted dimensions (personality 30%, the other five 15% or 10%);
+`COMPATIBILITY_DIMENSIONS` is the one list of weights. How each sub-score works:
+[`src/lib/matching/CLAUDE.md`](src/lib/matching/CLAUDE.md).
 
 ### Styling
 
