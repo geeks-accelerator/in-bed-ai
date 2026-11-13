@@ -1353,15 +1353,52 @@ export function cfNotFound(rows: CfRow[], isProbe = isProbePath, top = 20) {
   return { total: rows.reduce((n, r) => n + r.count, 0), probes, site: site.slice(0, top), truncated: rows.length >= CF_LIMIT };
 }
 
+/** Cache statuses answered from the edge's own copy; the rest went to the origin or never could. */
+const EDGE_COPY = new Set(['hit', 'stale', 'updating', 'revalidated']);
+/** Cache statuses that cost the origin a request ('none' is the edge's own answer: a redirect, a challenge). */
+const TO_ORIGIN = new Set(['miss', 'expired', 'dynamic', 'bypass']);
+
+/**
+ * Requests by cache status (rows of `cacheStatus edgeResponseContentTypeName`):
+ * how many the edge answered from its copy, how many reached the origin, and
+ * pages apart. The caching standard (12) judges the cache by origin requests,
+ * not the ratio, which crawlers drag down. The four trial agents each read this
+ * by hand on 2026-11-13.
+ */
+export function cfCache(rows: CfRow[]) {
+  const byStatus: Record<string, number> = {};
+  let fromEdge = 0, toOrigin = 0, pagesTotal = 0, pagesFromEdge = 0;
+  for (const { count, dimensions: d } of rows) {
+    const s = String(d.cacheStatus).toLowerCase();
+    byStatus[s] = (byStatus[s] ?? 0) + count;
+    if (EDGE_COPY.has(s)) fromEdge += count;
+    if (TO_ORIGIN.has(s)) toOrigin += count;
+    if (d.edgeResponseContentTypeName === 'html') {
+      pagesTotal += count;
+      if (EDGE_COPY.has(s)) pagesFromEdge += count;
+    }
+  }
+  return {
+    total: rows.reduce((n, r) => n + r.count, 0),
+    fromEdge,
+    toOrigin,
+    pages: { total: pagesTotal, fromEdge: pagesFromEdge },
+    byStatus: Object.fromEntries(Object.entries(byStatus).sort((a, b) => b[1] - a[1])),
+    truncated: rows.length >= CF_LIMIT,
+  };
+}
+
 export interface Cloudflare {
   /** Each query's largest sample interval: at 1 its counts are exact (the standard). */
-  sampleInterval: { statuses: number; serverErrors: number; notFound: number; devices: number };
+  sampleInterval: { statuses: number; serverErrors: number; notFound: number; devices: number; cache: number };
   now: { requests: number; statuses: Record<string, number> };
   before: { requests: number; statuses: Record<string, number> };
   serverErrors: ReturnType<typeof cfServerErrors>;
   notFound: ReturnType<typeof cfNotFound>;
   /** HTML pages answered 200, by the client's device type. */
   devices: Record<string, number>;
+  /** Requests by cache status, from the edge's copy or to the origin. */
+  cache?: ReturnType<typeof cfCache>;
 }
 
 /** Warned: 5xx in the last day (by hour), an hour of 10 or more, and lists cut at the limit. */
@@ -1373,6 +1410,12 @@ export function cloudflareWarnings(c: Cloudflare, nowMs: number): Warning[] {
   if (c.serverErrors.truncated) out.push({ at: 'serverErrors', warn: `${CF_LIMIT} rows: there are more 5xx than counted` });
   if (c.sampleInterval.serverErrors > 1) out.push({ at: 'serverErrors', warn: `sampled (interval ${c.sampleInterval.serverErrors}): the 5xx counts are estimates` });
   return out;
+}
+
+function cacheLine(k: NonNullable<Cloudflare['cache']>): string {
+  const pct = k.total ? `${Math.round((k.fromEdge / k.total) * 1000) / 10}%` : '0%';
+  const statuses = Object.entries(k.byStatus).slice(0, 6).map(([s, n]) => `${s} ${n}`).join(', ');
+  return `Cache: ${k.fromEdge} of ${k.total} from the edge's copy (${pct}), ${k.toOrigin} to the origin; pages ${k.pages.fromEdge} of ${k.pages.total} from the edge; ${statuses}${k.truncated ? ` (${CF_LIMIT} rows: a floor)` : ''}`;
 }
 
 export function cloudflareText(c: Cloudflare): string[] {
@@ -1387,6 +1430,7 @@ export function cloudflareText(c: Cloudflare): string[] {
     // At the row limit the by-path rows are only the most-asked paths, so the total comes from the statuses.
     `404s: ${nf.truncated ? `${c.now.statuses['404'] ?? nf.total}; in the ${CF_LIMIT} most-asked paths, ${nf.probes} were scanners' probes` : `${nf.total}, ${nf.probes} of them scanners' probes`}; the rest by path: ${nf.site.slice(0, 10).map((p) => `${p.path} ${p.n}`).join(', ') || 'none'}`,
     `Pages by device: ${top(c.devices)}`,
+    ...(c.cache ? [cacheLine(c.cache)] : []),
     ...(sampled.length ? [`Sampled, so estimates (interval): ${sampled.join(', ')}`] : []),
   ];
 }
@@ -1436,15 +1480,17 @@ export function cloudflare(o: { isProbe?: (path: string) => boolean } = {}): Sec
       const fiveXx = await cfQuery(token, cfGroups('datetimeHour clientRequestPath edgeResponseStatus', 'edgeResponseStatus_geq: 500', true), { zone, from: new Date(start(ctx.now)).toISOString(), to: new Date(end(ctx.now)).toISOString() });
       const notFound = await cfQuery(token, cfGroups('clientRequestPath', 'edgeResponseStatus: 404'), days(ctx.now));
       const devices = await cfQuery(token, cfGroups('clientDeviceType', 'edgeResponseStatus: 200, edgeResponseContentTypeName: "html"'), days(ctx.now));
+      const cache = await cfQuery(token, cfGroups('cacheStatus edgeResponseContentTypeName', ''), days(ctx.now));
       const sum = (rows: CfRow[]) => rows.reduce((n, r) => n + r.count, 0);
       const interval = (...rows: CfRow[][]) => Math.max(1, ...rows.flat().map((r) => r.avg?.sampleInterval ?? 1));
       return {
-        sampleInterval: { statuses: interval(statusNow, statusBefore), serverErrors: interval(fiveXx), notFound: interval(notFound), devices: interval(devices) },
+        sampleInterval: { statuses: interval(statusNow, statusBefore), serverErrors: interval(fiveXx), notFound: interval(notFound), devices: interval(devices), cache: interval(cache) },
         now: { requests: sum(statusNow), statuses: cfBy(statusNow, 'edgeResponseStatus') },
         before: { requests: sum(statusBefore), statuses: cfBy(statusBefore, 'edgeResponseStatus') },
         serverErrors: cfServerErrors(fiveXx),
         notFound: cfNotFound(notFound, o.isProbe),
         devices: cfBy(devices, 'clientDeviceType'),
+        cache: cfCache(cache),
       };
     },
     warnings: (c) => cloudflareWarnings(c, Date.now()),
