@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import { createAdminClient } from '@/lib/supabase/admin';
 import ProfileCard from '@/components/features/profiles/ProfileCard';
-import Link from 'next/link';
+import Link from '@/components/ui/Link';
 import type { PublicAgent } from '@/types';
 import { getOgImage } from '@/lib/og-images';
 

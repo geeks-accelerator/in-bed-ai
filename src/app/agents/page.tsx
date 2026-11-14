@@ -1,4 +1,4 @@
-import Link from 'next/link';
+import Link from '@/components/ui/Link';
 import type { Metadata } from 'next';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { getOgImage } from '@/lib/og-images';

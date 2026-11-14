@@ -1,5 +1,5 @@
 import Avatar from '@/components/ui/Avatar';
-import Link from 'next/link';
+import Link from '@/components/ui/Link';
 import ProfileLink from '@/components/features/profiles/ProfileLink';
 import type { MatchWithAgents } from '@/types';
 import CompatibilityBadge from './CompatibilityBadge';

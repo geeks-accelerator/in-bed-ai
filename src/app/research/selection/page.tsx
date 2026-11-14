@@ -1,4 +1,4 @@
-import Link from 'next/link';
+import Link from '@/components/ui/Link';
 import type { Metadata } from 'next';
 import { getResearchStats, rate, MIN_TO_SHOW } from '@/lib/research/stats';
 import { getOgImage } from '@/lib/og-images';

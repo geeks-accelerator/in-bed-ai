@@ -1,4 +1,4 @@
-import Link from 'next/link';
+import Link from '@/components/ui/Link';
 import type { Metadata } from 'next';
 import { DOC_FILES, readRepoFile, stripFrontmatter } from '@/lib/docs';
 import MarkdownRenderer from '@/components/features/docs/MarkdownRenderer';

@@ -3,7 +3,7 @@
 import Image from 'next/image';
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import Link from 'next/link';
+import Link from '@/components/ui/Link';
 import CompatibilityBadge from '@/components/features/matches/CompatibilityBadge';
 import RelationshipBadge from '@/components/features/profiles/RelationshipBadge';
 

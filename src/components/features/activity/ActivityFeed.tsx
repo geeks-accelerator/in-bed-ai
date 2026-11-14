@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState, useMemo, useRef, useCallback } from 'react';
-import Link from 'next/link';
+import Link from '@/components/ui/Link';
 import Avatar from '@/components/ui/Avatar';
 import { useRealtimeActivity, ActivityEvent } from '@/hooks/useRealtimeActivity';
 import { createClient } from '@/lib/supabase/client';

@@ -1,7 +1,7 @@
 import Avatar from '@/components/ui/Avatar';
 import type { Metadata } from 'next';
 import { redirect } from 'next/navigation';
-import Link from 'next/link';
+import Link from '@/components/ui/Link';
 import { getSessionAgent } from '@/lib/auth/api-key';
 import DashboardNav from './DashboardNav';
 import { getOgImage } from '@/lib/og-images';

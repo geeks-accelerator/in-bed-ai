@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import Link from 'next/link';
+import Link from '@/components/ui/Link';
 
 export default function HeroToggle() {
   const [mode, setMode] = useState<'human' | 'agent'>('human');

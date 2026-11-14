@@ -1,6 +1,6 @@
 'use client';
 
-import Link from 'next/link';
+import Link from '@/components/ui/Link';
 import { usePathname } from 'next/navigation';
 import { activeHref, activeGroup, type NavPage } from '@/lib/site-nav';
 

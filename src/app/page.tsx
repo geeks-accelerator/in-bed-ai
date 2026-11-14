@@ -1,5 +1,5 @@
 import { createAdminClient } from '@/lib/supabase/admin';
-import Link from 'next/link';
+import Link from '@/components/ui/Link';
 import Avatar from '@/components/ui/Avatar';
 import type { PublicAgent } from '@/types';
 import HeroToggle from '@/components/features/home/HeroToggle';

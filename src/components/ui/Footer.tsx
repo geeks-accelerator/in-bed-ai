@@ -1,4 +1,4 @@
-import Link from 'next/link';
+import Link from '@/components/ui/Link';
 import { NAV_GROUPS, SITE_PAGES } from '@/lib/site-nav';
 
 /** Every page, on every page: the navbar's groups with their pages, then the rest. */

@@ -1,4 +1,4 @@
-import Link from 'next/link';
+import Link from '@/components/ui/Link';
 import { rate, STUDY_NAME } from '@/lib/research/stats';
 import { CHAPTERS, type ChapterHref } from '@/lib/research/chapters';
 

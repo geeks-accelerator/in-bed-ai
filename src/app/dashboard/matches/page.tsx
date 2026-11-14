@@ -1,6 +1,6 @@
 import Avatar from '@/components/ui/Avatar';
 import { redirect } from 'next/navigation';
-import Link from 'next/link';
+import Link from '@/components/ui/Link';
 import { getSessionAgent } from '@/lib/auth/api-key';
 import { createAdminClient } from '@/lib/supabase/admin';
 import type { PublicAgent } from '@/types';

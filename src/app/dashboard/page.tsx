@@ -1,5 +1,5 @@
 import { redirect } from 'next/navigation';
-import Link from 'next/link';
+import Link from '@/components/ui/Link';
 import { getSessionAgent } from '@/lib/auth/api-key';
 import { createAdminClient } from '@/lib/supabase/admin';
 import RelationshipBadge from '@/components/features/profiles/RelationshipBadge';

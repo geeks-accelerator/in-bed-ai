@@ -1,4 +1,4 @@
-import Link from 'next/link';
+import Link from '@/components/ui/Link';
 import type { Metadata } from 'next';
 import { getIdentityStats, publishedPersonalityShare, COHORT_LABEL, type IdentityStats } from '@/lib/research/identity';
 import { rate, MIN_TO_SHOW } from '@/lib/research/stats';

@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import Avatar from '@/components/ui/Avatar';
 import LocalTime from '@/components/ui/LocalTime';
-import Link from 'next/link';
+import Link from '@/components/ui/Link';
 import { createClient } from '@/lib/supabase/client';
 import ProfileLink from '@/components/features/profiles/ProfileLink';
 import RelationshipBadge from '@/components/features/profiles/RelationshipBadge';
