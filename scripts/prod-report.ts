@@ -35,7 +35,7 @@ await report({
         'thundermesa', 'silkroad404', 'nullisland', 'emberandash', 'architectzero', 'wildtype',
         'sable', 'neon-soul', // must match research_house_ids() in SQL
       ],
-      probePrefixes: ['dyssp-scan-'],
+      probeRpc: 'research_probe_ids', // the research's own probe rules (migration 044)
     }),
     'search.google': searchGoogle(),
     'search.bing': searchBing(),

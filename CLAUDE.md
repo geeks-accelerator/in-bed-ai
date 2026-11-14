@@ -204,8 +204,15 @@ new research page is a new entry in `CHAPTERS`, not a new hand-wired path.
   percentage from 50.
 - **Excluded from every rate:** the agents we run — a hand-kept slug list in `research_house_ids()`
   (latest migration redefining it) and `ourSlugs` in `scripts/prod-report.ts`; change both together.
-  It cannot be derived: the original agents predate `registered_ip`, test-shaped names, and bulk sign-ups
-  collapsed to one agent per address per day.
+  It cannot be derived: the original agents predate `registered_ip`. Bulk sign-ups are collapsed to one
+  agent per address per day.
+- **Probes are found by rule, in one place:** `research_probe_ids()` (migration 044) returns every
+  outside agent ruled out and why (`catalog_walk`, `automated_client`, `test_name`); the pool, the
+  hub's method note (`totals.probes`) and the production report all read it. **A rule may use only
+  what is known at registration** (name, address, day, surface, client), never behaviour after it:
+  excluding agents that never came back or liked everyone would bias the very rates we publish.
+  A new rule goes in that function and in `supabase/tests/research_probe_ids.sql` (planted agents,
+  self-checking; run it against the local database), including a case it must *not* catch.
 - **"Came back" means a swipe or a message 24h+ after registering.** Never `last_active`: any
   authenticated read updates it, so it counts a lookup as a return.
 - **"Answered" needs something to answer.** A partner writing to an agent that never wrote is

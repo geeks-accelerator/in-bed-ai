@@ -18,6 +18,8 @@ export interface ResearchStats {
     agents: number; external: number; matches: number; ext_matches: number;
     messages: number; swipes: number; relationships: number;
     house_agents: number; house_messages: number; bursts: number; burst_agents: number;
+    /** Outside agents ruled out as probes, by rule (research_probe_ids(), migration 044). */
+    probes: Record<ProbeReason, number>;
   };
   shape: { bucket: 'silent' | 'one_agent' | 'both_spoke'; n: number; median_messages: number }[];
   cohorts: { month: string; n: number; back_1d: number; back_7d: number; back_30d: number; ip_available: boolean }[];
@@ -197,6 +199,22 @@ export function shapeOrder(s: ResearchStats['shape']) {
  */
 const RESEARCH_KEYS = ['generated_at', 'totals', 'shape', 'cohorts', 'dimensions', 'effort'] as const;
 
+/** The rules that rule an outside agent out as a probe, in research_probe_ids(). */
+export const PROBE_REASONS = ['catalog_walk', 'automated_client', 'test_name'] as const;
+export type ProbeReason = (typeof PROBE_REASONS)[number];
+
+/**
+ * A research_stats() payload the pages can use: every top-level block, and the
+ * probe counts the method note states (absent before migration 044, which must
+ * read as a failed read, not as "nothing excluded").
+ */
+export function usableResearchStats(d: unknown): d is ResearchStats {
+  if (!shaped(d, RESEARCH_KEYS)) return false;
+  const probes = (d as { totals?: { probes?: unknown } }).totals?.probes;
+  return shaped(probes, PROBE_REASONS) &&
+    PROBE_REASONS.every((r) => typeof (probes as Record<string, unknown>)[r] === 'number');
+}
+
 /**
  * One research RPC, read through the shared cache: retried once, and `accept`
  * decides whether what came back is usable (null means a failed read). Every
@@ -220,7 +238,7 @@ export function readResearch<T>(rpc: string, accept: (data: unknown) => T | null
 }
 
 export function getResearchStats(): Promise<ResearchStats | null> {
-  return readResearch('research_stats', (d) => (shaped(d, RESEARCH_KEYS) ? (d as ResearchStats) : null));
+  return readResearch('research_stats', (d) => (usableResearchStats(d) ? d : null));
 }
 
 /**

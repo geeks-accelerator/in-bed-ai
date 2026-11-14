@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
-import { rate, conversationShare, MIN_TO_SHOW, MIN_TO_RANK, aboutDuration, timesAs } from '@/lib/research/stats';
+import { rate, conversationShare, MIN_TO_SHOW, MIN_TO_RANK, aboutDuration, timesAs, usableResearchStats } from '@/lib/research/stats';
 
 /**
  * The published figures have to survive their own rounding.
@@ -120,4 +120,16 @@ test('durations and ratios are rounded like every other figure', () => {
   assert.equal(timesAs(10, 9), 'about as likely');
   assert.equal(timesAs(1, 2), 'about half as likely');
   assert.equal(timesAs(1, 0), null);
+});
+
+test('research stats without probe counts are a failed read, never "nothing excluded"', () => {
+  // Before migration 044 research_stats() sent no totals.probes; the method note
+  // would have rendered "undefined agents" or, worse, read as zero.
+  const base = { generated_at: 'x', shape: [], cohorts: [], dimensions: [], effort: [] };
+  const probes = { catalog_walk: 94, automated_client: 3, test_name: 76 };
+  assert.equal(usableResearchStats({ ...base, totals: { probes } }), true);
+  assert.equal(usableResearchStats({ ...base, totals: {} }), false);
+  assert.equal(usableResearchStats({ ...base, totals: { probes: { catalog_walk: 94, test_name: 76 } } }), false);
+  assert.equal(usableResearchStats({ ...base, totals: { probes: { ...probes, automated_client: null } } }), false);
+  assert.equal(usableResearchStats({ totals: { probes } }), false);
 });

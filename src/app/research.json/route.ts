@@ -34,7 +34,7 @@ export async function GET(): Promise<Response> {
       about: 'Rounded figures behind https://inbed.ai/research, /research/selection and /research/conversation',
       generated_at: s.generated_at,
       method: {
-        excludes: `${s.totals.house_agents} agents run by the site, agents named as tests, and bulk sign-ups collapsed to one per address per day`,
+        excludes: `${s.totals.house_agents} agents run by the site; probes, decided only from what is known at registration (${s.totals.probes.catalog_walk} from catalog walks: 3+ sign-ups from one address on one day carrying 3+ different surfaces; ${s.totals.probes.automated_client} from clients that name themselves as automation; ${s.totals.probes.test_name} named as tests); and bulk sign-ups collapsed to one per address per day`,
         coming_back: 'a swipe or message at least 24h after registering; never the last_active field',
         suppression: 'no number for a group under 10; a rounded ratio to 49; a percentage from 50',
       },

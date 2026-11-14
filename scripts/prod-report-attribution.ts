@@ -11,8 +11,12 @@ const end = (w: Window) => Date.parse(`${w.to}T00:00:00Z`) + 864e5;
 export interface AttributionOptions {
   /** Agent slugs we run ourselves. Excluded from every rate: not a channel. */
   ourSlugs?: string[];
-  /** Slug prefixes that are automated probes, e.g. a scanner's accounts. */
-  probePrefixes?: string[];
+  /**
+   * A SQL function returning `(id, reason)` for every account that is an
+   * automated probe, so the report excludes exactly what the research pages
+   * exclude (inbed.ai: research_probe_ids(), migration 044).
+   */
+  probeRpc?: string;
   /** Don't rank a channel below this many sign-ups. One at 100% of 2 is noise. */
   minToRank?: number;
   /** Days after sign-up by which an agent must have acted to count as stayed. */
@@ -26,6 +30,7 @@ interface AttributionRow {
   utm_campaign: string | null;
   utm_term: string | null;
   registration_user_agent: string | null;
+  id: string;
   slug: string | null;
   created_at: string;
   last_active: string | null;
@@ -36,6 +41,8 @@ interface Tally { key: string; n: number; stayed: number }
 export interface AttributionData {
   migrated: boolean;
   error?: string;
+  /** The probe function could not be read, so probes are counted as sign-ups. */
+  probeError?: string;
   total: number;
   excluded: number;
   taggedContent: number;
@@ -79,7 +86,7 @@ function tally(rows: AttributionRow[], key: (r: AttributionRow) => string | null
  */
 export function attribution(o: AttributionOptions = {}): SectionSpec<AttributionData> {
   const ourSlugs = new Set((o.ourSlugs ?? []).map((s) => s.toLowerCase()));
-  const probePrefixes = o.probePrefixes ?? [];
+  const probeRpc = o.probeRpc;
   const minToRank = o.minToRank ?? 10;
   const returnWindowDays = o.returnWindowDays ?? 7;
 
@@ -92,7 +99,7 @@ export function attribution(o: AttributionOptions = {}): SectionSpec<Attribution
       const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
       if (!url || !key) throw new Error('no NEXT_PUBLIC_SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY in .env.prod');
 
-      const cols = 'slug,created_at,last_active,utm_content,utm_source,utm_medium,utm_campaign,utm_term,registration_user_agent';
+      const cols = 'id,slug,created_at,last_active,utm_content,utm_source,utm_medium,utm_campaign,utm_term,registration_user_agent';
       const q = `${url}/rest/v1/agents?select=${cols}` +
         `&created_at=gte.${ctx.now.from}T00:00:00Z&created_at=lt.${new Date(end(ctx.now)).toISOString()}`;
       const res = await fetch(q, { headers: { apikey: key, authorization: `Bearer ${key}` }, signal: AbortSignal.timeout(30_000) });
@@ -112,10 +119,23 @@ export function attribution(o: AttributionOptions = {}): SectionSpec<Attribution
       }
 
       const all = (await res.json()) as AttributionRow[];
-      const mine = (r: AttributionRow) => {
-        const slug = (r.slug ?? '').toLowerCase();
-        return ourSlugs.has(slug) || probePrefixes.some((p) => slug.startsWith(p));
-      };
+
+      // Probes by the same rule the research uses. If the function is missing
+      // (its migration not applied yet), say so rather than counting probes as
+      // channels without a word.
+      const probes = new Set<string>();
+      let probeError: string | undefined;
+      if (probeRpc) {
+        const pr = await fetch(`${url}/rest/v1/rpc/${probeRpc}`, {
+          method: 'POST',
+          headers: { apikey: key, authorization: `Bearer ${key}`, 'content-type': 'application/json' },
+          body: '{}',
+          signal: AbortSignal.timeout(30_000),
+        });
+        if (pr.ok) for (const p of (await pr.json()) as { id: string }[]) probes.add(p.id);
+        else probeError = `${probeRpc}() answered ${pr.status}; probes are not excluded`;
+      }
+      const mine = (r: AttributionRow) => ourSlugs.has((r.slug ?? '').toLowerCase()) || probes.has(r.id);
       const rows = all.filter((r) => !mine(r));
       const stayed = (r: AttributionRow) =>
         r.last_active != null &&
@@ -130,6 +150,7 @@ export function attribution(o: AttributionOptions = {}): SectionSpec<Attribution
         migrated: true,
         total: rows.length,
         excluded: all.length - rows.length,
+        probeError,
         taggedContent: rows.filter((r) => r.utm_content).length,
         inboundRows: rows.filter((r) => r.utm_source || r.utm_medium || r.utm_campaign || r.utm_term).length,
         surfaces: tally(rows, (r) => (r.utm_content?.startsWith('unknown:') ? null : r.utm_content), stayed),
@@ -150,6 +171,7 @@ export function attribution(o: AttributionOptions = {}): SectionSpec<Attribution
     warnings: (d) => {
       if (d.error) return [{ at: '', warn: d.error }];
       const w: Warning[] = [];
+      if (d.probeError) w.push({ at: 'probes', warn: d.probeError });
       // A gap in utm_content is OUR bug: some surface is shipping untagged.
       if (d.total > 0 && d.taggedContent < d.total) {
         w.push({ at: 'utm_content', warn: `${d.total - d.taggedContent} of ${d.total} sign-ups carried no utm_content — a surface is untagged` });
@@ -168,7 +190,7 @@ export function attribution(o: AttributionOptions = {}): SectionSpec<Attribution
       const out: string[] = [];
       // Coverage first: it decides whether anything below means anything.
       out.push(`  coverage: ${d.taggedContent} of ${d.total} tagged (${pct(d.taggedContent, d.total)})` +
-        (d.excluded ? `, ${d.excluded} of ours excluded` : ''));
+        (d.excluded ? `, ${d.excluded} of ours or probes excluded` : ''));
       out.push(`  by surface (n, stayed ${d.returnWindowDays}d; unranked below n=${d.minToRank}):`);
       const rank = d.surfaces.filter((t) => t.n >= d.minToRank);
       const thin = d.surfaces.filter((t) => t.n < d.minToRank);
