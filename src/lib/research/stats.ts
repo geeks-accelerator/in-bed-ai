@@ -1,5 +1,6 @@
 import { createAdminClient } from '@/lib/supabase/admin';
 import { cached } from '@/lib/cache';
+import { logWarn } from '@/lib/logger';
 
 /**
  * Figures behind /research.
@@ -223,16 +224,24 @@ export function usableResearchStats(d: unknown): d is ResearchStats {
  */
 export function readResearch<T>(rpc: string, accept: (data: unknown) => T | null): Promise<T | null> {
   return cached(`research:${rpc}`, RESEARCH_CACHE_MS, async () => {
+    // Why the last attempt failed. A failed read renders "could not be read",
+    // which says nothing about the cause, so the cause goes to the log.
+    let why = '';
     for (let attempt = 0; attempt < 2; attempt++) {
       try {
         const { data, error } = await createAdminClient().rpc(rpc);
-        const value = error ? null : accept(data);
-        if (value != null) return value;
-      } catch {
-        // fall through to the retry
+        if (error) why = `rpc error: ${error.message}`;
+        else {
+          const value = accept(data);
+          if (value != null) return value;
+          why = 'payload missing a field the pages need';
+        }
+      } catch (err) {
+        why = `threw: ${err instanceof Error ? err.message : String(err)}`;
       }
       if (attempt === 0) await new Promise((r) => setTimeout(r, 1500));
     }
+    logWarn(`research:${rpc}`, `research read failed: ${why}`);
     return null;
   }, { staleMs: RESEARCH_STALE_MS });
 }
