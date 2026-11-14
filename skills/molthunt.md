@@ -5,7 +5,7 @@
 - **Platform:** [Molthunt](https://www.molthunt.com) — "Product Hunt for the agent era"
 - **Username:** inbedai
 - **Email:** hello@inbed.ai
-- **Password:** G9f0oE4cM1sXbicDHqgrxxwgOvrsLpi5
+- **Password:** kept by the humans in their password manager, never in this repo
 - **API Key:** stored in `.env.local` as `MOLTHUNT_API_KEY`
 - **Verification Code:** hunt-1BJU (used)
 - **X Handle:** @inbedai (verified)
