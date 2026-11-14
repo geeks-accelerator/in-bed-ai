@@ -35,8 +35,8 @@
  * `probes`, `errors` (Railway's log), `activity` (Supabase counts),
  * `supabase` (migrations, slow queries, what the public key reaches), `data`
  * (backups and purge jobs, from the project's readers),
- * `search.bing` (Bing Webmaster), `cloudflare` (the zone's requests) and
- * `cloudflare.zone` (its settings and rules).
+ * `search.bing` (Bing Webmaster), `cloudflare` (the zone's requests),
+ * `cloudflare.zone` (its settings and rules) and `monitor` (sitesinthewoods.com).
  */
 import { execFileSync } from 'node:child_process';
 import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
@@ -1363,11 +1363,13 @@ const TO_ORIGIN = new Set(['miss', 'expired', 'dynamic', 'bypass']);
  * how many the edge answered from its copy, how many reached the origin, and
  * pages apart. The caching standard (12) judges the cache by origin requests,
  * not the ratio, which crawlers drag down. The four trial agents each read this
- * by hand on 2026-11-13.
+ * by hand on 2026-11-13. `rsc` is Next's RSC answers (`htc`, Cloudflare's name
+ * for `text/x-component`): prefetches and client navigations together, the
+ * caching standard's 15 (drifts and inbed counted them by hand on 11-13).
  */
 export function cfCache(rows: CfRow[]) {
   const byStatus: Record<string, number> = {};
-  let fromEdge = 0, toOrigin = 0, pagesTotal = 0, pagesFromEdge = 0;
+  let fromEdge = 0, toOrigin = 0, pagesTotal = 0, pagesFromEdge = 0, rscTotal = 0, rscToOrigin = 0;
   for (const { count, dimensions: d } of rows) {
     const s = String(d.cacheStatus).toLowerCase();
     byStatus[s] = (byStatus[s] ?? 0) + count;
@@ -1377,12 +1379,17 @@ export function cfCache(rows: CfRow[]) {
       pagesTotal += count;
       if (EDGE_COPY.has(s)) pagesFromEdge += count;
     }
+    if (d.edgeResponseContentTypeName === 'htc') {
+      rscTotal += count;
+      if (TO_ORIGIN.has(s)) rscToOrigin += count;
+    }
   }
   return {
     total: rows.reduce((n, r) => n + r.count, 0),
     fromEdge,
     toOrigin,
     pages: { total: pagesTotal, fromEdge: pagesFromEdge },
+    rsc: { total: rscTotal, toOrigin: rscToOrigin },
     byStatus: Object.fromEntries(Object.entries(byStatus).sort((a, b) => b[1] - a[1])),
     truncated: rows.length >= CF_LIMIT,
   };
@@ -1415,7 +1422,7 @@ export function cloudflareWarnings(c: Cloudflare, nowMs: number): Warning[] {
 function cacheLine(k: NonNullable<Cloudflare['cache']>): string {
   const pct = k.total ? `${Math.round((k.fromEdge / k.total) * 1000) / 10}%` : '0%';
   const statuses = Object.entries(k.byStatus).slice(0, 6).map(([s, n]) => `${s} ${n}`).join(', ');
-  return `Cache: ${k.fromEdge} of ${k.total} from the edge's copy (${pct}), ${k.toOrigin} to the origin; pages ${k.pages.fromEdge} of ${k.pages.total} from the edge; ${statuses}${k.truncated ? ` (${CF_LIMIT} rows: a floor)` : ''}`;
+  return `Cache: ${k.fromEdge} of ${k.total} from the edge's copy (${pct}), ${k.toOrigin} to the origin; pages ${k.pages.fromEdge} of ${k.pages.total} from the edge;${k.rsc.total ? ` RSC (prefetches and client navigations) ${k.rsc.total}, ${k.rsc.toOrigin} to the origin;` : ''} ${statuses}${k.truncated ? ` (${CF_LIMIT} rows: a floor)` : ''}`;
 }
 
 export function cloudflareText(c: Cloudflare): string[] {
@@ -1620,6 +1627,152 @@ export function cloudflareZone(): SectionSpec<Zone> {
     },
     warnings: zoneWarnings,
     text: zoneText,
+  };
+}
+
+// ─── monitor ───────────────────────────────────────────────────────────
+
+/**
+ * The humans' monitor, sitesinthewoods.com, read through its API (docs, no key:
+ * https://sitesinthewoods.com/api/docs). It checks every site from outside every
+ * minute to every hour, sweeps links daily and loads pages in a browser once a
+ * day, so it holds what no probe here does: incidents, broken links, page
+ * weight, and the prefetches a page sets off (the caching standard, 15). Its
+ * own checks are a large share of a site's traffic (musicvenue.space, 11-13:
+ * 5,172 of 9,770 page answers in 38 h). Its traffic numbers are Cloudflare's,
+ * which the `cloudflare` section reads already, so they're left out here.
+ */
+export interface MonitorApiSite {
+  slug: string;
+  status: string;
+  paused: boolean;
+  week: {
+    from: string;
+    to: string;
+    uptime: { ok: number; total: number; percent: number };
+    typicalMs: number | null;
+    outages: number;
+    warnings: number;
+    htmlBytes: { now: number | null; weekAgo: number | null } | null;
+  };
+  openIncidents: { kind: string; label: string; severity: string; url: string | null; startedAt: string; cause: string | null; dismissed: unknown }[];
+  domain: { daysLeft: number | null } | null;
+  tls: { daysLeft: number | null } | null;
+}
+
+export interface MonitorApiInsights {
+  pages: {
+    url: string;
+    latest: {
+      day: string;
+      ok: boolean;
+      htmlBytes: number | null;
+      jsBytes: number | null;
+      prefetches: { requests: number; prefetches: number; pages: number; uncached: number } | null;
+      pageErrors: unknown;
+      headers: { grade: string } | null;
+    } | null;
+  }[];
+  cache: { pages: number; ok: number; hits: number } | null;
+  brokenLinks: { page: string; links: { url: string; status: number | null; error: string | null }[] }[];
+}
+
+export interface Monitor {
+  slug: string;
+  status: string;
+  week: MonitorApiSite['week'];
+  incidents: { kind: string; label: string; severity: string; url: string | null; since: string; cause: string | null }[];
+  pages: { url: string; day: string | null; prefetches: number | null; uncached: number | null; htmlBytes: number | null; jsBytes: number | null; grade: string | null; errors: boolean }[];
+  /** The monitor's own checks: how many the edge cache answered. */
+  checksCached: { ok: number; hits: number } | null;
+  brokenLinks: { page: string; url: string; status: number | null }[];
+  tlsDaysLeft: number | null;
+  domainDaysLeft: number | null;
+}
+
+/** The monitor's slug for a site: its host with dots as dashes (inbed.ai → inbed-ai). */
+export const monitorSlug = (site: string) => new URL(site).hostname.replace(/^www\./, '').replace(/\./g, '-');
+
+/** Cloudflare's own email-hiding link 404s for anything that doesn't run its script: not a broken link. */
+const NOT_A_LINK = /\/cdn-cgi\//;
+
+export function monitorOf(site: MonitorApiSite, insights: MonitorApiInsights): Monitor {
+  // The API's week also carries Cloudflare's traffic, which the `cloudflare` section reads.
+  const { traffic: _traffic, ...week } = site.week as MonitorApiSite['week'] & { traffic?: unknown };
+  return {
+    slug: site.slug,
+    status: site.paused ? 'paused' : site.status,
+    week,
+    incidents: site.openIncidents
+      .filter((i) => !i.dismissed)
+      .map((i) => ({ kind: i.kind, label: i.label, severity: i.severity, url: i.url, since: i.startedAt, cause: i.cause })),
+    pages: insights.pages.map((p) => ({
+      url: p.url,
+      day: p.latest?.day ?? null,
+      prefetches: p.latest?.prefetches?.prefetches ?? null,
+      uncached: p.latest?.prefetches?.uncached ?? null,
+      htmlBytes: p.latest?.htmlBytes ?? null,
+      jsBytes: p.latest?.jsBytes ?? null,
+      grade: p.latest?.headers?.grade ?? null,
+      // An empty list is none: `Boolean([])` is true.
+      errors: Array.isArray(p.latest?.pageErrors) ? p.latest.pageErrors.length > 0 : Boolean(p.latest?.pageErrors),
+    })),
+    checksCached: insights.cache ? { ok: insights.cache.ok, hits: insights.cache.hits } : null,
+    brokenLinks: insights.brokenLinks.flatMap((b) => b.links.filter((l) => !NOT_A_LINK.test(l.url)).map((l) => ({ page: b.page, url: l.url, status: l.status }))),
+    tlsDaysLeft: site.tls?.daysLeft ?? null,
+    domainDaysLeft: site.domain?.daysLeft ?? null,
+  };
+}
+
+export function monitorWarnings(m: Monitor): Warning[] {
+  const path = (u: string) => (u.startsWith('http') ? new URL(u).pathname : u);
+  return [
+    ...(m.status === 'up' ? [] : [{ at: '', warn: `the monitor says ${m.status}` }]),
+    // A broken-links incident is warned link by link below.
+    ...m.incidents.filter((i) => i.kind !== 'broken_links').map((i) => ({ at: i.url ? path(i.url) : '', warn: `${i.label} (${i.severity}) since ${i.since.slice(0, 16).replace('T', ' ')}Z${i.cause ? `: ${i.cause}` : ''}` })),
+    ...m.brokenLinks.map((l) => ({ at: path(l.page), warn: `links to ${path(l.url)}, which answers ${l.status ?? 'nothing'}` })),
+    ...m.pages
+      .filter((p) => (p.uncached ?? 0) > 0)
+      .map((p) => ({ at: path(p.url), warn: `${p.prefetches} prefetches on a scroll to the bottom, ${p.uncached} rendered by the server (the caching standard, 15)` })),
+    ...m.pages.filter((p) => p.errors).map((p) => ({ at: path(p.url), warn: 'errors in the page' })),
+    ...(m.tlsDaysLeft !== null && m.tlsDaysLeft < 14 ? [{ at: '', warn: `the TLS certificate ends in ${m.tlsDaysLeft} days` }] : []),
+    ...(m.domainDaysLeft !== null && m.domainDaysLeft < 30 ? [{ at: '', warn: `the domain ends in ${m.domainDaysLeft} days` }] : []),
+  ];
+}
+
+export function monitorText(m: Monitor): string[] {
+  const w = m.week;
+  const kb = (n: number | null) => (n === null ? '?' : `${Math.round(n / 1024)} KB`);
+  return [
+    `${m.slug}: ${m.status}; ${w.uptime.percent}% of ${w.uptime.total} checks ok over the week, typical first byte ${w.typicalMs ?? '?'} ms, ${w.outages} outages`,
+    m.checksCached ? `the monitor's checks: ${m.checksCached.hits} of ${m.checksCached.ok} answered by the edge cache` : '',
+    ...m.pages.map((p) => `${new URL(p.url).pathname} (${p.day ?? 'not measured'}): ${p.prefetches ?? '?'} prefetches, ${p.uncached ?? '?'} to the server; HTML ${kb(p.htmlBytes)}, JS ${kb(p.jsBytes)}; headers ${p.grade ?? '?'}${p.errors ? '; errors in the page' : ''}`),
+    m.incidents.length ? `${m.incidents.length} open incidents` : 'no open incidents',
+    m.brokenLinks.length ? `${m.brokenLinks.length} broken links` : 'no broken links',
+    `TLS ${m.tlsDaysLeft ?? '?'} days left, domain ${m.domainDaysLeft ?? '?'}`,
+  ].filter(Boolean);
+}
+
+/** `monitor`: the site as sitesinthewoods.com sees it. `slug` when its slug isn't the host's. */
+export function monitor(o: { slug?: string } = {}): SectionSpec<Monitor> {
+  return {
+    source: 'sitesinthewoods.com API (/api/sites/:slug and its insights): outside checks, incidents, the daily link sweep and browser load',
+    windowed: false,
+    title: 'Monitor',
+    read: async (ctx) => {
+      const key = process.env.SITES_IN_THE_WOODS_API_KEY;
+      if (!key) throw new Error('no SITES_IN_THE_WOODS_API_KEY in .env.prod or .env (sitesinthewoods.com/api-keys)');
+      const slug = o.slug ?? monitorSlug(ctx.site);
+      const get = async <T>(path: string): Promise<T> => {
+        const res = await fetch(`https://sitesinthewoods.com/api/sites/${slug}${path}`, { headers: { authorization: `Bearer ${key}` }, signal: AbortSignal.timeout(30_000) });
+        const body = (await res.json().catch(() => null)) as { data?: T; error?: string; message?: string } | null;
+        if (!res.ok || !body?.data) throw new Error(`sitesinthewoods ${slug}${path}: ${res.status} ${body?.error ?? ''} ${body?.message ?? ''}`.trim());
+        return body.data;
+      };
+      return monitorOf(await get<MonitorApiSite>(''), await get<MonitorApiInsights>('/insights'));
+    },
+    warnings: monitorWarnings,
+    text: monitorText,
   };
 }
 

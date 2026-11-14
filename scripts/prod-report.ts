@@ -4,7 +4,7 @@
  *
  *   npm run prod-report [-- --days 28] [-- --json] [-- --only probes]
  */
-import { activity, cloudflare, cloudflareZone, deploys, errors, github, probes, report, searchBing, searchGoogle } from './prod-report-core.ts';
+import { activity, cloudflare, cloudflareZone, deploys, errors, github, monitor, probes, report, searchBing, searchGoogle } from './prod-report-core.ts';
 import { attribution } from './prod-report-attribution.ts';
 
 await report({
@@ -41,6 +41,7 @@ await report({
     'search.bing': searchBing(),
     cloudflare: cloudflare(),
     'cloudflare.zone': cloudflareZone(),
+    monitor: monitor(),
     probes: probes([
       // Pages send the Accept a reader's browser does. `match` holds each kind of
       // URL to its caching policy (the agents' docs/standard-caching.md, 1 and 13).
