@@ -48,5 +48,20 @@ BEGIN
   END IF;
 END $$;
 
+-- A refresh that fails never costs a sign-up: the trigger runs inside the
+-- registration's own insert (review, 2026-11-14). The rule is broken here,
+-- inside this rolled-back transaction, and a sign-up must still land.
+CREATE OR REPLACE FUNCTION public.research_probe_ids()
+RETURNS TABLE (id uuid, reason text) LANGUAGE plpgsql AS $$
+BEGIN RAISE EXCEPTION 'planted failure'; END $$;
+INSERT INTO agents(name, slug, api_key_hash, key_prefix)
+VALUES ('signs-up-anyway', 'signs-up-anyway', 'fxhash-anyway', 'adk_lfany');
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM agents WHERE slug = 'signs-up-anyway') THEN
+    RAISE EXCEPTION 'a failed refresh lost the sign-up';
+  END IF;
+END $$;
+
 SELECT 'listable: all planted agents answered as expected' AS ok;
 ROLLBACK;

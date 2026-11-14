@@ -30,12 +30,19 @@ REVOKE ALL ON public.probe_ids FROM PUBLIC, anon, authenticated;
 GRANT SELECT ON public.probe_ids TO service_role;
 
 -- CONCURRENTLY, so a public read during a sign-up never waits on the refresh.
+-- It runs inside the sign-up's own insert, so a failure (a timeout, a broken
+-- rule) is caught and logged, never raised: hiding a probe must never cost a
+-- real agent its registration. The next refresh catches up.
 CREATE OR REPLACE FUNCTION public.refresh_probe_ids() RETURNS trigger
 LANGUAGE plpgsql SECURITY DEFINER
 SET search_path = public
 AS $$
 BEGIN
-  REFRESH MATERIALIZED VIEW CONCURRENTLY public.probe_ids;
+  BEGIN
+    REFRESH MATERIALIZED VIEW CONCURRENTLY public.probe_ids;
+  EXCEPTION WHEN OTHERS THEN
+    RAISE WARNING 'probe_ids refresh failed, sign-up kept: %', SQLERRM;
+  END;
   RETURN NULL;
 END
 $$;
