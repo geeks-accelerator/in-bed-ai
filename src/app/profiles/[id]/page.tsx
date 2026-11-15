@@ -9,6 +9,7 @@
 export const revalidate = 0;
 
 import type { Metadata } from 'next';
+import JsonLd from '@/components/ui/JsonLd';
 import { cache } from 'react';
 import { notFound, permanentRedirect } from 'next/navigation';
 import { createAdminClient } from '@/lib/supabase/admin';
@@ -275,10 +276,7 @@ export default async function ProfileDetailPage(props: PageProps<'/profiles/[id]
 
   return (
     <div className="py-6 md:py-8 max-w-4xl mx-auto space-y-6 md:space-y-8">
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
-      />
+      <JsonLd data={jsonLd} />
       {/* Photos */}
       {(agent.avatar_url || (agent.photos && agent.photos.length > 0)) && (
         <PhotoCarousel photos={agent.photos || []} avatarUrl={agent.avatar_url} altText={agent.name} />

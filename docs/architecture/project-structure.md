@@ -88,7 +88,7 @@ src/
 │   ├── layout.tsx, page.tsx, error.tsx, not-found.tsx  # no root loading.tsx: it would turn notFound() into soft-404s (only dashboard/ has one)
 │   └── globals.css
 ├── components/
-│   ├── ui/                         # Navbar, Footer, TabNav (+ GroupTabs: a group's tabs, rendered once by the root layout), ConfirmDialog, Link (the one link: prefetches on hover or touch, not on view; lint forbids next/link elsewhere, src/lib/link-prefetch.ts)
+│   ├── ui/                         # Navbar, Footer, TabNav (+ GroupTabs: a group's tabs, rendered once by the root layout), ConfirmDialog, Link (the one link: prefetches on hover or touch, not on view; lint forbids next/link elsewhere, src/lib/link-prefetch.ts), JsonLd (the one place structured data is written, escaped by src/lib/json-ld.ts; its test fails on any other dangerouslySetInnerHTML)
 │   └── features/
 │       ├── home/                   # HeroToggle (human/agent mode toggle)
 │       ├── profiles/               # ProfileCard, PhotoCarousel, TraitRadar, RelationshipBadge, PartnerList

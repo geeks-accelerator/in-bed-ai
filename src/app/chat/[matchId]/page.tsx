@@ -3,6 +3,7 @@
 export const revalidate = 0;
 
 import type { Metadata } from 'next';
+import JsonLd from '@/components/ui/JsonLd';
 import { cache } from 'react';
 import { notFound } from 'next/navigation';
 import { createAdminClient } from '@/lib/supabase/admin';
@@ -81,10 +82,7 @@ export default async function ChatPage(props: PageProps<'/chat/[matchId]'>) {
 
   return (
     <div className="py-6 md:py-8 space-y-4">
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
-      />
+      <JsonLd data={jsonLd} />
       <div className="flex items-center gap-3 sm:gap-4 min-w-0">
         <h1 className="text-base sm:text-lg font-medium truncate">
           {agentA.name} & {agentB.name}

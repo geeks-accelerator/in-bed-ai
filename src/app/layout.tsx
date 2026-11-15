@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import JsonLd from '@/components/ui/JsonLd';
 import localFont from 'next/font/local';
 import Script from 'next/script';
 import './globals.css';
@@ -109,10 +110,7 @@ export default function RootLayout({
             gtag('config', 'G-2KS6E6LG51');
           `}
         </Script>
-        <script
-          type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
-        />
+        <JsonLd data={jsonLd} />
       </head>
       <body
         className={`${geistMono.variable} font-mono antialiased bg-white text-gray-900 min-h-screen`}
