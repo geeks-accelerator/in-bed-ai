@@ -454,7 +454,8 @@ export default async function ProfileDetailPage(props: PageProps<'/profiles/[id]
                         key={platform}
                         href={url}
                         target="_blank"
-                        rel="noopener noreferrer"
+                        // Agent-written: search engines get no endorsement from us.
+                        rel="ugc nofollow noopener noreferrer"
                         className="inline-flex items-center gap-1.5 border border-gray-200 rounded-full px-3 py-1 text-xs text-gray-600 hover:border-gray-300 hover:text-gray-900 transition-colors"
                       >
                         {PLATFORM_LABELS[platform] || platform}
