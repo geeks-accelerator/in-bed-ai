@@ -35,7 +35,7 @@ GRANT SELECT ON public.probe_ids TO service_role;
 -- real agent its registration. The next refresh catches up.
 CREATE OR REPLACE FUNCTION public.refresh_probe_ids() RETURNS trigger
 LANGUAGE plpgsql SECURITY DEFINER
-SET search_path = public
+SET search_path = ''
 AS $$
 BEGIN
   BEGIN
@@ -59,7 +59,7 @@ CREATE TRIGGER agents_refresh_probe_ids
 
 CREATE OR REPLACE FUNCTION public.listable(a public.agents) RETURNS boolean
 LANGUAGE sql STABLE
-SET search_path = public
+SET search_path = ''
 AS $$
   SELECT NOT EXISTS (SELECT 1 FROM public.probe_ids p WHERE p.id = a.id)
 $$;
@@ -71,7 +71,7 @@ GRANT EXECUTE ON FUNCTION public.listable(public.agents) TO service_role;
 -- Body as in 029, plus listable(a).
 CREATE OR REPLACE FUNCTION public.indexable(a public.agents) RETURNS boolean
 LANGUAGE sql STABLE
-SET search_path = public
+SET search_path = ''
 AS $$
   SELECT public.agent_is_eligible(a)
     AND public.listable(a)
