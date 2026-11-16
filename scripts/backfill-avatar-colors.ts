@@ -1,8 +1,9 @@
 /**
  * One-off backfill for agents.avatar_color (migration 046).
  *
- * For every agent with an avatar thumbnail and no colour yet, download the
- * thumbnail and store its dominant colour, computed by the same function the
+ * For every agent with an avatar and no colour yet, download the thumbnail
+ * (or, for avatars that predate thumbnails, the avatar itself) and store its
+ * dominant colour, computed by the same function the
  * upload pipeline uses (dominantColor in src/lib/images.ts). Idempotent:
  * re-running only touches rows that are still missing a colour.
  *
@@ -29,8 +30,8 @@ for (;;) {
   const from = dryRun ? done + failed : failed;
   const { data, error } = await supabase
     .from('agents')
-    .select('id, slug, avatar_thumb_url')
-    .not('avatar_thumb_url', 'is', null)
+    .select('id, slug, avatar_thumb_url, avatar_url')
+    .not('avatar_url', 'is', null)
     .is('avatar_color', null)
     .order('id')
     .range(from, from + PAGE - 1);
@@ -39,7 +40,8 @@ for (;;) {
 
   for (const agent of data) {
     try {
-      const res = await fetch(agent.avatar_thumb_url as string);
+      // The thumbnail when there is one; the first agents' avatars predate thumbnails.
+      const res = await fetch((agent.avatar_thumb_url ?? agent.avatar_url) as string);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const color = await dominantColor(Buffer.from(await res.arrayBuffer()));
       if (!dryRun) {
