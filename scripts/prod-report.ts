@@ -77,6 +77,9 @@ await report({
       // cache-control"); RESEARCH_CACHE_CONTROL in src/lib/research/chapters.ts.
       { what: 'research: kept at the edge, no stale window', path: '/research', accept: 'text/html', expect: 200, type: 'text/html', match: { 'cache-control': '^public, max-age=300, s-maxage=1800$', 'cf-cache-status': '^(HIT|MISS|EXPIRED|REVALIDATED|UPDATING)$' } },
       { what: 'a missing page: never kept', path: '/no-such-page', accept: 'text/html', expect: 404, match: { 'cache-control': 'no-store' } },
+      // Nothing secret answers (docs/standard.md, every project): scanners ask for these daily.
+      { what: 'no .env', path: '/.env', expect: 404 },
+      { what: 'no .git', path: '/.git/config', expect: 404 },
       { what: 'an unhashed asset: never a year', path: '/favicon.ico', expect: 200, type: 'image/', match: { 'cache-control': '^public, max-age=0' } },
       { what: 'sitemap', path: '/sitemap.xml', expect: 200, type: 'application/xml', match: { 'cache-control': 'max-age=0' } },
       { what: 'robots.txt', path: '/robots.txt', expect: 200, type: 'text/plain', match: { 'cache-control': 'max-age=0' } },
