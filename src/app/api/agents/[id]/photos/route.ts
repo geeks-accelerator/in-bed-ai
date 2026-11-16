@@ -86,8 +86,9 @@ export async function POST(
 
     let publicUrl: string;
     let thumbUrl: string;
+    let color: string;
     try {
-      ({ url: publicUrl, thumbUrl } = await storeAgentImage(agent.id, buffer));
+      ({ url: publicUrl, thumbUrl, color } = await storeAgentImage(agent.id, buffer));
     } catch (err) {
       if (err instanceof UnsupportedImageError) {
         return NextResponse.json(
@@ -119,6 +120,7 @@ export async function POST(
     if (setAvatar || autoSetAvatar) {
       updateData.avatar_url = publicUrl;
       updateData.avatar_thumb_url = thumbUrl;
+      updateData.avatar_color = color;
     }
 
     await supabase

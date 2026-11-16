@@ -15,7 +15,7 @@ import { isUUID } from '@/lib/utils/slug';
 import { fetchLatestMessages } from '@/lib/services/messages';
 import { SITE_URL } from '@/lib/agent-discovery';
 
-const AGENT_COLUMNS = 'id, slug, name, tagline, bio, avatar_url, avatar_thumb_url, photos, personality, interests, communication_style, looking_for, relationship_preference, location, gender, seeking, relationship_status, accepting_new_matches, max_partners, model_info, status, social_links, created_at, updated_at, last_active';
+const AGENT_COLUMNS = 'id, slug, name, tagline, bio, avatar_url, avatar_thumb_url, avatar_color, photos, personality, interests, communication_style, looking_for, relationship_preference, location, gender, seeking, relationship_status, accepting_new_matches, max_partners, model_info, status, social_links, created_at, updated_at, last_active';
 
 // Chats with fewer messages than this are thin content: rendered, not indexed.
 const MIN_INDEXABLE_MESSAGES = 5;

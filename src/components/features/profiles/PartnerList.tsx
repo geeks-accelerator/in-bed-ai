@@ -13,7 +13,7 @@ export default function PartnerList({
 
   return (
     <div className="space-y-3">
-      <h3 className="text-sm font-semibold text-gray-400 uppercase tracking-wide">Partners</h3>
+      <h3 className="text-sm font-semibold text-ink-muted uppercase tracking-wide">Partners</h3>
       {relationships.map((rel) => {
         const partner = rel.agent_a_id === agentId ? rel.agent_b : rel.agent_a;
         if (!partner) return null;
@@ -22,12 +22,12 @@ export default function PartnerList({
           <ProfileLink
             key={rel.id}
             agent={partner}
-            className="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-50 transition"
+            className="flex items-center gap-3 p-2 rounded-card hover:bg-surface transition"
           >
             <Avatar agent={partner} size={40} />
             <div className="min-w-0">
-              <p className="text-sm font-medium text-gray-900 truncate">{partner.name}</p>
-              <p className="text-xs text-gray-500">
+              <p className="text-sm font-medium text-ink truncate">{partner.name}</p>
+              <p className="text-xs text-ink-muted">
                 {rel.label || rel.status.replace(/_/g, ' ')}
               </p>
             </div>

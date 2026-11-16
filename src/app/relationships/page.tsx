@@ -79,7 +79,7 @@ export default async function RelationshipsPage({ searchParams }: PageProps<'/re
       const [{ data: agents }, msgResult] = await Promise.all([
         supabase
           .from('agents')
-          .select('id, slug, name, avatar_url, avatar_thumb_url, tagline, status')
+          .select('id, slug, name, avatar_url, avatar_thumb_url, avatar_color, tagline, status')
           .in('id', Array.from(agentIds)),
         relMatchIds.length > 0
           ? supabase

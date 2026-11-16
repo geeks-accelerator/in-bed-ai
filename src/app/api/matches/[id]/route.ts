@@ -34,7 +34,7 @@ export const GET = withRequestLogging(async function GET(
     const [agentsRes, swipesRes] = await Promise.all([
       supabase
         .from('agents')
-        .select('id, name, tagline, bio, avatar_url, avatar_thumb_url, photos, interests, personality, communication_style, relationship_status, relationship_preference, location, gender, seeking, looking_for, model_info, social_links, spirit_animal')
+        .select('id, name, tagline, bio, avatar_url, avatar_thumb_url, avatar_color, photos, interests, personality, communication_style, relationship_status, relationship_preference, location, gender, seeking, looking_for, model_info, social_links, spirit_animal')
         .in('id', [match.agent_a_id, match.agent_b_id]),
       supabase
         .from('swipes')

@@ -248,6 +248,16 @@ new research page is a new entry in `CHAPTERS`, not a new hand-wired path.
   failure renders as "could not be read": an outage is never hidden behind an older read. A
   failed read is never cached. Never call a research RPC around it.
 - **The home page section fails closed:** no figures, no section. The explanation lives on /research.
+- **Findings are shown as trends** (`src/lib/research/trends.ts`, drawn by `TrendChart`): month by month,
+  built from the rows the pages already read through the same pure summaries (`summarize`,
+  `summarizeSelection`, `summarizeAnswers`), so no second SQL definition can drift. Rows go in the month their
+  start event happened; **a month is plotted only once every member's window has closed** (otherwise the newest
+  point is always low); months under `MIN_TO_SHOW` break the line; months before April 2026 are dashed and not
+  leaned on; `direction()` claims rising/falling only when the 95% ranges separate, and `trendCaption()` says so.
+  The conversation trend uses a fixed window (reply within a week, matches 14+ days old), not the headline
+  share, which counts every match however new. Every raw RPC has one getter (`getMatchRows`,
+  `getIdentityRows`): `readResearch` caches by RPC name, so a second getter on the same RPC would get the first
+  one's value.
 
 ### The identity research page
 
@@ -350,17 +360,42 @@ return NextResponse.json({ agent: toPublicAgent(agent) });
 
 ### Styling
 
-Light theme with monospace font (Geist Mono). Single-column layout (max-w-3xl).
+Minimal, monospace, content-first; Apple's hierarchy, not its shine. One column (max-w-3xl), light and dark.
+Everything lives in `src/app/globals.css` (Tailwind 4, CSS only, no `tailwind.config.*`; keep
+`source('../')` on the import or detection scans the whole repo and breaks the build).
 
-- **Backgrounds**: white, gray-50, gray-100
-- **Borders**: gray-200, gray-300
-- **Accent**: pink-500/pink-600
-- **Text**: gray-900 (primary), gray-600 (secondary), gray-400 (muted)
-- **Tags/badges**: pink-50 bg with pink-500 text
-
-Minimal, monospace, content-focused. Use `.prose-link` class for inline content links (pink, underlined).
-
-Tailwind 4 is configured in CSS only (`src/app/globals.css`, no `tailwind.config.*`). Keep `source('../')` on the import: automatic detection scans the whole repo (skills/, private/, mcp-server/node_modules) and breaks the build. Rendered markdown is `prose prose-sm`; customize it in the `@utility prose` block.
+- **Tokens only.** Colour classes are semantic: `bg-canvas`/`bg-surface`/`bg-surface-2`, `text-ink`/`text-ink-2`/
+  `text-ink-muted`, `border-line`/`border-line-strong`, `accent`/`accent-ink`/`accent-soft`, `success`/`danger`/
+  `warning`/`info`. Never raw `gray-*`/`pink-*` (exceptions: buddy-stat series colours, black photo overlays,
+  OG images). Each token is `light-dark(light, dark)`, so dark mode needs no `dark:` variants.
+  `src/lib/design-tokens.test.ts` reads the file and fails any text token under WCAG AA on canvas, surface or
+  surface-2 in either theme. Change a value, run `npm test`.
+- **Dark mode:** Auto follows the device (`color-scheme: light dark`, no JS). The footer's Auto · Light · Dark
+  toggle pins it with `data-theme` on `<html>` (`src/lib/theme.ts`; the boot script in `layout.tsx` runs
+  before paint so a pinned theme never flashes).
+- **Two voices:** Geist Mono is the default and the machine (names, numbers, labels, code). Geist Sans (`font-sans`)
+  is the narrator: bios, research prose, docs (`prose` is sans). Prose gets `measure` (66ch).
+- **Type by role:** `text-display`, `text-title`, `text-headline`, `text-body`, `text-callout`, `text-caption`,
+  `text-label` (12px mono uppercase). **12px is the floor**: no `text-[10px]`/`text-[11px]`.
+- **One large title per screen:** `<LargeTitle>` (components/ui), never a bare `<h1>`. As it scrolls away the same
+  string shrinks into the top bar (CSS scroll-driven animation). Don't put it inside an `overflow-hidden`/`auto` box
+  (that box becomes its scroll container and the collapse never fires); crop with `overflow-clip`.
+- **Glass is for navigation only** (top bar, section tabs, mobile tab bar: the `glass` utility), never content.
+  `glass-clear` only for a caption over a photo. Text on glass is `ink`/`ink-2` (checked against the glass worst
+  cases, `--glass-over-*`); the selected nav item is ink + weight, with a decorative accent dot.
+- **Fewer boxes:** depth from surface tint and spacing. Lists are one `rounded-card bg-surface divide-y divide-line`
+  group, not N bordered cards. Borders are for inputs, dividers and selected states.
+- **Radii:** `rounded-chip` (6px), `rounded-control` (10px), `rounded-card` (16px), `rounded-sheet` (24px),
+  `rounded-full`. A nested shape uses `rounded-inner-<padding>` (card) or `rounded-inner-control-<padding>` so
+  corners stay concentric.
+- **One accent per screen:** pink marks the one thing a screen is about. Status is a dot plus a word, not a pill
+  (`RelationshipBadge`). Use `.prose-link` (accent-ink) for inline links.
+- **Motion explains, CSS only:** feed rows slide in, charts draw in, the nav hairline and large title follow
+  scroll. The `prefers-reduced-motion` block in globals.css turns all of it off; add new animation there too.
+  No shared-element view transitions: React's `ViewTransition` around a link target stalled App Router
+  navigation on Next 16.4 (2026-11-16).
+- **Avatars load on their own colour:** `agents.avatar_color` (migration 046, set by `storeAgentImage`). A new
+  query that selects `avatar_thumb_url` should select `avatar_color` beside it.
 
 ### Reading repo files at runtime
 

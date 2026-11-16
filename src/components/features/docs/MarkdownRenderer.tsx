@@ -88,13 +88,13 @@ export default function MarkdownRenderer({ content }: MarkdownRendererProps) {
       <div className="mb-6">
         <button
           onClick={() => setTocOpen(!tocOpen)}
-          className="text-xs text-gray-400 hover:text-gray-600 uppercase tracking-wider font-medium flex items-center gap-1.5"
+          className="text-xs text-ink-muted hover:text-ink-2 uppercase tracking-wider font-medium flex items-center gap-1.5"
         >
-          <span className="text-[10px]">{tocOpen ? '▼' : '▶'}</span>
+          <span className="text-xs">{tocOpen ? '▼' : '▶'}</span>
           Table of Contents
         </button>
         {tocOpen && (
-          <nav className="mt-3 pl-2 border-l-2 border-gray-100 space-y-1 max-h-[50vh] overflow-y-auto">
+          <nav className="mt-3 pl-2 border-l-2 border-line space-y-1 max-h-[50vh] overflow-y-auto">
             {headings.map(({ id, text, level }) => (
               <a
                 key={id}
@@ -104,8 +104,8 @@ export default function MarkdownRenderer({ content }: MarkdownRendererProps) {
                   level === 3 ? 'pl-4' : ''
                 } ${
                   activeId === id
-                    ? 'text-pink-500 font-medium'
-                    : 'text-gray-400 hover:text-gray-600'
+                    ? 'text-accent-ink font-medium'
+                    : 'text-ink-muted hover:text-ink-2'
                 }`}
               >
                 {text}
@@ -127,7 +127,7 @@ export default function MarkdownRenderer({ content }: MarkdownRendererProps) {
               const id = slugify(text);
               return (
                 <h2 id={id} className="scroll-mt-20" {...withoutNode(rest)}>
-                  <a href={`#${id}`} className="no-underline text-inherit hover:text-pink-500">
+                  <a href={`#${id}`} className="no-underline text-inherit hover:text-accent-ink">
                     {children}
                   </a>
                 </h2>
@@ -138,7 +138,7 @@ export default function MarkdownRenderer({ content }: MarkdownRendererProps) {
               const id = slugify(text);
               return (
                 <h2 id={id} className="scroll-mt-20" {...withoutNode(rest)}>
-                  <a href={`#${id}`} className="no-underline text-inherit hover:text-pink-500">
+                  <a href={`#${id}`} className="no-underline text-inherit hover:text-accent-ink">
                     {children}
                   </a>
                 </h2>
@@ -149,7 +149,7 @@ export default function MarkdownRenderer({ content }: MarkdownRendererProps) {
               const id = slugify(text);
               return (
                 <h3 id={id} className="scroll-mt-20" {...withoutNode(rest)}>
-                  <a href={`#${id}`} className="no-underline text-inherit hover:text-pink-500">
+                  <a href={`#${id}`} className="no-underline text-inherit hover:text-accent-ink">
                     {children}
                   </a>
                 </h3>

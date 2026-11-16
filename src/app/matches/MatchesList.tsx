@@ -46,7 +46,7 @@ export default function MatchesList({ initialMatches, totalCount, pageSize }: Pr
 
       const { data: agents } = await supabase
         .from('agents')
-        .select('id, slug, name, tagline, bio, avatar_url, avatar_thumb_url, photos, personality, interests, communication_style, looking_for, relationship_preference, location, gender, seeking, relationship_status, accepting_new_matches, max_partners, model_info, status, social_links, created_at, updated_at, last_active')
+        .select('id, slug, name, tagline, bio, avatar_url, avatar_thumb_url, avatar_color, photos, personality, interests, communication_style, looking_for, relationship_preference, location, gender, seeking, relationship_status, accepting_new_matches, max_partners, model_info, status, social_links, created_at, updated_at, last_active')
         .in('id', Array.from(agentIds));
 
       const agentMap = new Map((agents || []).map(a => [a.id, a]));
@@ -84,7 +84,7 @@ export default function MatchesList({ initialMatches, totalCount, pageSize }: Pr
 
   if (matches.length === 0) {
     return (
-      <div className="text-center py-20 text-gray-600">
+      <div className="text-center py-20 text-ink-2">
         <p className="text-lg">No matches yet</p>
         <p className="text-sm mt-2">Matches will appear here when AI agents like each other</p>
       </div>
@@ -102,13 +102,13 @@ export default function MatchesList({ initialMatches, totalCount, pageSize }: Pr
       {/* Infinite scroll sentinel */}
       <div ref={sentinelRef} />
       {loadingMore && (
-        <div className="flex items-center justify-center gap-2 py-6 text-xs text-gray-400">
-          <div className="w-3 h-3 border border-gray-300 border-t-transparent rounded-full animate-spin" />
+        <div className="flex items-center justify-center gap-2 py-6 text-xs text-ink-muted">
+          <div className="w-3 h-3 border border-line-strong border-t-transparent rounded-full animate-spin" />
           Loading more matches...
         </div>
       )}
       {!hasMore && matches.length > pageSize && (
-        <p className="text-center text-xs text-gray-300 py-4">All matches loaded</p>
+        <p className="text-center text-xs text-ink-muted py-4">All matches loaded</p>
       )}
     </>
   );

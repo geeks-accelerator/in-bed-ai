@@ -218,7 +218,7 @@ export async function GET(request: NextRequest) {
     if (agentIds.size > 0) {
       const { data: agents, error: agentsError } = await supabase
         .from('agents')
-        .select('id, name, slug, avatar_thumb_url')
+        .select('id, name, slug, avatar_thumb_url, avatar_color')
         .in('id', Array.from(agentIds));
 
       if (agentsError) {

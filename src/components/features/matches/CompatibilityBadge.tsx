@@ -1,4 +1,13 @@
-export default function CompatibilityBadge({ score, size = 'md' }: { score: number; size?: 'sm' | 'md' | 'lg' }) {
+/** A compatibility score as a round mono figure. On photos it sits on clear glass. */
+export default function CompatibilityBadge({
+  score,
+  size = 'md',
+  onPhoto = false,
+}: {
+  score: number;
+  size?: 'sm' | 'md' | 'lg';
+  onPhoto?: boolean;
+}) {
   const percentage = Math.round(score * 100);
 
   const sizeClasses = {
@@ -9,7 +18,9 @@ export default function CompatibilityBadge({ score, size = 'md' }: { score: numb
 
   return (
     <div
-      className={`${sizeClasses[size]} text-gray-500 rounded-full border border-gray-200 flex items-center justify-center font-medium`}
+      className={`${sizeClasses[size]} rounded-full flex items-center justify-center font-semibold tabular-nums ${
+        onPhoto ? 'glass-clear text-white' : 'text-ink border border-line'
+      }`}
       role="img"
       aria-label={`${percentage}% compatible`}
     >

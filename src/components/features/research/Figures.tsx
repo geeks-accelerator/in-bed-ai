@@ -2,6 +2,8 @@ import Link from '@/components/ui/Link';
 import { rate, STUDY_NAME } from '@/lib/research/stats';
 import { CHAPTERS, type ChapterHref } from '@/lib/research/chapters';
 
+export { TrendChart } from './TrendChart';
+
 /**
  * The shared furniture of every research page.
  *
@@ -11,10 +13,10 @@ import { CHAPTERS, type ChapterHref } from '@/lib/research/chapters';
  */
 
 export const LABELS = {
-  MEASURED: 'bg-gray-900 text-white',
-  SIGNAL: 'bg-pink-50 text-pink-600 border border-pink-200',
-  CONTEXT: 'bg-gray-100 text-gray-500',
-  'OUR READ': 'bg-white text-gray-500 border border-gray-300',
+  MEASURED: 'bg-ink text-on-ink',
+  SIGNAL: 'bg-accent-soft text-accent-ink',
+  CONTEXT: 'bg-surface-2 text-ink-2',
+  'OUR READ': 'bg-surface-2 text-ink-2',
 } as const;
 
 export type SectionKind = keyof typeof LABELS;
@@ -23,10 +25,10 @@ export function Section({ kind, title, id, children }: {
   kind: SectionKind; title: string; id?: string; children: React.ReactNode;
 }) {
   return (
-    <section id={id} className="space-y-4 border-t border-gray-200 pt-8 scroll-mt-20">
+    <section id={id} className="space-y-5 border-t border-line pt-10 scroll-mt-32">
       <div className="flex items-baseline gap-3 flex-wrap">
-        <h2 className="text-sm font-medium uppercase tracking-wider text-gray-900">{title}</h2>
-        <span className={`text-[10px] px-1.5 py-0.5 rounded-sm uppercase tracking-wider ${LABELS[kind]}`}>
+        <h2 className="text-label uppercase text-ink">{title}</h2>
+        <span className={`text-xs px-1.5 py-0.5 rounded-chip uppercase tracking-wider ${LABELS[kind]}`}>
           {kind}
         </span>
       </div>
@@ -46,20 +48,20 @@ export function Bar({ label, k, n, note }: { label: string; k: number; n: number
   return (
     <div className="space-y-1">
       <div className="flex items-baseline justify-between gap-3 text-xs">
-        <span className="text-gray-700">{label}</span>
-        <span className="text-gray-500 shrink-0 tabular-nums">
+        <span className="text-ink-2">{label}</span>
+        <span className="text-ink-muted shrink-0 tabular-nums">
           {r.pct === null ? 'too few to say'
             : r.label === 'none of them' ? `none of ${n.toLocaleString('en-US')}`
             : r.label === 'all of them' ? `all ${n.toLocaleString('en-US')}`
             : `${r.label} of ${n.toLocaleString('en-US')}`}
         </span>
       </div>
-      <div className="h-2 bg-gray-100 rounded-sm overflow-hidden">
-        <div className="h-full bg-pink-500" style={{ width: `${width}%` }} />
+      <div className="h-2 bg-surface-2 rounded-chip overflow-hidden">
+        <div className="h-full bg-accent" style={{ width: `${width}%` }} />
       </div>
-      {note && <p className="text-[11px] text-gray-500">{note}</p>}
+      {note && <p className="text-xs text-ink-muted">{note}</p>}
       {r.pct !== null && r.lo !== null && (
-        <p className="text-[11px] text-gray-500 tabular-nums">
+        <p className="text-xs text-ink-muted tabular-nums">
           n={n.toLocaleString('en-US')} · 95% range {r.lo.toFixed(0)}–{r.hi!.toFixed(0)}%
         </p>
       )}
@@ -67,12 +69,16 @@ export function Bar({ label, k, n, note }: { label: string; k: number; n: number
   );
 }
 
+/**
+ * A finding stated as a sentence. The figure leads, in ink, but stays inside
+ * the sentence: a number on its own goes stale, and the trend chart beside it
+ * carries how it is moving.
+ */
 export function Headline({ value, children }: { value: string; children: React.ReactNode }) {
   return (
-    <div className="flex items-baseline gap-4 flex-wrap">
-      <span className="text-3xl md:text-4xl font-normal text-gray-900 tabular-nums">{value}</span>
-      <p className="text-sm text-gray-600 flex-1 min-w-[16rem]">{children}</p>
-    </div>
+    <p className="font-sans text-headline text-ink-2 measure">
+      <span className="font-mono font-semibold text-ink tabular-nums">{value}</span> {children}
+    </p>
   );
 }
 
@@ -82,7 +88,7 @@ export function Headline({ value, children }: { value: string; children: React.R
  */
 export function Unavailable() {
   return (
-    <div className="py-16 text-center text-sm text-gray-400 border border-dashed border-gray-200 rounded-lg">
+    <div className="py-16 text-center text-sm text-ink-muted bg-surface rounded-card">
       <p>The figures could not be read just now.</p>
       <p className="text-xs mt-1">
         No number is shown in their place: one we cannot verify is worse than none. This page is
@@ -114,25 +120,25 @@ export function DiffDot({ label, sub, diff, lo, hi, range = 40, unavailable }: {
   return (
     <div className="grid grid-cols-[minmax(8rem,11rem)_1fr_4.5rem] items-center gap-3 text-xs">
       <div>
-        <div className="text-gray-700">{label}</div>
-        {sub && <div className="text-[11px] text-gray-500">{sub}</div>}
+        <div className="text-ink-2">{label}</div>
+        {sub && <div className="text-xs text-ink-muted">{sub}</div>}
       </div>
       <div className="relative h-6" aria-hidden={diff === null}>
-        <div className="absolute inset-y-0 w-px bg-gray-300" style={{ left: '50%' }} />
+        <div className="absolute inset-y-0 w-px bg-line-strong" style={{ left: '50%' }} />
         {diff !== null && lo !== null && hi !== null ? (
           <>
-            <div className={`absolute top-1/2 h-px -translate-y-1/2 ${clear ? 'bg-pink-400' : 'bg-gray-400'}`}
+            <div className={`absolute top-1/2 h-px -translate-y-1/2 ${clear ? 'bg-accent' : 'bg-line-strong'}`}
                  style={{ left: x(lo), width: `calc(${x(hi)} - ${x(lo)})` }} />
-            <div className={`absolute top-1/2 h-2.5 w-2.5 -translate-x-1/2 -translate-y-1/2 rounded-full ${clear ? 'bg-pink-500' : 'bg-gray-500'}`}
+            <div className={`absolute top-1/2 h-2.5 w-2.5 -translate-x-1/2 -translate-y-1/2 rounded-full ${clear ? 'bg-accent' : 'bg-ink-muted'}`}
                  style={{ left: x(diff) }} />
           </>
         ) : (
-          <div className="absolute inset-0 flex items-center justify-center text-[11px] text-gray-400">
+          <div className="absolute inset-0 flex items-center justify-center text-xs text-ink-muted">
             {unavailable ?? 'cannot be compared'}
           </div>
         )}
       </div>
-      <div className="text-right tabular-nums text-gray-500">
+      <div className="text-right tabular-nums text-ink-muted">
         {diff === null ? '—' : (() => {
           const r = Math.round(diff);
           return r === 0 ? '0 pts' : `${r > 0 ? '+' : '−'}${Math.abs(r)} pts`;
@@ -145,7 +151,7 @@ export function DiffDot({ label, sub, diff, lo, hi, range = 40, unavailable }: {
 /** The axis labels under a set of DiffDots. */
 export function DiffAxis({ range = 40, left, right }: { range?: number; left: string; right: string }) {
   return (
-    <div className="grid grid-cols-[minmax(8rem,11rem)_1fr_4.5rem] gap-3 text-[10px] text-gray-400">
+    <div className="grid grid-cols-[minmax(8rem,11rem)_1fr_4.5rem] gap-3 text-xs text-ink-muted">
       <div />
       <div className="flex justify-between tabular-nums">
         <span>−{range}</span><span>{left} · 0 · {right}</span><span>+{range}</span>
@@ -165,12 +171,12 @@ export function Chapter({ href, heading, children }: {
   const c = CHAPTERS.find((x) => x.href === href)!;
   const n = CHAPTERS.indexOf(c) + 1;
   return (
-    <section className="space-y-4 border-t border-gray-200 pt-8">
-      <p className="text-[10px] uppercase tracking-wider text-gray-400">
+    <section className="space-y-5 border-t border-line pt-10">
+      <p className="text-label uppercase text-ink-muted">
         Chapter {n} · {c.stage}
       </p>
-      <h2 className="text-base md:text-lg font-medium text-gray-900">
-        <Link href={href} className="hover:text-pink-600">{heading}</Link>
+      <h2 className="text-headline text-ink">
+        <Link href={href} className="hover:text-accent-ink">{heading}</Link>
       </h2>
       {children}
       <p className="text-sm">
@@ -184,7 +190,7 @@ export function Chapter({ href, heading, children }: {
 export function ChapterCrumb({ href }: { href: ChapterHref }) {
   const c = CHAPTERS.find((x) => x.href === href)!;
   return (
-    <p className="text-[10px] uppercase tracking-wider text-gray-400">
+    <p className="text-xs uppercase tracking-wider text-ink-muted">
       <Link href="/research" className="prose-link">{STUDY_NAME}</Link> · chapter{' '}
       {CHAPTERS.indexOf(c) + 1} · {c.stage.toLowerCase()}
     </p>
@@ -194,13 +200,13 @@ export function ChapterCrumb({ href }: { href: ChapterHref }) {
 /** Between chapters: where this one sits, and the way to the others and the shared method. */
 export function ChapterNav({ current }: { current: ChapterHref }) {
   return (
-    <nav className="border-t border-gray-200 pt-6 text-xs text-gray-500 space-y-2">
-      <p className="text-[10px] uppercase tracking-wider text-gray-400">The chapters</p>
+    <nav className="border-t border-line pt-6 text-xs text-ink-muted space-y-2">
+      <p className="text-xs uppercase tracking-wider text-ink-muted">The chapters</p>
       <ol className="space-y-1">
         {CHAPTERS.map((c, i) => (
           <li key={c.href}>
             {c.href === current
-              ? <span className="text-gray-900">{i + 1}. {c.title}</span>
+              ? <span className="text-ink">{i + 1}. {c.title}</span>
               : <Link href={c.href} className="prose-link">{i + 1}. {c.title}</Link>}
           </li>
         ))}
@@ -212,3 +218,4 @@ export function ChapterNav({ current }: { current: ChapterHref }) {
     </nav>
   );
 }
+

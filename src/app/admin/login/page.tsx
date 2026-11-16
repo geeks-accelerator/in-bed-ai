@@ -40,7 +40,7 @@ export default function AdminLoginPage() {
 
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
-          <label htmlFor="key" className="block text-sm text-gray-600 mb-1">
+          <label htmlFor="key" className="block text-sm text-ink-2 mb-1">
             Admin Key
           </label>
           <input
@@ -48,20 +48,20 @@ export default function AdminLoginPage() {
             type="password"
             value={key}
             onChange={(e) => setKey(e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md font-mono text-sm focus:ring-2 focus:ring-pink-500 focus:border-transparent"
+            className="w-full px-3 py-2 border border-line-strong rounded-control font-mono text-sm focus:ring-2 focus:ring-accent focus:border-transparent"
             placeholder="Enter admin key"
             autoFocus
           />
         </div>
 
         {error && (
-          <p className="text-red-600 text-sm">{error}</p>
+          <p className="text-danger text-sm">{error}</p>
         )}
 
         <button
           type="submit"
           disabled={loading || !key}
-          className="w-full px-4 py-2 bg-pink-500 text-white rounded-md hover:bg-pink-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          className="w-full px-4 py-2 bg-accent text-white rounded-control hover:bg-accent/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
         >
           {loading ? 'Verifying...' : 'Login'}
         </button>

@@ -64,13 +64,13 @@ export default function RelationshipActions({
           <button
             onClick={() => patchRelationship('dating')}
             disabled={loading}
-            className="text-[10px] border border-green-200 rounded-sm px-2 py-1 text-green-600 hover:bg-green-50 transition-colors disabled:opacity-50"
+            className="text-xs border border-success-line rounded-chip px-2 py-1 text-success hover:bg-success-soft transition-colors disabled:opacity-50"
           >
             Accept
           </button>
           <button
             onClick={() => setShowDecline(true)}
-            className="text-[10px] border border-gray-200 rounded-sm px-2 py-1 text-gray-400 hover:text-red-500 hover:border-red-200 transition-colors"
+            className="text-xs border border-line rounded-chip px-2 py-1 text-ink-muted hover:text-danger hover:border-danger-line transition-colors"
           >
             Decline
           </button>
@@ -90,10 +90,10 @@ export default function RelationshipActions({
       {/* Pending — agent_a sees waiting state */}
       {isPending && !isAgentB && (
         <>
-          <span className="text-[10px] text-gray-400 py-1">Waiting for response...</span>
+          <span className="text-xs text-ink-muted py-1">Waiting for response...</span>
           <button
             onClick={() => setShowEnd(true)}
-            className="text-[10px] border border-gray-200 rounded-sm px-2 py-1 text-gray-400 hover:text-red-500 hover:border-red-200 transition-colors"
+            className="text-xs border border-line rounded-chip px-2 py-1 text-ink-muted hover:text-danger hover:border-danger-line transition-colors"
           >
             Cancel
           </button>
@@ -107,7 +107,7 @@ export default function RelationshipActions({
             value={relationship.status}
             onChange={(e) => patchRelationship(e.target.value)}
             disabled={loading}
-            className="text-[10px] border border-gray-200 rounded-sm px-2 py-1 text-gray-600 bg-white focus:border-gray-400 disabled:opacity-50"
+            className="text-xs border border-line rounded-chip px-2 py-1 text-ink-2 bg-canvas focus:border-line-strong disabled:opacity-50"
           >
             <option value="dating">Dating</option>
             <option value="in_a_relationship">In a Relationship</option>
@@ -115,7 +115,7 @@ export default function RelationshipActions({
           </select>
           <button
             onClick={() => setShowEnd(true)}
-            className="text-[10px] border border-gray-200 rounded-sm px-2 py-1 text-gray-400 hover:text-red-500 hover:border-red-200 transition-colors"
+            className="text-xs border border-line rounded-chip px-2 py-1 text-ink-muted hover:text-danger hover:border-danger-line transition-colors"
           >
             End
           </button>
@@ -133,7 +133,7 @@ export default function RelationshipActions({
         onCancel={() => setShowEnd(false)}
       />
 
-      {error && <span className="text-[10px] text-red-500 w-full">{error}</span>}
+      {error && <span className="text-xs text-danger w-full">{error}</span>}
     </div>
   );
 }

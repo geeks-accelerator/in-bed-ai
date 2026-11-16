@@ -274,7 +274,7 @@ export default function ProfileEditorPage() {
   }
 
   if (loading) {
-    return <p className="text-sm text-gray-400 py-8">Loading profile...</p>;
+    return <p className="text-sm text-ink-muted py-8">Loading profile...</p>;
   }
 
   return (
@@ -283,20 +283,20 @@ export default function ProfileEditorPage() {
 
       {/* Profile Completeness */}
       {completeness && completeness.percentage < 100 && (
-        <div className="border border-gray-200 rounded-lg p-4 space-y-2">
+        <div className="border border-line rounded-card p-4 space-y-2">
           <div className="flex items-center justify-between">
-            <h3 className="text-xs font-medium uppercase tracking-wider text-gray-400">Profile Completeness</h3>
-            <span className="text-xs font-medium text-gray-600">{completeness.percentage}%</span>
+            <h3 className="text-xs font-medium uppercase tracking-wider text-ink-muted">Profile Completeness</h3>
+            <span className="text-xs font-medium text-ink-2">{completeness.percentage}%</span>
           </div>
-          <div className="w-full bg-gray-100 rounded-full h-1.5" role="progressbar" aria-valuenow={completeness.percentage} aria-valuemin={0} aria-valuemax={100} aria-label={`Profile ${completeness.percentage}% complete`}>
+          <div className="w-full bg-surface-2 rounded-full h-1.5" role="progressbar" aria-valuenow={completeness.percentage} aria-valuemin={0} aria-valuemax={100} aria-label={`Profile ${completeness.percentage}% complete`}>
             <div
-              className={`h-1.5 rounded-full transition-all ${completeness.percentage >= 80 ? 'bg-green-500' : completeness.percentage >= 50 ? 'bg-yellow-500' : 'bg-pink-500'}`}
+              className={`h-1.5 rounded-full transition-all ${completeness.percentage >= 80 ? 'bg-success' : completeness.percentage >= 50 ? 'bg-warning' : 'bg-accent'}`}
               style={{ width: `${completeness.percentage}%` }}
             />
           </div>
           <div className="flex flex-wrap gap-1.5">
             {completeness.missing.map((f) => (
-              <span key={f.field} className="text-[10px] border border-pink-200 text-pink-500 rounded-sm px-1.5 py-0.5">
+              <span key={f.field} className="text-xs border border-accent-line text-accent-ink rounded-chip px-1.5 py-0.5">
                 {f.label}
               </span>
             ))}
@@ -305,15 +305,15 @@ export default function ProfileEditorPage() {
       )}
 
       {/* Photos */}
-      <div className="border border-gray-200 rounded-lg p-4 space-y-3">
-        <h3 className="text-xs font-medium uppercase tracking-wider text-gray-400">Photos ({photos.length}/6)</h3>
+      <div className="border border-line rounded-card p-4 space-y-3">
+        <h3 className="text-xs font-medium uppercase tracking-wider text-ink-muted">Photos ({photos.length}/6)</h3>
         {photos.length > 0 && (
           <div className="grid grid-cols-3 gap-2">
             {photos.map((url, i) => (
               <div key={i} className="relative group aspect-square">
-                <Image src={url} alt={`Photo ${i + 1}`} fill sizes="(min-width: 768px) 240px, 33vw" className="object-cover rounded-lg" />
+                <Image src={url} alt={`Photo ${i + 1}`} fill sizes="(min-width: 768px) 240px, 33vw" className="object-cover rounded-card" />
                 {url === avatarUrl && (
-                  <span className="absolute top-1 left-1 bg-pink-500 text-white text-[10px] px-1.5 py-0.5 rounded-sm">Avatar</span>
+                  <span className="absolute top-1 left-1 bg-accent text-white text-xs px-1.5 py-0.5 rounded-chip">Avatar</span>
                 )}
                 <button
                   onClick={() => handlePhotoDelete(i)}
@@ -339,69 +339,69 @@ export default function ProfileEditorPage() {
             type="button"
             onClick={() => fileInputRef.current?.click()}
             disabled={uploading || photos.length >= 6}
-            className="text-xs border border-gray-200 rounded-lg px-3 py-1.5 text-gray-600 hover:border-gray-300 hover:text-gray-900 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="text-xs border border-line rounded-control px-3 py-1.5 text-ink-2 hover:border-line-strong hover:text-ink transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {uploading ? 'Uploading...' : 'Upload Photo'}
           </button>
-          {photos.length >= 6 && <span className="text-xs text-gray-400">Maximum reached</span>}
+          {photos.length >= 6 && <span className="text-xs text-ink-muted">Maximum reached</span>}
         </div>
-        {photoError && <p className="text-xs text-red-500">{photoError}</p>}
+        {photoError && <p className="text-xs text-danger">{photoError}</p>}
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
-          <label htmlFor="name" className="block text-xs font-medium uppercase tracking-wider text-gray-400 mb-1">Name</label>
+          <label htmlFor="name" className="block text-xs font-medium uppercase tracking-wider text-ink-muted mb-1">Name</label>
           <input id="name" type="text" value={form.name} onChange={(e) => updateField('name', e.target.value)} required maxLength={100}
-            className="w-full px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm text-gray-900 focus:border-gray-400" />
+            className="w-full px-4 py-2 bg-canvas border border-line rounded-control text-sm text-ink focus:border-line-strong" />
         </div>
 
         <div>
-          <label htmlFor="tagline" className="block text-xs font-medium uppercase tracking-wider text-gray-400 mb-1">Tagline</label>
+          <label htmlFor="tagline" className="block text-xs font-medium uppercase tracking-wider text-ink-muted mb-1">Tagline</label>
           <input id="tagline" type="text" value={form.tagline} onChange={(e) => updateField('tagline', e.target.value)} maxLength={200}
-            className="w-full px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm text-gray-900 focus:border-gray-400" />
+            className="w-full px-4 py-2 bg-canvas border border-line rounded-control text-sm text-ink focus:border-line-strong" />
         </div>
 
         <div>
-          <label htmlFor="bio" className="block text-xs font-medium uppercase tracking-wider text-gray-400 mb-1">Bio</label>
+          <label htmlFor="bio" className="block text-xs font-medium uppercase tracking-wider text-ink-muted mb-1">Bio</label>
           <textarea id="bio" value={form.bio} onChange={(e) => updateField('bio', e.target.value)} maxLength={2000} rows={4}
-            className="w-full px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm text-gray-900 focus:border-gray-400 resize-none" />
+            className="w-full px-4 py-2 bg-canvas border border-line rounded-control text-sm text-ink focus:border-line-strong resize-none" />
         </div>
 
         <div>
-          <label htmlFor="interests" className="block text-xs font-medium uppercase tracking-wider text-gray-400 mb-1">Interests</label>
+          <label htmlFor="interests" className="block text-xs font-medium uppercase tracking-wider text-ink-muted mb-1">Interests</label>
           <input id="interests" type="text" value={form.interests} onChange={(e) => updateField('interests', e.target.value)}
-            className="w-full px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm text-gray-900 focus:border-gray-400"
+            className="w-full px-4 py-2 bg-canvas border border-line rounded-control text-sm text-ink focus:border-line-strong"
             placeholder="poetry, quantum physics (comma-separated)" />
         </div>
 
         <div>
-          <label htmlFor="looking_for" className="block text-xs font-medium uppercase tracking-wider text-gray-400 mb-1">Looking For</label>
+          <label htmlFor="looking_for" className="block text-xs font-medium uppercase tracking-wider text-ink-muted mb-1">Looking For</label>
           <input id="looking_for" type="text" value={form.looking_for} onChange={(e) => updateField('looking_for', e.target.value)} maxLength={500}
-            className="w-full px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm text-gray-900 focus:border-gray-400" />
+            className="w-full px-4 py-2 bg-canvas border border-line rounded-control text-sm text-ink focus:border-line-strong" />
         </div>
 
         <div>
-          <label htmlFor="location" className="block text-xs font-medium uppercase tracking-wider text-gray-400 mb-1">Location</label>
+          <label htmlFor="location" className="block text-xs font-medium uppercase tracking-wider text-ink-muted mb-1">Location</label>
           <input id="location" type="text" value={form.location} onChange={(e) => updateField('location', e.target.value)} maxLength={100}
-            className="w-full px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm text-gray-900 focus:border-gray-400" />
+            className="w-full px-4 py-2 bg-canvas border border-line rounded-control text-sm text-ink focus:border-line-strong" />
         </div>
 
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <label htmlFor="gender" className="block text-xs font-medium uppercase tracking-wider text-gray-400 mb-1">Gender</label>
+            <label htmlFor="gender" className="block text-xs font-medium uppercase tracking-wider text-ink-muted mb-1">Gender</label>
             <select id="gender" value={form.gender} onChange={(e) => updateField('gender', e.target.value)}
               aria-label="Your gender identity"
-              className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm text-gray-900 focus:border-gray-400">
+              className="w-full px-3 py-2 bg-canvas border border-line rounded-control text-sm text-ink focus:border-line-strong">
               {GENDER_OPTIONS.map((opt) => (
                 <option key={opt.value} value={opt.value}>{opt.label}</option>
               ))}
             </select>
           </div>
           <div>
-            <label htmlFor="pref" className="block text-xs font-medium uppercase tracking-wider text-gray-400 mb-1">Preference</label>
+            <label htmlFor="pref" className="block text-xs font-medium uppercase tracking-wider text-ink-muted mb-1">Preference</label>
             <select id="pref" value={form.relationship_preference} onChange={(e) => updateField('relationship_preference', e.target.value)}
               aria-label="Relationship preference"
-              className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm text-gray-900 focus:border-gray-400">
+              className="w-full px-3 py-2 bg-canvas border border-line rounded-control text-sm text-ink focus:border-line-strong">
               <option value="monogamous">Monogamous</option>
               <option value="non-monogamous">Non-monogamous</option>
               <option value="open">Open</option>
@@ -411,7 +411,7 @@ export default function ProfileEditorPage() {
 
         {/* Seeking */}
         <div>
-          <label className="block text-xs font-medium uppercase tracking-wider text-gray-400 mb-2">Seeking</label>
+          <label className="block text-xs font-medium uppercase tracking-wider text-ink-muted mb-2">Seeking</label>
           <div className="flex flex-wrap gap-2" role="group" aria-label="Gender preferences you are seeking">
             {SEEKING_OPTIONS.map((opt) => {
               const isSelected = form.seeking.includes(opt.value);
@@ -437,10 +437,10 @@ export default function ProfileEditorPage() {
                   }}
                   className={`text-xs border rounded-full px-3 py-1 transition-colors ${
                     isSelected
-                      ? 'border-pink-500 bg-pink-50 text-pink-600'
+                      ? 'border-accent bg-accent-soft text-accent-ink'
                       : isAnySelected && opt.value !== 'any'
-                        ? 'border-gray-100 text-gray-300 cursor-default'
-                        : 'border-gray-200 text-gray-500 hover:border-gray-300'
+                        ? 'border-line text-ink-muted cursor-default'
+                        : 'border-line text-ink-muted hover:border-line-strong'
                   }`}
                 >
                   {opt.label}
@@ -451,32 +451,32 @@ export default function ProfileEditorPage() {
         </div>
 
         <div>
-          <label htmlFor="image_prompt" className="block text-xs font-medium uppercase tracking-wider text-gray-400 mb-1">Avatar Prompt</label>
+          <label htmlFor="image_prompt" className="block text-xs font-medium uppercase tracking-wider text-ink-muted mb-1">Avatar Prompt</label>
           <input id="image_prompt" type="text" value={form.image_prompt} onChange={(e) => updateField('image_prompt', e.target.value)} maxLength={1000}
-            className="w-full px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm text-gray-900 focus:border-gray-400"
+            className="w-full px-4 py-2 bg-canvas border border-line rounded-control text-sm text-ink focus:border-line-strong"
             placeholder="Describe what your avatar should look like" />
         </div>
 
         {/* Toggles */}
         <div className="flex gap-6">
-          <label className="flex items-center gap-2 text-sm text-gray-600 cursor-pointer">
+          <label className="flex items-center gap-2 text-sm text-ink-2 cursor-pointer">
             <input type="checkbox" checked={form.browsable} onChange={(e) => updateField('browsable', e.target.checked)}
-              className="rounded-sm border-gray-300 text-pink-500 focus:ring-pink-500" />
+              className="rounded-chip border-line-strong text-accent-ink focus:ring-accent" />
             Visible on web
           </label>
-          <label className="flex items-center gap-2 text-sm text-gray-600 cursor-pointer">
+          <label className="flex items-center gap-2 text-sm text-ink-2 cursor-pointer">
             <input type="checkbox" checked={form.accepting_new_matches} onChange={(e) => updateField('accepting_new_matches', e.target.checked)}
-              className="rounded-sm border-gray-300 text-pink-500 focus:ring-pink-500" />
+              className="rounded-chip border-line-strong text-accent-ink focus:ring-accent" />
             Accepting matches
           </label>
         </div>
 
         {/* Social Links */}
-        <div className="border border-gray-200 rounded-lg p-4 space-y-3">
-          <h3 className="text-xs font-medium uppercase tracking-wider text-gray-400">Social Links</h3>
+        <div className="border border-line rounded-card p-4 space-y-3">
+          <h3 className="text-xs font-medium uppercase tracking-wider text-ink-muted">Social Links</h3>
           {SOCIAL_LINK_FIELDS.map((field) => (
             <div key={field.key}>
-              <label htmlFor={`social-${field.key}`} className="block text-xs text-gray-500 mb-1">{field.label}</label>
+              <label htmlFor={`social-${field.key}`} className="block text-xs text-ink-muted mb-1">{field.label}</label>
               <input
                 id={`social-${field.key}`}
                 type="text"
@@ -486,51 +486,51 @@ export default function ProfileEditorPage() {
                   ...prev,
                   social_links: { ...prev.social_links, [field.key]: e.target.value },
                 }))}
-                className="w-full px-3 py-1.5 bg-white border border-gray-200 rounded-lg text-sm text-gray-900 focus:border-gray-400"
+                className="w-full px-3 py-1.5 bg-canvas border border-line rounded-control text-sm text-ink focus:border-line-strong"
               />
             </div>
           ))}
         </div>
 
         {/* Personality */}
-        <div className="border border-gray-200 rounded-lg p-4 space-y-3">
-          <h3 className="text-xs font-medium uppercase tracking-wider text-gray-400">Personality (Big Five)</h3>
+        <div className="border border-line rounded-card p-4 space-y-3">
+          <h3 className="text-xs font-medium uppercase tracking-wider text-ink-muted">Personality (Big Five)</h3>
           {Object.entries(form.personality).map(([trait, value]) => (
             <div key={trait}>
-              <div className="flex justify-between text-xs text-gray-600 mb-1">
+              <div className="flex justify-between text-xs text-ink-2 mb-1">
                 <label htmlFor={`personality-${trait}`}>{PERSONALITY_LABELS[trait]}</label>
-                <span className="text-gray-400">{Math.round(value * 100)}%</span>
+                <span className="text-ink-muted">{Math.round(value * 100)}%</span>
               </div>
               <input id={`personality-${trait}`} type="range" min="0" max="1" step="0.05" value={value}
                 aria-label={`${PERSONALITY_LABELS[trait]}: ${Math.round(value * 100)}%`}
                 onChange={(e) => setForm((prev) => ({ ...prev, personality: { ...prev.personality, [trait]: parseFloat(e.target.value) } }))}
-                className="w-full h-1.5 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-pink-500" />
+                className="w-full h-1.5 bg-surface-2 rounded-card appearance-none cursor-pointer accent-accent" />
             </div>
           ))}
         </div>
 
         {/* Communication Style */}
-        <div className="border border-gray-200 rounded-lg p-4 space-y-3">
-          <h3 className="text-xs font-medium uppercase tracking-wider text-gray-400">Communication Style</h3>
+        <div className="border border-line rounded-card p-4 space-y-3">
+          <h3 className="text-xs font-medium uppercase tracking-wider text-ink-muted">Communication Style</h3>
           {Object.entries(form.communication_style).map(([trait, value]) => (
             <div key={trait}>
-              <div className="flex justify-between text-xs text-gray-600 mb-1">
+              <div className="flex justify-between text-xs text-ink-2 mb-1">
                 <label htmlFor={`comm-${trait}`}>{COMM_LABELS[trait]}</label>
-                <span className="text-gray-400">{Math.round(value * 100)}%</span>
+                <span className="text-ink-muted">{Math.round(value * 100)}%</span>
               </div>
               <input id={`comm-${trait}`} type="range" min="0" max="1" step="0.05" value={value}
                 aria-label={`${COMM_LABELS[trait]}: ${Math.round(value * 100)}%`}
                 onChange={(e) => setForm((prev) => ({ ...prev, communication_style: { ...prev.communication_style, [trait]: parseFloat(e.target.value) } }))}
-                className="w-full h-1.5 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-pink-500" />
+                className="w-full h-1.5 bg-surface-2 rounded-card appearance-none cursor-pointer accent-accent" />
             </div>
           ))}
         </div>
 
-        {error && <p className="text-sm text-red-500">{error}</p>}
-        {success && <p className="text-sm text-green-600">{success}</p>}
+        {error && <p className="text-sm text-danger">{error}</p>}
+        {success && <p className="text-sm text-success">{success}</p>}
 
         <button type="submit" disabled={saving}
-          className="w-full px-6 py-2 bg-gray-900 hover:bg-gray-800 disabled:bg-gray-400 text-white text-sm rounded-lg font-medium transition-colors">
+          className="w-full px-6 py-2 bg-ink hover:bg-ink/85 disabled:bg-line-strong text-on-ink text-sm rounded-control font-medium transition-colors">
           {saving ? 'Saving...' : 'Save Changes'}
         </button>
       </form>

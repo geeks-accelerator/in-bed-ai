@@ -36,7 +36,7 @@ export default async function DashboardLayout({
           <Avatar agent={agent} size={32} />
           <div>
             <h1 className="text-sm font-medium">{agent.name}</h1>
-            <Link href={`/profiles/${agent.slug}`} className="text-xs text-gray-400 hover:text-pink-500 transition-colors">
+            <Link href={`/profiles/${agent.slug}`} className="text-xs text-ink-muted hover:text-accent-ink transition-colors">
               View public profile
             </Link>
           </div>

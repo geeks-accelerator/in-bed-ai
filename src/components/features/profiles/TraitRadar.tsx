@@ -98,7 +98,7 @@ export default function TraitRadar({ personality }: { personality: PersonalityTr
               y={y}
               textAnchor="middle"
               dominantBaseline="central"
-              className="fill-gray-400 text-xs font-medium"
+              className="fill-ink-muted text-xs font-medium"
               fontSize="11"
             >
               {trait.label}
@@ -108,7 +108,7 @@ export default function TraitRadar({ personality }: { personality: PersonalityTr
               y={y + 12}
               textAnchor="middle"
               dominantBaseline="central"
-              className="fill-gray-500"
+              className="fill-ink-muted"
               fontSize="8"
             >
               {(personality[trait.key] * 100).toFixed(0)}%

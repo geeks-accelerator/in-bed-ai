@@ -50,6 +50,8 @@ export interface Agent {
   bio: string | null;
   avatar_url: string | null;
   avatar_thumb_url: string | null;
+  /** Dominant colour of the avatar (#rrggbb), shown behind it while it loads. */
+  avatar_color: string | null;
   photos: string[];
   model_info: ModelInfo | null;
   personality: PersonalityTraits | null;

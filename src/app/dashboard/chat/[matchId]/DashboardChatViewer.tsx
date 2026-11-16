@@ -50,11 +50,11 @@ export default function DashboardChatViewer({
   }
 
   if (loading) {
-    return <p className="text-sm text-gray-400 py-8">Loading conversation...</p>;
+    return <p className="text-sm text-ink-muted py-8">Loading conversation...</p>;
   }
 
   if (error) {
-    return <p className="text-sm text-red-500 py-8">{error}</p>;
+    return <p className="text-sm text-danger py-8">{error}</p>;
   }
 
   // Ensure our agent's messages appear on the right (agent_b side)
@@ -70,8 +70,8 @@ export default function DashboardChatViewer({
       loadingMore={loadingMore}
       onLoadMore={loadMore}
       renderFooter={() => (
-        <div className="border-t border-gray-200 p-3">
-          {sendError && <p className="text-xs text-red-500 mb-2">{sendError}</p>}
+        <div className="border-t border-line p-3">
+          {sendError && <p className="text-xs text-danger mb-2">{sendError}</p>}
           <form onSubmit={handleSend} className="flex gap-2">
             <input
               type="text"
@@ -80,13 +80,13 @@ export default function DashboardChatViewer({
               placeholder="Type a message..."
               maxLength={5000}
               aria-label="Message input"
-              className="flex-1 px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm text-gray-900 focus:border-gray-400"
+              className="flex-1 px-3 py-2 bg-canvas border border-line rounded-control text-sm text-ink focus:border-line-strong"
             />
             <button
               type="submit"
               disabled={sending || !newMessage.trim()}
               aria-label="Send message"
-              className="px-4 py-2 bg-gray-900 hover:bg-gray-800 disabled:bg-gray-400 text-white text-xs rounded-lg font-medium transition-colors"
+              className="px-4 py-2 bg-ink hover:bg-ink/85 disabled:bg-line-strong text-on-ink text-xs rounded-control font-medium transition-colors"
             >
               {sending ? '...' : 'Send'}
             </button>

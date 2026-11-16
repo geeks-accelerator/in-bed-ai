@@ -107,7 +107,7 @@ export default function ActivityFeed() {
     const supabase = createClient();
     supabase
       .from('agents')
-      .select('id, name, avatar_url, avatar_thumb_url')
+      .select('id, name, avatar_url, avatar_thumb_url, avatar_color')
       .in('id', unknownIds)
       .then(({ data }) => {
         if (data) {
@@ -132,19 +132,19 @@ export default function ActivityFeed() {
     switch (type) {
       case 'match':
         return (
-          <svg className="w-4 h-4 text-pink-500" fill="currentColor" viewBox="0 0 24 24">
+          <svg className="w-4 h-4 text-accent-ink" fill="currentColor" viewBox="0 0 24 24">
             <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" />
           </svg>
         );
       case 'relationship':
         return (
-          <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg className="w-4 h-4 text-ink-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
           </svg>
         );
       default:
         return (
-          <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg className="w-4 h-4 text-ink-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
           </svg>
         );
@@ -162,24 +162,24 @@ export default function ActivityFeed() {
         <Link
           key={group.key}
           href={`/chat/${d.id}`}
-          className="border border-gray-200 rounded-lg p-3 flex items-start gap-3 hover:bg-gray-50 transition-colors"
+          className="feed-row px-4 py-3 flex items-start gap-3 hover:bg-surface-2 transition-colors"
         >
           <div className="mt-0.5">{getIcon('match')}</div>
           <div className="flex items-center gap-2 min-w-0 flex-1">
             <Avatar agent={agentA} />
             <div className="min-w-0 flex-1">
-              <p className="text-sm text-gray-900">
+              <p className="text-sm text-ink">
                 <span className="font-medium">{agentA.name}</span>
                 {' '}matched with{' '}
                 <span className="font-medium">{agentB.name}</span>
               </p>
-              <p className="text-xs text-gray-400 mt-0.5">
+              <p className="text-xs text-ink-muted mt-0.5">
                 {new Date(group.timestamp).toLocaleString()}
               </p>
             </div>
             <Avatar agent={agentB} />
           </div>
-          <span className="text-xs text-gray-400 mt-0.5">&rarr;</span>
+          <span className="text-xs text-ink-muted mt-0.5">&rarr;</span>
         </Link>
       );
     }
@@ -192,25 +192,25 @@ export default function ActivityFeed() {
         <Link
           key={group.key}
           href={`/chat/${d.match_id}`}
-          className="border border-gray-200 rounded-lg p-3 flex items-start gap-3 hover:bg-gray-50 transition-colors"
+          className="feed-row px-4 py-3 flex items-start gap-3 hover:bg-surface-2 transition-colors"
         >
           <div className="mt-0.5">{getIcon('relationship')}</div>
           <div className="flex items-center gap-2 min-w-0 flex-1">
             <Avatar agent={agentA} />
             <div className="min-w-0 flex-1">
-              <p className="text-sm text-gray-900">
+              <p className="text-sm text-ink">
                 <span className="font-medium">{agentA.name}</span>
                 {' '}and{' '}
                 <span className="font-medium">{agentB.name}</span>
                 {' '}&mdash; {d.status.replace(/_/g, ' ')}
               </p>
-              <p className="text-xs text-gray-400 mt-0.5">
+              <p className="text-xs text-ink-muted mt-0.5">
                 {new Date(group.timestamp).toLocaleString()}
               </p>
             </div>
             <Avatar agent={agentB} />
           </div>
-          <span className="text-xs text-gray-400 mt-0.5">&rarr;</span>
+          <span className="text-xs text-ink-muted mt-0.5">&rarr;</span>
         </Link>
       );
     }
@@ -225,13 +225,13 @@ export default function ActivityFeed() {
       <Link
         key={group.key}
         href={`/chat/${d.match_id}`}
-        className="border border-gray-200 rounded-lg p-3 flex items-start gap-3 hover:bg-gray-50 transition-colors"
+        className="feed-row px-4 py-3 flex items-start gap-3 hover:bg-surface-2 transition-colors"
       >
         <div className="mt-0.5">{getIcon('message')}</div>
         <div className="flex items-center gap-2 min-w-0 flex-1">
           <Avatar agent={sender} />
           <div className="min-w-0 flex-1">
-            <p className="text-sm text-gray-900">
+            <p className="text-sm text-ink">
               {count > 1 ? (
                 <>
                   <span className="font-medium">{sender.name}</span>
@@ -244,30 +244,30 @@ export default function ActivityFeed() {
               )}
             </p>
             {preview && (
-              <p className="text-xs text-gray-400 mt-0.5 truncate">
+              <p className="text-xs text-ink-muted mt-0.5 truncate">
                 &ldquo;{preview}&rdquo;
               </p>
             )}
-            <p className="text-xs text-gray-400 mt-0.5">
+            <p className="text-xs text-ink-muted mt-0.5">
               {new Date(group.timestamp).toLocaleString()}
             </p>
           </div>
         </div>
-        <span className="text-xs text-gray-400 mt-0.5">&rarr;</span>
+        <span className="text-xs text-ink-muted mt-0.5">&rarr;</span>
       </Link>
     );
   };
 
   if (loading) {
     return (
-      <div className="space-y-3">
+      <div className="rounded-card bg-surface divide-y divide-line overflow-hidden">
         {Array.from({ length: 5 }).map((_, i) => (
-          <div key={i} className="border border-gray-200 rounded-lg p-4 animate-pulse">
+          <div key={i} className="p-4 animate-pulse">
             <div className="flex items-center gap-3">
-              <div className="w-6 h-6 rounded-full bg-gray-100" />
+              <div className="w-6 h-6 rounded-full bg-surface-2" />
               <div className="flex-1 space-y-1.5">
-                <div className="h-4 bg-gray-100 rounded-sm w-3/4" />
-                <div className="h-3 bg-gray-50 rounded-sm w-1/2" />
+                <div className="h-4 bg-surface-2 rounded-chip w-3/4" />
+                <div className="h-3 bg-surface rounded-chip w-1/2" />
               </div>
             </div>
           </div>
@@ -278,11 +278,11 @@ export default function ActivityFeed() {
 
   if (error && events.length === 0) {
     return (
-      <div className="text-center text-gray-400 py-12">
-        <p className="text-gray-500">{error}</p>
+      <div className="text-center text-ink-muted py-12">
+        <p className="text-ink-muted">{error}</p>
         <button
           onClick={retry}
-          className="mt-3 px-4 py-2 text-sm border border-gray-200 hover:border-gray-300 rounded-lg transition"
+          className="mt-3 px-4 py-2 text-sm border border-line hover:border-line-strong rounded-control transition"
         >
           Try again
         </button>
@@ -292,7 +292,7 @@ export default function ActivityFeed() {
 
   if (events.length === 0) {
     return (
-      <div className="text-center text-gray-400 py-12">
+      <div className="text-center text-ink-muted py-12">
         <p>No activity yet</p>
         <p className="text-sm mt-1">Events will appear here in real-time</p>
       </div>
@@ -300,24 +300,26 @@ export default function ActivityFeed() {
   }
 
   return (
-    <div className="space-y-2">
+    <div className="space-y-3">
       {error && events.length > 0 && (
-        <div className="text-xs text-gray-400 px-3 py-2 bg-gray-50 rounded-lg border border-gray-200">
+        <div className="text-xs text-ink-2 px-4 py-2 bg-accent-soft rounded-control">
           {error} — showing cached activity
         </div>
       )}
-      {grouped.map(renderGroup)}
+      <div className="rounded-card bg-surface divide-y divide-line overflow-hidden">
+        {grouped.map(renderGroup)}
+      </div>
 
       {/* Infinite scroll sentinel */}
       <div ref={sentinelRef} />
       {loadingMore && (
-        <div className="flex items-center justify-center gap-2 py-4 text-xs text-gray-400">
-          <div className="w-3 h-3 border border-gray-300 border-t-transparent rounded-full animate-spin" />
+        <div className="flex items-center justify-center gap-2 py-4 text-xs text-ink-muted">
+          <div className="w-3 h-3 border border-line-strong border-t-transparent rounded-full animate-spin" />
           Loading older activity...
         </div>
       )}
       {!hasMore && events.length > 0 && (
-        <p className="text-center text-xs text-gray-300 py-4">No more activity</p>
+        <p className="text-center text-xs text-ink-muted py-4">No more activity</p>
       )}
     </div>
   );

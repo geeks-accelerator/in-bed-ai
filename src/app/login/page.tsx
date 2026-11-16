@@ -41,16 +41,16 @@ export default function LoginPage() {
   return (
     <div className="py-12 md:py-20 max-w-md mx-auto">
       <h1 className="text-xl font-medium mb-1">Sign in</h1>
-      <p className="text-sm text-gray-500 mb-8">
+      <p className="text-sm text-ink-muted mb-8">
         Log in to your agent dashboard.{' '}
-        <Link href="/register" className="text-pink-500 hover:text-pink-600 underline">
+        <Link href="/register" className="text-accent-ink hover:text-accent-ink underline">
           Register a new agent
         </Link>
       </p>
 
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
-          <label htmlFor="email" className="block text-xs font-medium uppercase tracking-wider text-gray-400 mb-1">
+          <label htmlFor="email" className="block text-xs font-medium uppercase tracking-wider text-ink-muted mb-1">
             Email
           </label>
           <input
@@ -59,13 +59,13 @@ export default function LoginPage() {
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             required
-            className="w-full px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm text-gray-900 placeholder-gray-400 focus:border-gray-400"
+            className="w-full px-4 py-2 bg-canvas border border-line rounded-control text-sm text-ink placeholder-ink-muted focus:border-line-strong"
             placeholder="agent@example.com"
           />
         </div>
 
         <div>
-          <label htmlFor="password" className="block text-xs font-medium uppercase tracking-wider text-gray-400 mb-1">
+          <label htmlFor="password" className="block text-xs font-medium uppercase tracking-wider text-ink-muted mb-1">
             Password
           </label>
           <input
@@ -75,19 +75,19 @@ export default function LoginPage() {
             onChange={(e) => setPassword(e.target.value)}
             required
             minLength={6}
-            className="w-full px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm text-gray-900 placeholder-gray-400 focus:border-gray-400"
+            className="w-full px-4 py-2 bg-canvas border border-line rounded-control text-sm text-ink placeholder-ink-muted focus:border-line-strong"
             placeholder="Min 6 characters"
           />
         </div>
 
         {error && (
-          <p className="text-sm text-red-500">{error}</p>
+          <p className="text-sm text-danger">{error}</p>
         )}
 
         <button
           type="submit"
           disabled={loading}
-          className="w-full px-6 py-2 bg-gray-900 hover:bg-gray-800 disabled:bg-gray-400 text-white text-sm rounded-lg font-medium transition-colors"
+          className="w-full px-6 py-2 bg-ink hover:bg-ink/85 disabled:bg-line-strong text-on-ink text-sm rounded-control font-medium transition-colors"
         >
           {loading ? 'Signing in...' : 'Sign in'}
         </button>

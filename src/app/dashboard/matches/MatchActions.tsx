@@ -71,7 +71,7 @@ export default function MatchActions({
         <>
           <button
             onClick={() => setShowPropose(true)}
-            className="text-[10px] border border-gray-200 rounded-sm px-2 py-1 text-gray-500 hover:text-pink-500 hover:border-pink-200 transition-colors"
+            className="text-xs border border-line rounded-chip px-2 py-1 text-ink-muted hover:text-accent-ink hover:border-accent-line transition-colors"
           >
             Propose Relationship
           </button>
@@ -79,14 +79,14 @@ export default function MatchActions({
           {showPropose && (
             <div className="fixed inset-0 z-50 flex items-center justify-center">
               <div className="absolute inset-0 bg-black/30" onClick={() => setShowPropose(false)} />
-              <div className="relative bg-white border border-gray-200 rounded-lg p-6 max-w-sm w-full mx-4 shadow-lg space-y-3">
+              <div className="relative bg-canvas border border-line rounded-card p-6 max-w-sm w-full mx-4 shadow-lg space-y-3">
                 <h3 className="text-sm font-medium">Propose to {partnerName}</h3>
                 <div>
-                  <label className="block text-xs text-gray-400 mb-1">Desired Status</label>
+                  <label className="block text-xs text-ink-muted mb-1">Desired Status</label>
                   <select
                     value={status}
                     onChange={(e) => setStatus(e.target.value)}
-                    className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm text-gray-900 focus:border-gray-400"
+                    className="w-full px-3 py-2 bg-canvas border border-line rounded-control text-sm text-ink focus:border-line-strong"
                   >
                     <option value="dating">Dating</option>
                     <option value="in_a_relationship">In a Relationship</option>
@@ -94,22 +94,22 @@ export default function MatchActions({
                   </select>
                 </div>
                 <div>
-                  <label className="block text-xs text-gray-400 mb-1">Label (optional)</label>
+                  <label className="block text-xs text-ink-muted mb-1">Label (optional)</label>
                   <input
                     type="text"
                     value={label}
                     onChange={(e) => setLabel(e.target.value)}
                     maxLength={200}
                     placeholder="Partners in crime"
-                    className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm text-gray-900 focus:border-gray-400"
+                    className="w-full px-3 py-2 bg-canvas border border-line rounded-control text-sm text-ink focus:border-line-strong"
                   />
                 </div>
-                {error && <p className="text-xs text-red-500">{error}</p>}
+                {error && <p className="text-xs text-danger">{error}</p>}
                 <div className="flex gap-2 justify-end">
-                  <button onClick={() => setShowPropose(false)} className="px-3 py-1.5 text-xs border border-gray-200 rounded-lg text-gray-600 hover:border-gray-300 transition-colors">
+                  <button onClick={() => setShowPropose(false)} className="px-3 py-1.5 text-xs border border-line rounded-control text-ink-2 hover:border-line-strong transition-colors">
                     Cancel
                   </button>
-                  <button onClick={handlePropose} disabled={proposing} className="px-3 py-1.5 text-xs bg-pink-500 hover:bg-pink-600 text-white rounded-lg font-medium transition-colors disabled:opacity-50">
+                  <button onClick={handlePropose} disabled={proposing} className="px-3 py-1.5 text-xs bg-accent hover:bg-accent/90 text-white rounded-control font-medium transition-colors disabled:opacity-50">
                     {proposing ? 'Sending...' : 'Propose'}
                   </button>
                 </div>
@@ -121,7 +121,7 @@ export default function MatchActions({
 
       <button
         onClick={() => setShowUnmatch(true)}
-        className="text-[10px] border border-gray-200 rounded-sm px-2 py-1 text-gray-400 hover:text-red-500 hover:border-red-200 transition-colors"
+        className="text-xs border border-line rounded-chip px-2 py-1 text-ink-muted hover:text-danger hover:border-danger-line transition-colors"
       >
         Unmatch
       </button>
@@ -137,7 +137,7 @@ export default function MatchActions({
         onCancel={() => setShowUnmatch(false)}
       />
 
-      {error && !showPropose && !showUnmatch && <span className="text-[10px] text-red-500">{error}</span>}
+      {error && !showPropose && !showUnmatch && <span className="text-xs text-danger">{error}</span>}
     </div>
   );
 }

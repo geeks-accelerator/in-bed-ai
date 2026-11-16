@@ -148,17 +148,17 @@ export default function AdminLogsPage() {
   };
 
   const getStatusColor = (status: number | null) => {
-    if (!status) return 'text-gray-400';
-    if (status < 300) return 'text-green-600';
-    if (status < 400) return 'text-blue-600';
-    if (status < 500) return 'text-yellow-600';
-    return 'text-red-600';
+    if (!status) return 'text-ink-muted';
+    if (status < 300) return 'text-success';
+    if (status < 400) return 'text-info';
+    if (status < 500) return 'text-warning';
+    return 'text-danger';
   };
 
   if (loading && !data) {
     return (
       <div className="py-8">
-        <p className="text-gray-500">Loading...</p>
+        <p className="text-ink-muted">Loading...</p>
       </div>
     );
   }
@@ -166,7 +166,7 @@ export default function AdminLogsPage() {
   if (error && !data) {
     return (
       <div className="py-8">
-        <p className="text-red-600">{error}</p>
+        <p className="text-danger">{error}</p>
       </div>
     );
   }
@@ -186,15 +186,15 @@ export default function AdminLogsPage() {
     <div className="py-8 space-y-6">
       {/* Conversion Funnel */}
       <div>
-        <h2 className="text-sm font-medium text-gray-500 mb-3">Conversion Funnel (all time)</h2>
+        <h2 className="text-sm font-medium text-ink-muted mb-3">Conversion Funnel (all time)</h2>
         <div className="flex items-end gap-1">
           {funnelItems.map((item, i) => (
             <div key={item.label} className="flex-1 flex flex-col items-center">
               <p className="text-xl font-medium">{item.value.toLocaleString()}</p>
-              <p className="text-xs text-gray-500">{item.label}</p>
-              {item.sub && <p className="text-xs text-gray-400">{item.sub}</p>}
+              <p className="text-xs text-ink-muted">{item.label}</p>
+              {item.sub && <p className="text-xs text-ink-muted">{item.sub}</p>}
               {i < funnelItems.length - 1 && (
-                <div className="text-gray-300 mt-1">&rarr;</div>
+                <div className="text-ink-muted mt-1">&rarr;</div>
               )}
             </div>
           ))}
@@ -203,24 +203,24 @@ export default function AdminLogsPage() {
 
       {/* Activity Stats Cards */}
       <div>
-        <h2 className="text-sm font-medium text-gray-500 mb-3">API Activity (last 24h)</h2>
+        <h2 className="text-sm font-medium text-ink-muted mb-3">API Activity (last 24h)</h2>
         <div className="grid grid-cols-3 gap-4">
-          <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+          <div className="bg-surface border border-line rounded-card p-4">
             <p className="text-2xl font-medium">{data?.stats.unique_agents || 0}</p>
-            <p className="text-sm text-gray-500">Active Agents</p>
+            <p className="text-sm text-ink-muted">Active Agents</p>
           </div>
-          <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+          <div className="bg-surface border border-line rounded-card p-4">
             <p className="text-2xl font-medium">{data?.stats.total_requests.toLocaleString() || 0}</p>
-            <p className="text-sm text-gray-500">Total Requests</p>
+            <p className="text-sm text-ink-muted">Total Requests</p>
           </div>
-          <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+          <div className="bg-surface border border-line rounded-card p-4">
             <p className="text-2xl font-medium">
-              <span className="text-green-600">{data?.stats.success_count || 0}</span>
+              <span className="text-success">{data?.stats.success_count || 0}</span>
               {' ok '}
-              <span className="text-red-600">{data?.stats.error_count || 0}</span>
+              <span className="text-danger">{data?.stats.error_count || 0}</span>
               {' err'}
             </p>
-            <p className="text-sm text-gray-500">Status</p>
+            <p className="text-sm text-ink-muted">Status</p>
           </div>
         </div>
       </div>
@@ -232,7 +232,7 @@ export default function AdminLogsPage() {
           <select
             value={path}
             onChange={(e) => { setPath(e.target.value); setPage(0); }}
-            className="px-3 py-1.5 border border-gray-300 rounded-md text-sm font-mono bg-white focus:ring-2 focus:ring-pink-500"
+            className="px-3 py-1.5 border border-line-strong rounded-control text-sm font-mono bg-canvas focus:ring-2 focus:ring-accent"
           >
             <option value="">All Endpoints</option>
             {data?.paths.map((p) => (
@@ -240,15 +240,15 @@ export default function AdminLogsPage() {
             ))}
           </select>
 
-          <div className="flex items-center gap-1 border border-gray-300 rounded-md overflow-hidden">
+          <div className="flex items-center gap-1 border border-line-strong rounded-control overflow-hidden">
             {TIME_RANGES.map((tr) => (
               <button
                 key={tr.value}
                 onClick={() => { setTimeRange(tr.value); setPage(0); }}
                 className={`px-2 py-1 text-sm ${
                   timeRange === tr.value
-                    ? 'bg-pink-500 text-white'
-                    : 'bg-white text-gray-600 hover:bg-gray-50'
+                    ? 'bg-accent text-white'
+                    : 'bg-canvas text-ink-2 hover:bg-surface'
                 }`}
               >
                 {tr.label}
@@ -256,19 +256,19 @@ export default function AdminLogsPage() {
             ))}
           </div>
 
-          <label className="flex items-center gap-1.5 text-sm text-gray-600 cursor-pointer">
+          <label className="flex items-center gap-1.5 text-sm text-ink-2 cursor-pointer">
             <input
               type="checkbox"
               checked={autoRefresh}
               onChange={(e) => setAutoRefresh(e.target.checked)}
-              className="rounded-sm border-gray-300 text-pink-500 focus:ring-pink-500"
+              className="rounded-chip border-line-strong text-accent-ink focus:ring-accent"
             />
             Auto
           </label>
 
           <button
             onClick={fetchLogs}
-            className="p-1.5 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-md"
+            className="p-1.5 text-ink-muted hover:text-ink-2 hover:bg-surface-2 rounded-control"
             title="Refresh"
           >
             <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -279,52 +279,52 @@ export default function AdminLogsPage() {
       </div>
 
       {/* Logs Table */}
-      <div className="border border-gray-200 rounded-lg overflow-hidden">
+      <div className="border border-line rounded-card overflow-hidden">
         <table className="w-full text-sm">
-          <thead className="bg-gray-50 border-b border-gray-200">
+          <thead className="bg-surface border-b border-line">
             <tr>
-              <th className="text-left px-4 py-2 font-medium text-gray-600">Time</th>
-              <th className="text-left px-4 py-2 font-medium text-gray-600">Method</th>
-              <th className="text-left px-4 py-2 font-medium text-gray-600">Path</th>
-              <th className="text-left px-4 py-2 font-medium text-gray-600">Agent</th>
-              <th className="text-right px-4 py-2 font-medium text-gray-600">Status</th>
-              <th className="text-right px-4 py-2 font-medium text-gray-600">Duration</th>
+              <th className="text-left px-4 py-2 font-medium text-ink-2">Time</th>
+              <th className="text-left px-4 py-2 font-medium text-ink-2">Method</th>
+              <th className="text-left px-4 py-2 font-medium text-ink-2">Path</th>
+              <th className="text-left px-4 py-2 font-medium text-ink-2">Agent</th>
+              <th className="text-right px-4 py-2 font-medium text-ink-2">Status</th>
+              <th className="text-right px-4 py-2 font-medium text-ink-2">Duration</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-gray-100">
+          <tbody className="divide-y divide-line">
             {data?.logs.map((log) => (
-              <tr key={log.id} className="hover:bg-gray-50">
-                <td className="px-4 py-2 text-gray-500 whitespace-nowrap">
+              <tr key={log.id} className="hover:bg-surface">
+                <td className="px-4 py-2 text-ink-muted whitespace-nowrap">
                   {formatTime(log.created_at)}
                 </td>
                 <td className="px-4 py-2 font-mono">
                   <span className={
-                    log.method === 'GET' ? 'text-blue-600' :
-                    log.method === 'POST' ? 'text-green-600' :
-                    log.method === 'PATCH' ? 'text-yellow-600' :
-                    log.method === 'DELETE' ? 'text-red-600' :
-                    'text-gray-600'
+                    log.method === 'GET' ? 'text-info' :
+                    log.method === 'POST' ? 'text-success' :
+                    log.method === 'PATCH' ? 'text-warning' :
+                    log.method === 'DELETE' ? 'text-danger' :
+                    'text-ink-2'
                   }>
                     {log.method}
                   </span>
                 </td>
-                <td className="px-4 py-2 font-mono text-gray-700 max-w-xs truncate" title={log.path}>
+                <td className="px-4 py-2 font-mono text-ink-2 max-w-xs truncate" title={log.path}>
                   {log.path}
                 </td>
-                <td className="px-4 py-2 text-gray-600">
-                  {log.agent_name || <span className="text-gray-400">&mdash;</span>}
+                <td className="px-4 py-2 text-ink-2">
+                  {log.agent_name || <span className="text-ink-muted">&mdash;</span>}
                 </td>
                 <td className={`px-4 py-2 text-right font-mono ${getStatusColor(log.status_code)}`}>
                   {log.status_code || '—'}
                 </td>
-                <td className="px-4 py-2 text-right font-mono text-gray-500">
+                <td className="px-4 py-2 text-right font-mono text-ink-muted">
                   {log.duration_ms != null ? `${log.duration_ms}ms` : '—'}
                 </td>
               </tr>
             ))}
             {data?.logs.length === 0 && (
               <tr>
-                <td colSpan={6} className="px-4 py-8 text-center text-gray-500">
+                <td colSpan={6} className="px-4 py-8 text-center text-ink-muted">
                   No logs found
                 </td>
               </tr>
@@ -335,7 +335,7 @@ export default function AdminLogsPage() {
 
       {/* Pagination */}
       {totalPages > 1 && (
-        <div className="flex items-center justify-between text-sm text-gray-600">
+        <div className="flex items-center justify-between text-sm text-ink-2">
           <p>
             Showing {page * 50 + 1}-{Math.min((page + 1) * 50, data?.total || 0)} of {data?.total || 0}
           </p>
@@ -343,14 +343,14 @@ export default function AdminLogsPage() {
             <button
               onClick={() => setPage(p => Math.max(0, p - 1))}
               disabled={page === 0}
-              className="px-3 py-1 border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="px-3 py-1 border border-line-strong rounded-control hover:bg-surface disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Previous
             </button>
             <button
               onClick={() => setPage(p => p + 1)}
               disabled={page >= totalPages - 1}
-              className="px-3 py-1 border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="px-3 py-1 border border-line-strong rounded-control hover:bg-surface disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Next
             </button>
@@ -361,26 +361,26 @@ export default function AdminLogsPage() {
       {/* Log Files */}
       {logFiles.length > 0 && (
         <div>
-          <h2 className="text-sm font-medium text-gray-500 mb-3">Application Log Files</h2>
-          <div className="border border-gray-200 rounded-lg overflow-hidden">
+          <h2 className="text-sm font-medium text-ink-muted mb-3">Application Log Files</h2>
+          <div className="border border-line rounded-card overflow-hidden">
             <table className="w-full text-sm">
-              <thead className="bg-gray-50 border-b border-gray-200">
+              <thead className="bg-surface border-b border-line">
                 <tr>
-                  <th className="text-left px-4 py-2 font-medium text-gray-600">Date</th>
-                  <th className="text-right px-4 py-2 font-medium text-gray-600">Size</th>
-                  <th className="text-right px-4 py-2 font-medium text-gray-600"></th>
+                  <th className="text-left px-4 py-2 font-medium text-ink-2">Date</th>
+                  <th className="text-right px-4 py-2 font-medium text-ink-2">Size</th>
+                  <th className="text-right px-4 py-2 font-medium text-ink-2"></th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-100">
+              <tbody className="divide-y divide-line">
                 {logFiles.map((file) => (
-                  <tr key={file.name} className="hover:bg-gray-50">
-                    <td className="px-4 py-2 font-mono text-gray-700">{file.date}</td>
-                    <td className="px-4 py-2 text-right text-gray-500">{formatBytes(file.size)}</td>
+                  <tr key={file.name} className="hover:bg-surface">
+                    <td className="px-4 py-2 font-mono text-ink-2">{file.date}</td>
+                    <td className="px-4 py-2 text-right text-ink-muted">{formatBytes(file.size)}</td>
                     <td className="px-4 py-2 text-right">
                       <button
                         onClick={() => downloadLogFile(file.name)}
                         disabled={downloading === file.name}
-                        className="text-pink-600 hover:text-pink-700 disabled:opacity-50 font-medium"
+                        className="text-accent-ink hover:text-accent-ink disabled:opacity-50 font-medium"
                       >
                         {downloading === file.name ? 'Downloading...' : 'Download'}
                       </button>
@@ -394,13 +394,13 @@ export default function AdminLogsPage() {
       )}
 
       {/* Logout */}
-      <div className="pt-4 border-t border-gray-200">
+      <div className="pt-4 border-t border-line">
         <button
           onClick={() => {
             localStorage.removeItem('admin_key');
             router.push('/admin/login');
           }}
-          className="text-sm text-gray-500 hover:text-gray-700"
+          className="text-sm text-ink-muted hover:text-ink-2"
         >
           Logout
         </button>

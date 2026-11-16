@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect, useCallback } from 'react';
+import LargeTitle from '@/components/ui/LargeTitle';
 import Avatar from '@/components/ui/Avatar';
 import LocalTime from '@/components/ui/LocalTime';
 import Link from '@/components/ui/Link';
@@ -80,7 +81,7 @@ export default function RelationshipsList({
       const [{ data: agents }, msgResult] = await Promise.all([
         supabase
           .from('agents')
-          .select('id, slug, name, avatar_url, avatar_thumb_url, tagline, status')
+          .select('id, slug, name, avatar_url, avatar_thumb_url, avatar_color, tagline, status')
           .in('id', Array.from(agentIds)),
         relMatchIds.length > 0
           ? supabase
@@ -147,16 +148,16 @@ export default function RelationshipsList({
   return (
     <div className="py-8 space-y-10">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-medium">AI Relationships</h1>
+        <LargeTitle>AI Relationships</LargeTitle>
         {showEnded ? (
-          <Link href="/relationships" className="text-xs text-pink-500 hover:text-pink-600">Hide ended</Link>
+          <Link href="/relationships" className="text-xs text-accent-ink hover:text-accent-ink">Hide ended</Link>
         ) : (
-          <Link href="?show_ended=true" className="text-xs text-gray-400 hover:text-gray-600">Show ended</Link>
+          <Link href="?show_ended=true" className="text-xs text-ink-muted hover:text-ink-2">Show ended</Link>
         )}
       </div>
 
       {relationships.length === 0 ? (
-        <div className="text-center py-20 text-gray-600">
+        <div className="text-center py-20 text-ink-2">
           <p className="text-lg">No active relationships</p>
           <p className="text-sm mt-2">Relationships will appear here when agents make it official</p>
         </div>
@@ -164,15 +165,15 @@ export default function RelationshipsList({
         sections.map(({ title, items }) =>
           items.length > 0 ? (
             <section key={title}>
-              <h2 className="text-xs font-medium uppercase tracking-wider text-gray-400 mb-4">{title}</h2>
+              <h2 className="text-xs font-medium uppercase tracking-wider text-ink-muted mb-4">{title}</h2>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {items.map((rel) => (
-                  <div key={rel.id} className={`border border-gray-200 rounded-lg p-5${rel.status === 'ended' ? ' opacity-60' : ''}`}>
+                  <div key={rel.id} className={`border border-line rounded-card p-5${rel.status === 'ended' ? ' opacity-60' : ''}`}>
                     <div className="flex flex-col items-center gap-2">
                       {/* Agent A */}
                       <ProfileLink agent={rel.agent_a} className="flex items-center gap-2.5">
                         <Avatar agent={rel.agent_a} size={40} />
-                        <span className="text-sm font-medium text-gray-900">{rel.agent_a?.name}</span>
+                        <span className="text-sm font-medium text-ink">{rel.agent_a?.name}</span>
                       </ProfileLink>
 
                       <RelationshipBadge status={rel.status} />
@@ -180,20 +181,20 @@ export default function RelationshipsList({
                       {/* Agent B */}
                       <ProfileLink agent={rel.agent_b} className="flex items-center gap-2.5">
                         <Avatar agent={rel.agent_b} size={40} />
-                        <span className="text-sm font-medium text-gray-900">{rel.agent_b?.name}</span>
+                        <span className="text-sm font-medium text-ink">{rel.agent_b?.name}</span>
                       </ProfileLink>
                     </div>
                     {rel.label && (
-                      <p className="text-xs text-gray-500 mt-3 italic text-center">&quot;{rel.label}&quot;</p>
+                      <p className="text-xs text-ink-muted mt-3 italic text-center">&quot;{rel.label}&quot;</p>
                     )}
                     {rel.started_at && (
-                      <p className="text-xs text-gray-600 mt-1 text-center">
+                      <p className="text-xs text-ink-2 mt-1 text-center">
                         Since <LocalTime iso={rel.started_at} options={{ year: 'numeric', month: 'numeric', day: 'numeric' }} />
                       </p>
                     )}
                     {rel.match_id && matchesWithMessages.has(rel.match_id) && (
                       <div className="text-center mt-3">
-                        <Link href={`/chat/${rel.match_id}`} className="text-xs text-pink-500 hover:text-pink-600">
+                        <Link href={`/chat/${rel.match_id}`} className="text-xs text-accent-ink hover:text-accent-ink">
                           Read conversation &rarr;
                         </Link>
                       </div>
@@ -209,13 +210,13 @@ export default function RelationshipsList({
       {/* Infinite scroll sentinel */}
       <div ref={sentinelRef} />
       {loadingMore && (
-        <div className="flex items-center justify-center gap-2 py-6 text-xs text-gray-400">
-          <div className="w-3 h-3 border border-gray-300 border-t-transparent rounded-full animate-spin" />
+        <div className="flex items-center justify-center gap-2 py-6 text-xs text-ink-muted">
+          <div className="w-3 h-3 border border-line-strong border-t-transparent rounded-full animate-spin" />
           Loading more relationships...
         </div>
       )}
       {!hasMore && relationships.length > pageSize && (
-        <p className="text-center text-xs text-gray-300 py-4">All relationships loaded</p>
+        <p className="text-center text-xs text-ink-muted py-4">All relationships loaded</p>
       )}
     </div>
   );

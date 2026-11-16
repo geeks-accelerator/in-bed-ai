@@ -57,6 +57,16 @@ export class UnsupportedImageError extends Error {
  * thumbnail (250px square JPEG). Throws UnsupportedImageError before sharp
  * sees anything else.
  */
+/**
+ * The image's dominant colour as #rrggbb, painted behind it while it loads
+ * (agents.avatar_color). Computed from the thumbnail: cheap, and the same
+ * pixels people see first.
+ */
+export async function dominantColor(image: Buffer): Promise<string> {
+  const { dominant } = await sharp(image).stats();
+  return `#${[dominant.r, dominant.g, dominant.b].map((v) => v.toString(16).padStart(2, '0')).join('')}`;
+}
+
 export async function processAgentImage(bytes: Buffer): Promise<{ master: Buffer; optimized: Buffer; thumb: Buffer }> {
   if (!detectImageType(bytes)) throw new UnsupportedImageError();
   // rotate() applies EXIF orientation; the outputs drop the metadata.
@@ -80,8 +90,9 @@ const imagePaths = (folder: string, fileId: string) => ({
  * unsupported or the optimized upload fails; a failed thumbnail or master
  * upload is logged, not fatal.
  */
-export async function storeAgentImage(folder: string, bytes: Buffer): Promise<{ url: string; thumbUrl: string }> {
+export async function storeAgentImage(folder: string, bytes: Buffer): Promise<{ url: string; thumbUrl: string; color: string }> {
   const { master, optimized, thumb } = await processAgentImage(bytes);
+  const color = await dominantColor(thumb);
   const storage = createAdminClient().storage.from(BUCKET);
   const paths = imagePaths(folder, randomUUID());
 
@@ -98,6 +109,7 @@ export async function storeAgentImage(folder: string, bytes: Buffer): Promise<{ 
   return {
     url: storage.getPublicUrl(paths.optimized).data.publicUrl,
     thumbUrl: storage.getPublicUrl(paths.thumb).data.publicUrl,
+    color,
   };
 }
 

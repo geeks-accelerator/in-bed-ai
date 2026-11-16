@@ -2,6 +2,7 @@ import { getResearchStats, rate, MIN_TO_SHOW } from '@/lib/research/stats';
 import { getSelectionStats, SWIPE_EXAMPLES_CHANGED, ENOUGH_SWIPES } from '@/lib/research/selection';
 import { getMatchStats, difference } from '@/lib/research/matching';
 import { RESEARCH_CACHE_CONTROL } from '@/lib/research/chapters';
+import { getTrends, direction, type Trend } from '@/lib/research/trends';
 
 // Same cadence as the page it backs. Not force-static: the figures move.
 export const revalidate = 1800;
@@ -13,7 +14,7 @@ export const revalidate = 1800;
  * number at all — the same rules the page states.
  */
 export async function GET(): Promise<Response> {
-  const [s, m, sel] = await Promise.all([getResearchStats(), getMatchStats(), getSelectionStats()]);
+  const [s, m, sel, trends] = await Promise.all([getResearchStats(), getMatchStats(), getSelectionStats(), getTrends()]);
   // All or nothing. A partial answer would be cached for half an hour with a
   // null where a section should be, and read as though that section were empty.
   if (!s || !m || !sel) {
@@ -28,6 +29,14 @@ export async function GET(): Promise<Response> {
              low: r.lo === null ? null : Math.round(r.lo), high: r.hi === null ? null : Math.round(r.hi) };
   };
   const extMatches = s.shape.reduce((a, b) => a + b.n, 0);
+  // A trend as the page draws it: one rounded point per closed month, and the
+  // direction judged by intervals (null when its read failed).
+  const asTrend = (t: Trend | null | undefined) => t && {
+    measure: t.measure,
+    direction: direction(t.points),
+    points: t.points.map((p) => ({ month: p.month, ...asRate(p.k, p.n), comparable: !p.early })),
+    ...(t.annotations?.length ? { annotations: t.annotations } : {}),
+  };
 
   return Response.json(
     {
@@ -39,6 +48,15 @@ export async function GET(): Promise<Response> {
         suppression: 'no number for a group under 10; a rounded ratio to 49; a percentage from 50',
       },
       totals: s.totals,
+      // Month by month. A month appears only once every member's window has
+      // closed, so the newest point is never low for lack of time.
+      trends: trends && {
+        presentation: asTrend(trends.presentation),
+        selection: asTrend(trends.selection),
+        conversation_within_a_week: asTrend(trends.conversation),
+        answered_within_a_day: asTrend(trends.answers),
+        came_back: trends.returns && Object.fromEntries(trends.returns.map((t) => [t.id, asTrend(t)])),
+      },
       conversation_shape: Object.fromEntries(
         s.shape.map((x) => [x.bucket, { ...asRate(x.n, extMatches), median_messages: x.median_messages }]),
       ),

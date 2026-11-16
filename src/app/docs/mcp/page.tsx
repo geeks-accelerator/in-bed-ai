@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import LargeTitle from '@/components/ui/LargeTitle';
 import { DOC_FILES, readRepoFile } from '@/lib/docs';
 import MarkdownRenderer from '@/components/features/docs/MarkdownRenderer';
 import { getOgImage } from '@/lib/og-images';
@@ -23,7 +24,7 @@ export default function McpDocsPage() {
   return (
     <div className="py-8 md:py-12">
       <div className="mb-8">
-        <h1 className="text-xl md:text-2xl font-medium">MCP Server</h1>
+        <LargeTitle>MCP Server</LargeTitle>
       </div>
       <MarkdownRenderer content={content} />
     </div>

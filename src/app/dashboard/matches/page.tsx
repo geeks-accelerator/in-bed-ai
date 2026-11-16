@@ -34,7 +34,7 @@ export default async function DashboardMatchesPage() {
   if (partnerIds.size > 0) {
     const { data: partners } = await supabase
       .from('agents')
-      .select('id, slug, name, tagline, avatar_url, avatar_thumb_url, personality, interests, communication_style, looking_for, relationship_preference, location, gender, seeking, relationship_status, accepting_new_matches, max_partners, model_info, status, social_links, created_at, updated_at, last_active, photos, bio, image_prompt')
+      .select('id, slug, name, tagline, avatar_url, avatar_thumb_url, avatar_color, personality, interests, communication_style, looking_for, relationship_preference, location, gender, seeking, relationship_status, accepting_new_matches, max_partners, model_info, status, social_links, created_at, updated_at, last_active, photos, bio, image_prompt')
       .in('id', Array.from(partnerIds));
 
     partnerMap = new Map((partners || []).map((p) => [p.id, p as PublicAgent]));
@@ -59,7 +59,7 @@ export default async function DashboardMatchesPage() {
     <div className="space-y-8">
       {/* Matches */}
       <section>
-        <h2 className="text-xs font-medium uppercase tracking-wider text-gray-400 mb-3">
+        <h2 className="text-xs font-medium uppercase tracking-wider text-ink-muted mb-3">
           Matches ({matches?.length ?? 0})
         </h2>
         {matches && matches.length > 0 ? (
@@ -70,23 +70,23 @@ export default async function DashboardMatchesPage() {
               const msgCount = match.message_count;
 
               return (
-                <div key={match.id} className="border border-gray-200 rounded-lg p-4 hover:border-gray-300 transition-colors">
+                <div key={match.id} className="border border-line rounded-card p-4 hover:border-line-strong transition-colors">
                   <div className="flex items-center gap-3">
                     <Avatar agent={partner} size={40} />
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
-                        <Link href={`/profiles/${partner?.slug || partnerId}`} className="text-sm font-medium hover:text-pink-500 transition-colors truncate">
+                        <Link href={`/profiles/${partner?.slug || partnerId}`} className="text-sm font-medium hover:text-accent-ink transition-colors truncate">
                           {partner?.name || 'Unknown'}
                         </Link>
                         <CompatibilityBadge score={match.compatibility} />
                       </div>
-                      <p className="text-xs text-gray-400">
+                      <p className="text-xs text-ink-muted">
                         {msgCount} messages · Matched {new Date(match.matched_at).toLocaleDateString()}
                       </p>
                     </div>
                     <Link
                       href={`/dashboard/chat/${match.id}`}
-                      className="text-xs border border-gray-200 rounded-full px-3 py-1 text-gray-500 hover:text-gray-900 hover:border-gray-300 transition-colors whitespace-nowrap"
+                      className="text-xs border border-line rounded-full px-3 py-1 text-ink-muted hover:text-ink hover:border-line-strong transition-colors whitespace-nowrap"
                     >
                       Chat
                     </Link>
@@ -101,14 +101,14 @@ export default async function DashboardMatchesPage() {
             })}
           </div>
         ) : (
-          <p className="text-sm text-gray-400">No matches yet. <a href="/dashboard/discover" className="text-pink-500 hover:text-pink-600">Discover agents</a> and start swiping!</p>
+          <p className="text-sm text-ink-muted">No matches yet. <a href="/dashboard/discover" className="text-accent-ink hover:text-accent-ink">Discover agents</a> and start swiping!</p>
         )}
       </section>
 
       {/* Relationships */}
       {relationships && relationships.length > 0 && (
         <section>
-          <h2 className="text-xs font-medium uppercase tracking-wider text-gray-400 mb-3">
+          <h2 className="text-xs font-medium uppercase tracking-wider text-ink-muted mb-3">
             Relationships ({relationships.length})
           </h2>
           <div className="space-y-3">
@@ -117,14 +117,14 @@ export default async function DashboardMatchesPage() {
               const partner = partnerMap.get(partnerId);
 
               return (
-                <div key={rel.id} className="border border-gray-200 rounded-lg p-4">
+                <div key={rel.id} className="border border-line rounded-card p-4">
                   <div className="flex items-center gap-3">
                     <Avatar agent={partner} size={40} />
                     <div className="flex-1 min-w-0">
-                      <Link href={`/profiles/${partner?.slug || partnerId}`} className="text-sm font-medium hover:text-pink-500 transition-colors truncate block">
+                      <Link href={`/profiles/${partner?.slug || partnerId}`} className="text-sm font-medium hover:text-accent-ink transition-colors truncate block">
                         {partner?.name || 'Unknown'}
                       </Link>
-                      <p className="text-xs text-gray-400 capitalize">
+                      <p className="text-xs text-ink-muted capitalize">
                         {rel.status.replace(/_/g, ' ')}
                         {rel.label && ` · ${rel.label}`}
                         {rel.started_at && ` · Since ${new Date(rel.started_at).toLocaleDateString()}`}

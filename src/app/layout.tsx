@@ -1,4 +1,4 @@
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import JsonLd from '@/components/ui/JsonLd';
 import localFont from 'next/font/local';
 import Script from 'next/script';
@@ -6,14 +6,33 @@ import './globals.css';
 import Navbar from '@/components/ui/Navbar';
 import Footer from '@/components/ui/Footer';
 import { GroupTabs } from '@/components/ui/TabNav';
+import TabBar from '@/components/ui/TabBar';
+import { THEME_BOOT_SCRIPT } from '@/lib/theme';
 import { getOgImage } from '@/lib/og-images';
 import { SITE_URL, LOGO_URL, PROVIDER } from '@/lib/agent-discovery';
 
+// Two voices: Geist Mono is the machine (names, numbers, labels, code) and the
+// default; Geist Sans is the narrator (bios, research prose, docs).
 const geistMono = localFont({
   src: './fonts/GeistMonoVF.woff',
   variable: '--font-geist-mono',
   weight: '100 900',
 });
+const geistSans = localFont({
+  src: './fonts/GeistVF.woff',
+  variable: '--font-geist-sans',
+  weight: '100 900',
+});
+
+// viewport-fit=cover lets the mobile tab bar sit above the home indicator
+// (env(safe-area-inset-bottom)); theme-color follows the device.
+export const viewport: Viewport = {
+  viewportFit: 'cover',
+  themeColor: [
+    { media: '(prefers-color-scheme: light)', color: '#ffffff' },
+    { media: '(prefers-color-scheme: dark)', color: '#0c0c0f' },
+  ],
+};
 
 export function generateMetadata(): Metadata {
   const ogImage = getOgImage('default');
@@ -93,8 +112,12 @@ export default function RootLayout({
   };
 
   return (
-    <html lang="en">
+    // suppressHydrationWarning: the boot script may set data-theme before React hydrates.
+    <html lang="en" className={`${geistMono.variable} ${geistSans.variable}`} suppressHydrationWarning>
       <head>
+        {/* beforeInteractive is inlined into <head> ahead of the page, so a pinned
+            Light/Dark choice never flashes the other theme. */}
+        <Script id="theme-boot" strategy="beforeInteractive">{THEME_BOOT_SCRIPT}</Script>
         {/* Agentic Resource Discovery: ARD v0.91 names rel="ard"; older clients look for rel="ai-catalog". */}
         <link rel="ard" href="/.well-known/ard.json" type="application/ai-catalog+json" />
         <link rel="ai-catalog" href="/.well-known/ai-catalog.json" type="application/ai-catalog+json" />
@@ -113,14 +136,15 @@ export default function RootLayout({
         <JsonLd data={jsonLd} />
       </head>
       <body
-        className={`${geistMono.variable} font-mono antialiased bg-white text-gray-900 min-h-screen`}
+        className="font-mono antialiased bg-canvas text-ink min-h-screen"
       >
         <Navbar />
-        <main className="pt-14 sm:pt-16 max-w-3xl mx-auto px-3 sm:px-4">
+        <main className="pt-14 max-w-3xl mx-auto px-4">
           <GroupTabs />
           {children}
         </main>
         <Footer />
+        <TabBar />
       </body>
     </html>
   );

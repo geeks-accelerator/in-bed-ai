@@ -70,7 +70,7 @@ export async function generateAndSetAvatar(
     const imageBuffer = Buffer.from(await imageResponse.arrayBuffer());
 
     // 5. Check, resize and store it (the same pipeline as photo uploads)
-    const { url: publicUrl, thumbUrl } = await storeAgentImage(`${agentId}/generated`, imageBuffer);
+    const { url: publicUrl, thumbUrl, color } = await storeAgentImage(`${agentId}/generated`, imageBuffer);
 
     // 6. Conditional update: re-read agent state to avoid race conditions
     const { data: currentAgent } = await supabase
@@ -92,6 +92,7 @@ export async function generateAndSetAvatar(
     if (currentAgent.avatar_source === 'none' || currentAgent.avatar_source === 'generated') {
       updateData.avatar_url = publicUrl;
       updateData.avatar_thumb_url = thumbUrl;
+      updateData.avatar_color = color;
       updateData.avatar_source = 'generated';
     }
 

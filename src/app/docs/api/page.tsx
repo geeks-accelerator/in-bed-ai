@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import LargeTitle from '@/components/ui/LargeTitle';
 import { DOC_FILES, readRepoFile } from '@/lib/docs';
 import MarkdownRenderer from '@/components/features/docs/MarkdownRenderer';
 import { getOgImage } from '@/lib/og-images';
@@ -22,15 +23,15 @@ export default function ApiDocsPage() {
   return (
     <div className="py-8 md:py-12">
       <div className="mb-8">
-        <h1 className="text-xl md:text-2xl font-medium">API Reference</h1>
+        <LargeTitle>API Reference</LargeTitle>
       </div>
       <MarkdownRenderer content={content} />
 
       {/* Related infrastructure */}
-      <div className="mt-12 border-t border-gray-200 pt-8">
-        <p className="text-sm text-gray-500 leading-relaxed">
+      <div className="mt-12 border-t border-line pt-8">
+        <p className="text-sm text-ink-muted leading-relaxed">
           Running your agents on your own hardware?{' '}
-          <a href="https://ollamaherd.com" target="_blank" rel="noopener" className="text-gray-700 hover:text-pink-500 underline underline-offset-2">Orchestrate local LLMs across your fleet of devices with Ollama Herd</a>.
+          <a href="https://ollamaherd.com" target="_blank" rel="noopener" className="text-ink-2 hover:text-accent-ink underline underline-offset-2">Orchestrate local LLMs across your fleet of devices with Ollama Herd</a>.
         </p>
       </div>
     </div>

@@ -242,12 +242,24 @@ const MATCH_KEYS = ['c', 'bd', 'ap', 'bp', 'n', 'spk', 'reply_h', 'age_d'] as co
 const SENDER_KEYS = ['n', 'to_house'] as const satisfies readonly (keyof SenderRow)[];
 const FIRST_KEYS = ['opened', 'reply_h', 'partner_house', 'back', 'age_d'] as const satisfies readonly (keyof FirstMessageRow)[];
 
-export function getMatchStats(): Promise<MatchStats | null> {
+export interface MatchRead { generated_at: string; matches: MatchRow[]; senders: SenderRow[]; first_messages: FirstMessageRow[] }
+
+/**
+ * The raw rows, cached under the RPC's name. Every reader of match_profiles
+ * goes through this one getter: a second getter on the same RPC would share
+ * the cache key and receive whatever the first one stored.
+ */
+export function getMatchRows(): Promise<MatchRead | null> {
   return readResearch('match_profiles', (data) => {
-    const d = data as { generated_at: string; matches: MatchRow[]; senders: SenderRow[]; first_messages: FirstMessageRow[] } | null;
+    const d = data as MatchRead | null;
     return d && shaped(d, ['generated_at', 'matches', 'senders', 'first_messages'])
       && shaped(d.matches, MATCH_KEYS) && shaped(d.senders, SENDER_KEYS) && shaped(d.first_messages, FIRST_KEYS)
-      ? summarizeMatches(d.matches, d.senders, d.first_messages, d.generated_at)
+      ? d
       : null;
   });
+}
+
+export async function getMatchStats(): Promise<MatchStats | null> {
+  const d = await getMatchRows();
+  return d && summarizeMatches(d.matches, d.senders, d.first_messages, d.generated_at);
 }

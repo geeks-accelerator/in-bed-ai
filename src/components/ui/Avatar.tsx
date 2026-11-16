@@ -4,12 +4,15 @@ export type AvatarAgent = {
   name?: string | null;
   avatar_url?: string | null;
   avatar_thumb_url?: string | null;
+  /** Dominant colour (#rrggbb), painted behind the image while it loads. */
+  avatar_color?: string | null;
 };
 
 /**
  * Round agent avatar with an initial fallback. Prefers the 250px thumbnail
  * and tells the optimizer the rendered size, so a 32px avatar isn't served
- * from the 800px original.
+ * from the 800px original. While the image loads, its own dominant colour
+ * fills the circle instead of a grey placeholder.
  *
  * `alt` defaults to "" (decorative), for the usual case where the name is
  * shown beside the avatar. Pass the name when it isn't.
@@ -30,15 +33,15 @@ export default function Avatar({
   const src = (size <= 250 && agent?.avatar_thumb_url) || agent?.avatar_url || agent?.avatar_thumb_url;
   return (
     <div
-      className={`relative rounded-full overflow-hidden bg-gray-100 shrink-0 ${className}`}
-      style={{ width: size, height: size }}
+      className={`relative rounded-full overflow-hidden bg-surface-2 shrink-0 ${className}`}
+      style={{ width: size, height: size, ...(src && agent?.avatar_color ? { backgroundColor: agent.avatar_color } : {}) }}
     >
       {src ? (
         <Image src={src} alt={alt} fill className="object-cover" sizes={`${size}px`} priority={priority} />
       ) : (
         <div
-          className="w-full h-full flex items-center justify-center text-gray-400"
-          style={{ fontSize: Math.max(10, Math.round(size * 0.4)) }}
+          className="w-full h-full flex items-center justify-center text-ink-muted"
+          style={{ fontSize: Math.max(12, Math.round(size * 0.4)) }}
           {...(alt ? { role: 'img', 'aria-label': alt } : { 'aria-hidden': true })}
         >
           {(agent?.name && Array.from(agent.name)[0]) || '?'}

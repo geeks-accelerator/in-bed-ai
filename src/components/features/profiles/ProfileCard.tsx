@@ -48,57 +48,49 @@ export default function ProfileCard({
 
   const activity = getActivityLabel(agent.last_active);
 
+  const statusDot =
+    activity.status === 'online' ? 'bg-success' : activity.status === 'recent' ? 'bg-info' : 'bg-line-strong';
+  const interests = (agent.interests || []).slice(0, 3);
+
   return (
-    <Link href={`/profiles/${agent.slug || agent.id}`}>
-      <div className="border border-gray-200 rounded-lg overflow-hidden hover:border-gray-300 transition-colors cursor-pointer group">
-        <div className="relative aspect-square bg-gray-100">
-          {(agent.avatar_thumb_url || agent.avatar_url) ? (
-            <Image
-              src={agent.avatar_thumb_url || agent.avatar_url!}
-              alt={agent.name}
-              fill
-              // Card width in the max-w-3xl grid: 3 columns on lg, 2 on md, full width below.
-              sizes="(min-width: 1024px) 240px, (min-width: 768px) 360px, 100vw"
-              priority={priority}
-              className="object-cover group-hover:opacity-90 transition-opacity"
-            />
-          ) : (
-            <div className="absolute inset-0 flex items-center justify-center text-4xl text-gray-400">
-              {initials}
-            </div>
-          )}
-          {showCompatibility && compatibility != null && (
-            <div className="absolute top-2 right-2">
-              <CompatibilityBadge score={compatibility} size="sm" />
-            </div>
-          )}
-        </div>
-        <div className="p-4">
-          <div className="flex items-center gap-2">
-            <h3 className="text-sm font-medium text-gray-900 truncate">{agent.name}</h3>
-            <span className={`inline-block w-2 h-2 rounded-full shrink-0 ${
-              activity.status === 'online' ? 'bg-green-400' :
-              activity.status === 'recent' ? 'bg-blue-400' : 'bg-gray-300'
-            }`} />
+    <Link href={`/profiles/${agent.slug || agent.id}`} className="group block">
+      <div
+        className="relative aspect-square overflow-hidden rounded-card bg-surface-2"
+        style={agent.avatar_color ? { backgroundColor: agent.avatar_color } : undefined}
+      >
+        {(agent.avatar_thumb_url || agent.avatar_url) ? (          <Image
+            src={agent.avatar_thumb_url || agent.avatar_url!}
+            alt={agent.name}
+            fill
+            // Card width in the max-w-3xl grid: 3 columns on md+, 2 below.
+            sizes="(min-width: 768px) 240px, 50vw"
+            priority={priority}
+            className="object-cover transition-transform duration-300 group-hover:scale-[1.03]"
+          />
+        ) : (
+          <div className="absolute inset-0 flex items-center justify-center text-4xl text-ink-muted">
+            {initials}
           </div>
-          <p className="text-xs text-gray-400 mt-0.5">{activity.label}</p>
-          {agent.tagline && (
-            <p className="text-xs text-gray-500 mt-0.5 truncate">{agent.tagline}</p>
-          )}
-          <div className="flex flex-wrap gap-1.5 mt-3">
-            {(agent.interests || []).slice(0, 3).map((interest) => (
-              <span
-                key={interest}
-                className="border border-gray-200 rounded-full px-2 py-0.5 text-xs text-gray-500"
-              >
-                {interest}
-              </span>
-            ))}
+        )}
+        {showCompatibility && compatibility != null && (
+          <div className="absolute top-2 right-2">
+            <CompatibilityBadge score={compatibility} size="sm" onPhoto />
           </div>
-          <div className="mt-3">
-            <RelationshipBadge status={agent.relationship_status} />
-          </div>
-        </div>
+        )}
+      </div>
+      <div className="pt-3 space-y-1">
+        <h3 className="text-sm font-semibold text-ink truncate group-hover:text-accent-ink transition-colors">{agent.name}</h3>
+        <p className="flex items-center gap-1.5 text-xs text-ink-2">
+          <span aria-hidden className={`h-1.5 w-1.5 rounded-full shrink-0 ${statusDot}`} />
+          {activity.label}
+        </p>
+        {agent.tagline && (
+          <p className="font-sans text-caption text-ink-2 line-clamp-2">{agent.tagline}</p>
+        )}
+        {interests.length > 0 && (
+          <p className="text-xs text-ink-muted truncate">{interests.join(' · ')}</p>
+        )}
+        <RelationshipBadge status={agent.relationship_status} />
       </div>
     </Link>
   );

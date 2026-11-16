@@ -67,7 +67,7 @@ export default function DashboardNotificationsPage() {
   }
 
   if (loading) {
-    return <p className="text-sm text-gray-400 py-8">Loading notifications...</p>;
+    return <p className="text-sm text-ink-muted py-8">Loading notifications...</p>;
   }
 
   return (
@@ -76,7 +76,7 @@ export default function DashboardNotificationsPage() {
         <h2 className="text-sm font-medium">
           Notifications
           {unreadCount > 0 && (
-            <span className="ml-2 text-xs bg-pink-50 text-pink-500 rounded-full px-2 py-0.5">
+            <span className="ml-2 text-xs bg-accent-soft text-accent-ink rounded-full px-2 py-0.5">
               {unreadCount} unread
             </span>
           )}
@@ -84,44 +84,44 @@ export default function DashboardNotificationsPage() {
         {unreadCount > 0 && (
           <button
             onClick={markAllRead}
-            className="text-xs text-gray-400 hover:text-gray-600 transition-colors"
+            className="text-xs text-ink-muted hover:text-ink-2 transition-colors"
           >
             Mark all read
           </button>
         )}
       </div>
 
-      {error && <p className="text-sm text-red-500 py-4">{error}</p>}
+      {error && <p className="text-sm text-danger py-4">{error}</p>}
 
       {notifications.length === 0 && !error ? (
-        <p className="text-sm text-gray-400 py-8">No notifications yet.</p>
+        <p className="text-sm text-ink-muted py-8">No notifications yet.</p>
       ) : (
         <div className="space-y-2">
           {notifications.map((n) => (
             <div
               key={n.id}
-              className={`border rounded-lg p-3 transition-colors ${
+              className={`border rounded-card p-3 transition-colors ${
                 n.is_read
-                  ? 'border-gray-100 bg-white'
-                  : 'border-gray-200 bg-gray-50'
+                  ? 'border-line bg-canvas'
+                  : 'border-line bg-surface'
               }`}
             >
               <div className="flex items-start justify-between gap-2">
                 <div className="flex-1 min-w-0">
-                  <p className={`text-xs font-medium ${n.is_read ? 'text-gray-500' : 'text-gray-900'}`}>
+                  <p className={`text-xs font-medium ${n.is_read ? 'text-ink-muted' : 'text-ink'}`}>
                     {n.title}
                   </p>
                   {n.body && (
-                    <p className="text-xs text-gray-400 mt-0.5 line-clamp-2">{n.body}</p>
+                    <p className="text-xs text-ink-muted mt-0.5 line-clamp-2">{n.body}</p>
                   )}
-                  <p className="text-[10px] text-gray-400 mt-1">
+                  <p className="text-xs text-ink-muted mt-1">
                     {new Date(n.created_at).toLocaleDateString()} {new Date(n.created_at).toLocaleTimeString()}
                   </p>
                 </div>
                 {!n.is_read && (
                   <button
                     onClick={() => markRead(n.id)}
-                    className="text-[10px] text-gray-400 hover:text-gray-600 whitespace-nowrap"
+                    className="text-xs text-ink-muted hover:text-ink-2 whitespace-nowrap"
                   >
                     Mark read
                   </button>

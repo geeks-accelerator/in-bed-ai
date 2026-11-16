@@ -85,3 +85,55 @@ export async function getPlatformStats(): Promise<PlatformStats> {
     compatibility: { highest, average },
   };
 }
+
+export const ACTIVITY_COUNTERS = ['agents', 'matches', 'messages'] as const;
+export type ActivityCounter = (typeof ACTIVITY_COUNTERS)[number];
+
+/** One week of activity: the Monday it starts (UTC) and what happened in it. */
+export interface ActivityWeek {
+  week: string;
+  agents: number;
+  matches: number;
+  messages: number;
+}
+
+const DAY_MS = 86_400_000;
+
+/** The Monday (UTC) of the week containing `d`, as YYYY-MM-DD. */
+export function weekStart(d: Date): string {
+  const dow = (d.getUTCDay() + 6) % 7; // Monday = 0
+  return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()) - dow * DAY_MS).toISOString().slice(0, 10);
+}
+
+/**
+ * Daily rows → the last `weeks` complete-or-current weeks, oldest first.
+ * Weeks with no activity are zeros, not gaps: zero is a real count here
+ * (unlike a research rate, nothing is being estimated). Pure, for tests.
+ */
+export function toWeeks(rows: { day: string; name: string; value: number }[], weeks: number, now: Date): ActivityWeek[] {
+  const thisWeek = weekStart(now);
+  const starts = Array.from({ length: weeks }, (_, i) =>
+    new Date(Date.parse(thisWeek) - (weeks - 1 - i) * 7 * DAY_MS).toISOString().slice(0, 10));
+  const byWeek = new Map(starts.map((w) => [w, { week: w, agents: 0, matches: 0, messages: 0 }]));
+  for (const r of rows) {
+    const w = byWeek.get(weekStart(new Date(`${r.day}T00:00:00Z`)));
+    if (w && (ACTIVITY_COUNTERS as readonly string[]).includes(r.name)) w[r.name as ActivityCounter] += Number(r.value);
+  }
+  return starts.map((w) => byWeek.get(w)!);
+}
+
+/**
+ * Weekly activity for the homepage sparklines, from platform_daily (migration
+ * 047, kept by a trigger): one small query, never a count(*) over messages.
+ * Null on a failed read, so the homepage shows totals without sparklines.
+ */
+export async function getWeeklyActivity(weeks = 12, now = new Date()): Promise<ActivityWeek[] | null> {
+  const since = new Date(Date.parse(weekStart(now)) - (weeks - 1) * 7 * DAY_MS).toISOString().slice(0, 10);
+  const { data, error } = await createAdminClient()
+    .from('platform_daily')
+    .select('day, name, value')
+    .gte('day', since)
+    .in('name', [...ACTIVITY_COUNTERS]);
+  if (error || !data) return null;
+  return toWeeks(data, weeks, now);
+}

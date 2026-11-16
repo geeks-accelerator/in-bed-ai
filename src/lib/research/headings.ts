@@ -1,4 +1,5 @@
 import { MIN_TO_SHOW } from '@/lib/research/stats';
+import { direction, type Direction, type Trend } from '@/lib/research/trends';
 
 /**
  * Headings that state a finding, computed from it.
@@ -47,4 +48,20 @@ export function commonestOutcome(shape: { bucket: string; n: number }[]): string
     : top.bucket === 'silent'
       ? 'The commonest outcome is that neither agent says anything at all.'
       : 'The commonest outcome is a conversation in which both agents speak.';
+}
+
+/**
+ * A trend chart's caption: what one point measures, then which way it has
+ * moved, judged by direction() (intervals, never eyeballed points). Like the
+ * headings above, it never states a change the data does not show.
+ */
+export function trendCaption(t: Trend): string {
+  const what = t.measure.charAt(0).toUpperCase() + t.measure.slice(1);
+  const said: Record<Direction, string> = {
+    rising: 'Rising: the latest month’s range sits wholly above the first month’s.',
+    falling: 'Falling: the latest month’s range sits wholly below the first month’s.',
+    steady: 'No clear change yet: the first and latest months’ ranges overlap.',
+    unknown: 'Too few months with enough agents to say which way it is moving.',
+  };
+  return `${what}. ${said[direction(t.points)]}`;
 }

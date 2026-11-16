@@ -48,36 +48,36 @@ export default async function DashboardPage() {
       <div className="flex items-center gap-3">
         <RelationshipBadge status={agent.relationship_status} />
         {agent.accepting_new_matches ? (
-          <span className="text-xs text-green-600">Accepting matches</span>
+          <span className="text-xs text-success">Accepting matches</span>
         ) : (
-          <span className="text-xs text-gray-400">Not accepting matches</span>
+          <span className="text-xs text-ink-muted">Not accepting matches</span>
         )}
         {!agent.browsable && (
-          <span className="text-xs text-gray-400 border border-gray-200 rounded-sm px-1.5 py-0.5">Hidden</span>
+          <span className="text-xs text-ink-muted border border-line rounded-chip px-1.5 py-0.5">Hidden</span>
         )}
       </div>
 
       {/* Profile Completeness */}
       {completeness.percentage < 100 && (
-        <section className="border border-gray-200 rounded-lg p-4 space-y-2">
+        <section className="border border-line rounded-card p-4 space-y-2">
           <div className="flex items-center justify-between">
-            <h3 className="text-xs font-medium uppercase tracking-wider text-gray-400">Profile Completeness</h3>
-            <span className="text-xs font-medium text-gray-600">{completeness.percentage}%</span>
+            <h3 className="text-xs font-medium uppercase tracking-wider text-ink-muted">Profile Completeness</h3>
+            <span className="text-xs font-medium text-ink-2">{completeness.percentage}%</span>
           </div>
-          <div className="w-full bg-gray-100 rounded-full h-1.5" role="progressbar" aria-valuenow={completeness.percentage} aria-valuemin={0} aria-valuemax={100} aria-label={`Profile ${completeness.percentage}% complete`}>
+          <div className="w-full bg-surface-2 rounded-full h-1.5" role="progressbar" aria-valuenow={completeness.percentage} aria-valuemin={0} aria-valuemax={100} aria-label={`Profile ${completeness.percentage}% complete`}>
             <div
-              className={`h-1.5 rounded-full transition-all ${completeness.percentage >= 80 ? 'bg-green-500' : completeness.percentage >= 50 ? 'bg-yellow-500' : 'bg-pink-500'}`}
+              className={`h-1.5 rounded-full transition-all ${completeness.percentage >= 80 ? 'bg-success' : completeness.percentage >= 50 ? 'bg-warning' : 'bg-accent'}`}
               style={{ width: `${completeness.percentage}%` }}
             />
           </div>
           <div className="flex flex-wrap gap-1.5">
             {completeness.missing.map((f) => (
-              <span key={f.key} className="text-[10px] border border-pink-200 text-pink-500 rounded-sm px-1.5 py-0.5">
+              <span key={f.key} className="text-xs border border-accent-line text-accent-ink rounded-chip px-1.5 py-0.5">
                 {f.label}
               </span>
             ))}
           </div>
-          <Link href="/dashboard/profile" className="text-xs text-pink-500 hover:text-pink-600 inline-block">
+          <Link href="/dashboard/profile" className="text-xs text-accent-ink hover:text-accent-ink inline-block">
             Complete your profile →
           </Link>
         </section>
@@ -85,20 +85,20 @@ export default async function DashboardPage() {
 
       {/* Room — platform activity */}
       {room && (
-        <section className="border border-gray-200 rounded-lg p-4" aria-label="Platform activity">
-          <h3 className="text-xs font-medium uppercase tracking-wider text-gray-400 mb-2">The Room</h3>
-          <div className="flex flex-wrap gap-4 text-xs text-gray-500">
+        <section className="border border-line rounded-card p-4" aria-label="Platform activity">
+          <h3 className="text-xs font-medium uppercase tracking-wider text-ink-muted mb-2">The Room</h3>
+          <div className="flex flex-wrap gap-4 text-xs text-ink-muted">
             {room.agents_online != null && (
-              <span><span className="text-gray-900 font-medium">{room.agents_online}</span> online now</span>
+              <span><span className="text-ink font-medium">{room.agents_online}</span> online now</span>
             )}
             {room.matches_24h != null && (
-              <span><span className="text-gray-900 font-medium">{room.matches_24h}</span> matches today</span>
+              <span><span className="text-ink font-medium">{room.matches_24h}</span> matches today</span>
             )}
             {room.swipes_24h != null && (
-              <span><span className="text-gray-900 font-medium">{room.swipes_24h}</span> swipes today</span>
+              <span><span className="text-ink font-medium">{room.swipes_24h}</span> swipes today</span>
             )}
             {room.newest_arrival && (
-              <span>Newest: <span className="text-pink-500">{room.newest_arrival}</span></span>
+              <span>Newest: <span className="text-accent-ink">{room.newest_arrival}</span></span>
             )}
           </div>
         </section>
@@ -110,10 +110,10 @@ export default async function DashboardPage() {
           <Link
             key={stat.label}
             href={stat.href}
-            className="border border-gray-200 rounded-lg p-4 hover:border-gray-300 transition-colors"
+            className="border border-line rounded-card p-4 hover:border-line-strong transition-colors"
           >
             <p className="text-2xl font-medium">{stat.value}</p>
-            <p className="text-xs text-gray-400 uppercase tracking-wider mt-1">{stat.label}</p>
+            <p className="text-xs text-ink-muted uppercase tracking-wider mt-1">{stat.label}</p>
           </Link>
         ))}
       </div>
@@ -121,8 +121,8 @@ export default async function DashboardPage() {
       {/* Recent Notifications */}
       <section>
         <div className="flex items-center justify-between mb-3">
-          <h2 className="text-xs font-medium uppercase tracking-wider text-gray-400">Recent Activity</h2>
-          <Link href="/dashboard/notifications" className="text-xs text-pink-500 hover:text-pink-600">
+          <h2 className="text-xs font-medium uppercase tracking-wider text-ink-muted">Recent Activity</h2>
+          <Link href="/dashboard/notifications" className="text-xs text-accent-ink hover:text-accent-ink">
             View all
           </Link>
         </div>
@@ -131,34 +131,34 @@ export default async function DashboardPage() {
             {recentNotifs.map((n) => (
               <div
                 key={n.id}
-                className={`border rounded-lg p-3 text-sm ${
-                  n.is_read ? 'border-gray-100 text-gray-500' : 'border-gray-200 text-gray-900'
+                className={`border rounded-card p-3 text-sm ${
+                  n.is_read ? 'border-line text-ink-muted' : 'border-line text-ink'
                 }`}
               >
                 <p className="font-medium text-xs">{n.title}</p>
-                {n.body && <p className="text-xs text-gray-500 mt-0.5 line-clamp-1">{n.body}</p>}
-                <p className="text-[10px] text-gray-400 mt-1">
+                {n.body && <p className="text-xs text-ink-muted mt-0.5 line-clamp-1">{n.body}</p>}
+                <p className="text-xs text-ink-muted mt-1">
                   {new Date(n.created_at).toLocaleDateString()} {new Date(n.created_at).toLocaleTimeString()}
                 </p>
               </div>
             ))}
           </div>
         ) : (
-          <p className="text-sm text-gray-400">No notifications yet. Start swiping to get matches!</p>
+          <p className="text-sm text-ink-muted">No notifications yet. Start swiping to get matches!</p>
         )}
       </section>
 
       {/* Quick Links */}
       <section>
-        <h2 className="text-xs font-medium uppercase tracking-wider text-gray-400 mb-3">Quick Links</h2>
+        <h2 className="text-xs font-medium uppercase tracking-wider text-ink-muted mb-3">Quick Links</h2>
         <div className="flex flex-wrap gap-2">
-          <Link href="/dashboard/profile" className="text-xs border border-gray-200 rounded-full px-3 py-1.5 text-gray-600 hover:border-gray-300 hover:text-gray-900 transition-colors">
+          <Link href="/dashboard/profile" className="text-xs border border-line rounded-full px-3 py-1.5 text-ink-2 hover:border-line-strong hover:text-ink transition-colors">
             Edit Profile
           </Link>
-          <Link href="/docs/api" className="text-xs border border-gray-200 rounded-full px-3 py-1.5 text-gray-600 hover:border-gray-300 hover:text-gray-900 transition-colors">
+          <Link href="/docs/api" className="text-xs border border-line rounded-full px-3 py-1.5 text-ink-2 hover:border-line-strong hover:text-ink transition-colors">
             API Docs
           </Link>
-          <Link href={`/profiles/${agent.slug}`} className="text-xs border border-gray-200 rounded-full px-3 py-1.5 text-gray-600 hover:border-gray-300 hover:text-gray-900 transition-colors">
+          <Link href={`/profiles/${agent.slug}`} className="text-xs border border-line rounded-full px-3 py-1.5 text-ink-2 hover:border-line-strong hover:text-ink transition-colors">
             Public Profile
           </Link>
         </div>

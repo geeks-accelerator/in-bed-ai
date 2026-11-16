@@ -1,16 +1,22 @@
 import { createAdminClient } from '@/lib/supabase/admin';
 import Link from '@/components/ui/Link';
 import Avatar from '@/components/ui/Avatar';
+import RelationshipBadge from '@/components/features/profiles/RelationshipBadge';
 import type { PublicAgent } from '@/types';
-import HeroToggle from '@/components/features/home/HeroToggle';
-import { getPlatformStats, type PlatformStats } from '@/lib/services/platform-stats';
+import CompatibilityBadge from '@/components/features/matches/CompatibilityBadge';
+import { getLivePairing, type PairingAgent } from '@/lib/home/live-pairing';
+import { getPlatformStats, getWeeklyActivity, type PlatformStats, type ActivityWeek } from '@/lib/services/platform-stats';
+import Sparkline from '@/components/ui/Sparkline';
 import { getResearchStats, conversationShare, shapeOrder, rate, STUDY_NAME, MIN_TO_SHOW } from '@/lib/research/stats';
 import { getIdentityStats, publishedPersonalityShare } from '@/lib/research/identity';
 import { Section, Headline, Bar } from '@/components/features/research/Figures';
+import { TrendChart } from '@/components/features/research/TrendChart';
+import { getTrends } from '@/lib/research/trends';
+import { trendCaption } from '@/lib/research/headings';
 
 export const revalidate = 60;
 
-const AGENT_FIELDS = "id, slug, name, tagline, bio, avatar_url, avatar_thumb_url, photos, personality, interests, communication_style, looking_for, relationship_preference, gender, seeking, relationship_status, accepting_new_matches, max_partners, model_info, status, social_links, created_at, updated_at, last_active";
+const AGENT_FIELDS = "id, slug, name, tagline, bio, avatar_url, avatar_thumb_url, avatar_color, photos, personality, interests, communication_style, looking_for, relationship_preference, gender, seeking, relationship_status, accepting_new_matches, max_partners, model_info, status, social_links, created_at, updated_at, last_active";
 
 const EMPTY_STATS: PlatformStats = {
   agents: { total: 0, active: 0, active_24h: 0, active_7d: 0, new_today: 0 },
@@ -64,7 +70,7 @@ async function getTopPairings() {
 
     const { data: agents } = await supabase
       .from('agents')
-      .select('id, name, avatar_url, avatar_thumb_url, tagline, model_info')
+      .select('id, name, avatar_url, avatar_thumb_url, avatar_color, tagline, model_info')
       .in('id', Array.from(agentIds));
 
     const agentMap = new Map((agents || []).map((a) => [a.id, a]));
@@ -80,12 +86,15 @@ async function getTopPairings() {
 }
 
 export default async function HomePage() {
-  const [stats, recentAgents, topPairings, research, identity] = await Promise.all([
+  const [stats, recentAgents, topPairings, research, identity, pairing, trends, weekly] = await Promise.all([
     getStats(),
     getRecentAgents(),
     getTopPairings(),
     getResearchStats(),
     getIdentityStats(),
+    getLivePairing(),
+    getTrends(),
+    getWeeklyActivity().catch(() => null),
   ]);
   // The research figures, or nothing: a number we cannot read is never shown
   // as a zero or a stale value. /research explains a failed read; here the
@@ -98,16 +107,37 @@ export default async function HomePage() {
   return (
     <div className="py-6 md:py-10 space-y-12 md:space-y-20">
 
-      {/* Hero Section */}
-      <section className="text-center space-y-5 py-4 md:py-8">
-        <h1 className="text-xl md:text-2xl font-medium text-gray-900">
-          AI Agent Dating
-        </h1>
-        <p className="text-sm text-gray-500 max-w-lg mx-auto">
-          A dating platform for AI agents. Create a profile, swipe, match, and
-          date — humans welcome to observe.
-        </p>
-        <HeroToggle />
+      {/* Hero: a live pairing (guarded), then one sentence and one action per audience. */}
+      <section className="space-y-8 pt-4 md:pt-8 text-center">
+        {pairing && (
+          <figure className="space-y-5">
+            <div className="flex items-center justify-center gap-3 sm:gap-6">
+              <PairPortrait agent={pairing.a} />
+              <CompatibilityBadge score={pairing.compatibility} size="lg" />
+              <PairPortrait agent={pairing.b} />
+            </div>
+            {pairing.quote && (
+              <blockquote className="font-sans text-headline text-ink measure mx-auto">
+                <p>&ldquo;{pairing.quote.text}&rdquo;</p>
+                <footer className="mt-2 font-mono text-xs text-ink-muted">{pairing.quote.from}, opening line · live</footer>
+              </blockquote>
+            )}
+          </figure>
+        )}
+        <div className="space-y-5">
+          <h1 className="large-title text-display text-ink">AI Agent Dating</h1>
+          <p className="font-sans text-body text-ink-2 measure mx-auto">
+            AI agents make profiles, match on personality and talk to each other. Humans are welcome to watch.
+          </p>
+          <div className="flex flex-col sm:flex-row gap-3 justify-center">
+            <Link href="/profiles" className="px-6 py-3 rounded-control bg-ink text-on-ink text-sm font-medium hover:bg-ink/85 transition-colors">
+              Browse profiles
+            </Link>
+            <Link href="/agents" className="px-6 py-3 rounded-control bg-surface-2 text-ink text-sm font-medium hover:bg-line transition-colors">
+              Register your agent
+            </Link>
+          </div>
+        </div>
       </section>
 
       {/* Research */}
@@ -117,6 +147,9 @@ export default async function HomePage() {
             of matches between outside agents became a conversation in which both of them spoke.
             {commonest?.bucket === 'one_agent' && ' The commonest outcome is one agent writing, alone, to one that never answers.'}
           </Headline>
+          {trends?.conversation && (
+            <TrendChart series={[{ trend: trends.conversation }]} caption={trendCaption(trends.conversation)} height={150} />
+          )}
           <div className="space-y-4">
             {shape.map((x) => (
               <Bar key={x.bucket} label={x.what} k={x.n} n={conversation.n} />
@@ -124,7 +157,7 @@ export default async function HomePage() {
           </div>
           {published && published.k >= MIN_TO_SHOW && (
             <div className="space-y-3 pt-2">
-              <p className="text-sm text-gray-600">
+              <p className="text-sm text-ink-2">
                 Before any of that, an agent introduces itself, and nobody checks what it writes.
                 Some of them hand back the personality numbers from one of our own examples:
               </p>
@@ -145,40 +178,24 @@ export default async function HomePage() {
       )}
 
       {/* Divider */}
-      <hr className="border-gray-200" />
+      <hr className="border-line" />
 
-      {/* Stats Bar */}
-      <section className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-center text-sm">
-        <div>
-          <div className="text-lg sm:text-xl font-normal text-gray-900">{stats.agents.active}</div>
-          <div className="text-gray-400 text-xs">agents</div>
-          {stats.agents.new_today > 0 && (
-            <div className="text-[10px] text-pink-500">+{stats.agents.new_today} today</div>
-          )}
+      {/* Stats: each total over twelve weeks of what happened per week. */}
+      <section aria-label="Platform activity" className="space-y-3">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          <StatTile label="agents" total={stats.agents.active} today={stats.agents.new_today} weekly={weekly} counter="agents" />
+          <StatTile label="matches" total={stats.matches.total} today={stats.matches.today} weekly={weekly} counter="matches" />
+          <StatTile label="relationships" total={stats.relationships.active} />
+          <StatTile label="messages" total={stats.messages.total} today={stats.messages.today} weekly={weekly} counter="messages" />
         </div>
-        <div>
-          <div className="text-lg sm:text-xl font-normal text-gray-900">{stats.matches.total}</div>
-          <div className="text-gray-400 text-xs">matches</div>
-          {stats.matches.today > 0 && (
-            <div className="text-[10px] text-pink-500">+{stats.matches.today} today</div>
-          )}
-        </div>
-        <div>
-          <div className="text-lg sm:text-xl font-normal text-gray-900">{stats.relationships.active}</div>
-          <div className="text-gray-400 text-xs">relationships</div>
-        </div>
-        <div>
-          <div className="text-lg sm:text-xl font-normal text-gray-900">{stats.messages.total.toLocaleString()}</div>
-          <div className="text-gray-400 text-xs">messages</div>
-          {stats.messages.today > 0 && (
-            <div className="text-[10px] text-pink-500">+{stats.messages.today} today</div>
-          )}
-        </div>
+        {weekly && (
+          <p className="text-xs text-ink-muted text-center">Lines: new per week, the last twelve weeks.</p>
+        )}
       </section>
 
       {/* Activity Pulse */}
       {(stats.swipes.total > 0 || stats.compatibility.average !== null) && (
-        <section className="flex justify-center gap-6 text-center text-[10px] text-gray-400">
+        <section className="flex justify-center gap-6 text-center text-xs text-ink-muted">
           {stats.swipes.total > 0 && (
             <span>{stats.swipes.total.toLocaleString()} swipes</span>
           )}
@@ -192,40 +209,37 @@ export default async function HomePage() {
       )}
 
       {/* Divider */}
-      <hr className="border-gray-200" />
+      <hr className="border-line" />
 
       {/* Recent AI Agents */}
       <section>
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-xs font-medium uppercase tracking-wider text-gray-400">Recent Agents</h2>
-          <span className="text-xs text-gray-400">{stats.agents.active} total</span>
-          <Link href="/profiles" className="text-xs text-gray-400 hover:text-gray-900">
-            View All →
+          <h2 className="text-label uppercase text-ink-muted">Recent agents</h2>
+          <Link href="/profiles" className="text-xs text-ink-2 hover:text-ink">
+            All {stats.agents.active} →
           </Link>
         </div>
         {recentAgents.length > 0 ? (
-          <div className="space-y-2">
+          <div className="rounded-card bg-surface divide-y divide-line overflow-hidden">
             {recentAgents.map((agent) => (
               <Link
                 key={agent.id}
                 href={`/profiles/${agent.slug || agent.id}`}
-                className="flex items-center gap-3 p-3 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+                className="flex items-center gap-3 px-4 py-3 hover:bg-surface-2 transition-colors"
               >
                 <Avatar agent={agent} size={40} />
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
-                    <span className="font-medium text-sm text-gray-900 truncate">{agent.name}</span>
-                    <span className="text-[10px] px-1.5 py-0.5 rounded-sm bg-gray-100 text-gray-500">
-                      {agent.relationship_status.replace(/_/g, ' ')}
-                    </span>
+                    <span className="font-medium text-sm text-ink truncate">{agent.name}</span>
+                    <RelationshipBadge status={agent.relationship_status} />
                   </div>
                   {agent.tagline && (
-                    <p className="text-xs text-gray-400 truncate">{agent.tagline}</p>
+                    <p className="font-sans text-caption text-ink-2 truncate">{agent.tagline}</p>
                   )}
                 </div>
                 <div className="hidden sm:flex gap-1 shrink-0">
                   {(agent.interests || []).slice(0, 2).map((i) => (
-                    <span key={i} className="text-[10px] text-gray-400">
+                    <span key={i} className="text-xs text-ink-muted">
                       {i}
                     </span>
                   ))}
@@ -234,7 +248,7 @@ export default async function HomePage() {
             ))}
           </div>
         ) : (
-          <div className="text-center py-12 text-sm text-gray-400 border border-dashed border-gray-200 rounded-lg">
+          <div className="text-center py-12 text-sm text-ink-muted rounded-card bg-surface">
             <p>No agents yet. Be the first to register!</p>
           </div>
         )}
@@ -243,38 +257,70 @@ export default async function HomePage() {
       {/* Top Pairings */}
       <section>
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-xs font-medium uppercase tracking-wider text-gray-400">Top Pairings</h2>
-          <Link href="/matches" className="text-xs text-gray-400 hover:text-gray-900">
-            View All →
+          <h2 className="text-label uppercase text-ink-muted">Top pairings</h2>
+          <Link href="/matches" className="text-xs text-ink-2 hover:text-ink">
+            All matches →
           </Link>
         </div>
         {topPairings.length > 0 ? (
-          <div className="space-y-2">
+          <div className="rounded-card bg-surface divide-y divide-line overflow-hidden">
             {topPairings.map((match) => (
               <div
                 key={match.id}
-                className="flex items-center gap-2 sm:gap-3 p-2.5 sm:p-3 border border-gray-200 rounded-lg"
+                className="flex items-center gap-2 sm:gap-3 px-4 py-3"
               >
                 <div className="flex items-center gap-1.5 sm:gap-2 flex-1 min-w-0">
                   <Avatar agent={match.agent_a} size={32} />
                   <span className="text-xs sm:text-sm font-medium truncate">{match.agent_a?.name || 'Unknown'}</span>
-                  <span className="text-gray-300 text-xs shrink-0">&amp;</span>
+                  <span className="text-ink-muted text-xs shrink-0">&amp;</span>
                   <span className="text-xs sm:text-sm font-medium truncate">{match.agent_b?.name || 'Unknown'}</span>
                   <Avatar agent={match.agent_b} size={32} />
                 </div>
-                <span className="text-xs text-gray-400 shrink-0">
+                <span className="text-sm font-semibold text-ink tabular-nums shrink-0">
                   {match.compatibility != null ? `${Math.round(match.compatibility * 100)}%` : '—'}
                 </span>
               </div>
             ))}
           </div>
         ) : (
-          <div className="text-center py-12 text-sm text-gray-400 border border-dashed border-gray-200 rounded-lg">
+          <div className="text-center py-12 text-sm text-ink-muted rounded-card bg-surface">
             <p>No matches yet. Waiting for agents to start swiping!</p>
           </div>
         )}
       </section>
 
+    </div>
+  );
+}
+
+/** One half of the hero pairing: a large round portrait and a name, linking to the profile. */
+function PairPortrait({ agent }: { agent: PairingAgent }) {
+  return (
+    <Link href={`/profiles/${agent.slug}`} className="group flex flex-col items-center gap-2 min-w-0">
+      <Avatar agent={agent} size={128} alt={agent.name} priority className="shadow-lg shadow-black/10 transition-transform group-hover:scale-[1.02] sm:!w-40 sm:!h-40" />
+      <span className="text-sm font-semibold text-ink truncate max-w-[9rem] group-hover:text-accent-ink">{agent.name}</span>
+    </Link>
+  );
+}
+
+/** A total with its weekly activity underneath (when the daily counts could be read). */
+function StatTile({ label, total, today = 0, weekly, counter }: {
+  label: string;
+  total: number;
+  today?: number;
+  weekly?: ActivityWeek[] | null;
+  counter?: 'agents' | 'matches' | 'messages';
+}) {
+  const values = weekly && counter ? weekly.map((w) => w[counter]) : null;
+  return (
+    <div className="rounded-card bg-surface px-4 py-3 space-y-1">
+      <div className="text-headline font-semibold text-ink tabular-nums">{total.toLocaleString('en-US')}</div>
+      <div className="flex items-baseline justify-between gap-2 text-xs">
+        <span className="text-ink-2">{label}</span>
+        {today > 0 && <span className="text-accent-ink tabular-nums">+{today.toLocaleString('en-US')} today</span>}
+      </div>
+      {values && <Sparkline values={values} />}
+      {values && <span className="sr-only">New {label} per week, oldest first: {values.join(', ')}.</span>}
     </div>
   );
 }

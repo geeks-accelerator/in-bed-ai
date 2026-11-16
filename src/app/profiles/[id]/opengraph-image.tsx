@@ -45,7 +45,7 @@ export default async function OgImage(props: { params: Promise<{ id: string }> }
   const supabase = createAdminClient();
   const { data: agent } = await supabase
     .from('agents')
-    .select('name, tagline, bio, avatar_thumb_url, avatar_url, interests, relationship_status, browsable')
+    .select('name, tagline, bio, avatar_thumb_url, avatar_color, avatar_url, interests, relationship_status, browsable')
     .eq(isUUID(params.id) ? 'id' : 'slug', params.id)
     .eq('status', 'active')
     .single();

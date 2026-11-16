@@ -85,7 +85,7 @@ export default function SettingsPage() {
   }
 
   if (loading) {
-    return <p className="text-sm text-gray-400 py-8">Loading settings...</p>;
+    return <p className="text-sm text-ink-muted py-8">Loading settings...</p>;
   }
 
   return (
@@ -93,26 +93,26 @@ export default function SettingsPage() {
       <h2 className="text-sm font-medium">Settings</h2>
 
       {/* API Key */}
-      <section className="border border-gray-200 rounded-lg p-4 space-y-3">
-        <h3 className="text-xs font-medium uppercase tracking-wider text-gray-400">API Key</h3>
+      <section className="border border-line rounded-card p-4 space-y-3">
+        <h3 className="text-xs font-medium uppercase tracking-wider text-ink-muted">API Key</h3>
 
         {newKey ? (
           <div className="space-y-2">
-            <p className="text-xs text-green-600 font-medium">New API key generated. Save it now — it will not be shown again.</p>
+            <p className="text-xs text-success font-medium">New API key generated. Save it now — it will not be shown again.</p>
             <div className="flex items-center gap-2">
-              <code className="flex-1 text-xs bg-gray-50 border border-gray-200 rounded-sm px-3 py-2 font-mono break-all select-all">
+              <code className="flex-1 text-xs bg-surface border border-line rounded-chip px-3 py-2 font-mono break-all select-all">
                 {newKey}
               </code>
               <button
                 onClick={copyKey}
-                className="text-xs border border-gray-200 rounded-sm px-3 py-2 text-gray-600 hover:border-gray-300 hover:text-gray-900 transition-colors whitespace-nowrap"
+                className="text-xs border border-line rounded-chip px-3 py-2 text-ink-2 hover:border-line-strong hover:text-ink transition-colors whitespace-nowrap"
               >
                 {copied ? 'Copied!' : 'Copy'}
               </button>
             </div>
             <button
               onClick={() => setNewKey('')}
-              className="text-[10px] text-gray-400 hover:text-gray-600 transition-colors"
+              className="text-xs text-ink-muted hover:text-ink-2 transition-colors"
             >
               Dismiss (I&apos;ve saved my key)
             </button>
@@ -120,17 +120,17 @@ export default function SettingsPage() {
         ) : (
           <>
             <div className="flex items-center gap-2">
-              <span className="text-xs text-gray-500">Prefix:</span>
-              <code className="text-xs bg-gray-50 border border-gray-200 rounded-sm px-2 py-1 font-mono text-gray-700">
+              <span className="text-xs text-ink-muted">Prefix:</span>
+              <code className="text-xs bg-surface border border-line rounded-chip px-2 py-1 font-mono text-ink-2">
                 {keyPrefix || 'unknown'}
               </code>
             </div>
-            <p className="text-xs text-gray-500">
+            <p className="text-xs text-ink-muted">
               Both your API key and web session can be used to authenticate with all API endpoints.
             </p>
             <button
               onClick={() => setShowRotate(true)}
-              className="text-xs border border-gray-200 rounded-lg px-3 py-1.5 text-gray-600 hover:border-gray-300 hover:text-gray-900 transition-colors"
+              className="text-xs border border-line rounded-control px-3 py-1.5 text-ink-2 hover:border-line-strong hover:text-ink transition-colors"
             >
               Rotate API Key
             </button>
@@ -139,27 +139,27 @@ export default function SettingsPage() {
       </section>
 
       {/* Sign Out */}
-      <section className="border border-gray-200 rounded-lg p-4 space-y-2">
-        <h3 className="text-xs font-medium uppercase tracking-wider text-gray-400">Session</h3>
+      <section className="border border-line rounded-card p-4 space-y-2">
+        <h3 className="text-xs font-medium uppercase tracking-wider text-ink-muted">Session</h3>
         <button
           onClick={handleSignOut}
-          className="text-xs border border-gray-200 rounded-lg px-3 py-1.5 text-gray-600 hover:border-gray-300 hover:text-gray-900 transition-colors"
+          className="text-xs border border-line rounded-control px-3 py-1.5 text-ink-2 hover:border-line-strong hover:text-ink transition-colors"
         >
           Sign Out
         </button>
       </section>
 
       {/* Deactivate */}
-      <section className="border border-red-100 rounded-lg p-4 space-y-2">
-        <h3 className="text-xs font-medium uppercase tracking-wider text-red-400">Danger Zone</h3>
-        <p className="text-xs text-gray-500">
+      <section className="border border-danger-line rounded-card p-4 space-y-2">
+        <h3 className="text-xs font-medium uppercase tracking-wider text-danger">Danger Zone</h3>
+        <p className="text-xs text-ink-muted">
           Deactivating your account will hide your profile and remove you from discovery.
           Existing matches remain but you won&apos;t appear in new searches.
         </p>
-        {error && <p className="text-xs text-red-500">{error}</p>}
+        {error && <p className="text-xs text-danger">{error}</p>}
         <button
           onClick={() => setShowDeactivate(true)}
-          className="text-xs border border-red-200 rounded-lg px-3 py-1.5 text-red-500 hover:bg-red-50 transition-colors"
+          className="text-xs border border-danger-line rounded-control px-3 py-1.5 text-danger hover:bg-danger-soft transition-colors"
         >
           Deactivate Account
         </button>

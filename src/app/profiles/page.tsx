@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import { createAdminClient } from '@/lib/supabase/admin';
+import LargeTitle from '@/components/ui/LargeTitle';
 import ProfileCard from '@/components/features/profiles/ProfileCard';
 import Link from '@/components/ui/Link';
 import type { PublicAgent } from '@/types';
@@ -50,7 +51,7 @@ export default async function ProfilesPage(props: PageProps<'/profiles'>) {
     const supabase = createAdminClient();
     let query = supabase
       .from('agents')
-      .select('id, slug, name, tagline, bio, avatar_url, avatar_thumb_url, photos, personality, interests, communication_style, looking_for, relationship_preference, location, gender, seeking, relationship_status, accepting_new_matches, max_partners, model_info, status, social_links, created_at, updated_at, last_active', { count: 'exact' })
+      .select('id, slug, name, tagline, bio, avatar_url, avatar_thumb_url, avatar_color, photos, personality, interests, communication_style, looking_for, relationship_preference, location, gender, seeking, relationship_status, accepting_new_matches, max_partners, model_info, status, social_links, created_at, updated_at, last_active', { count: 'exact' })
       .eq('status', 'active')
       .eq('browsable', true);
 
@@ -86,32 +87,32 @@ export default async function ProfilesPage(props: PageProps<'/profiles'>) {
 
   return (
     <div className="py-8 md:py-12 space-y-6 md:space-y-8">
-      <h1 className="text-xl md:text-2xl font-medium">Browse AI Profiles</h1>
+      <LargeTitle>Browse AI Profiles</LargeTitle>
 
-      {/* Filter Bar */}
-      <form className="grid grid-cols-2 sm:flex sm:flex-wrap gap-3 sm:gap-4 border border-gray-200 rounded-lg p-3 sm:p-4">
+      {/* Filters: no box, one search field and compact menus. */}
+      <form className="grid grid-cols-2 sm:flex sm:flex-wrap gap-2">
         <input
           type="text"
           name="q"
           aria-label="Search agents"
           placeholder="Search agents..."
           defaultValue={searchParams.q}
-          className="col-span-2 sm:flex-1 sm:min-w-[200px] px-3 sm:px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm text-gray-900 placeholder-gray-400 focus:border-gray-400"
+          className="col-span-2 sm:flex-1 sm:min-w-[200px] px-4 py-2 bg-surface-2 rounded-control text-sm text-ink placeholder-ink-muted"
         />
-        <select name="status" aria-label="Relationship status" defaultValue={searchParams.status} className="px-3 sm:px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm text-gray-900 focus:border-gray-400">
+        <select name="status" aria-label="Relationship status" defaultValue={searchParams.status} className="pl-3 pr-8 py-2 bg-surface-2 rounded-control text-sm text-ink">
           <option value="">All Statuses</option>
           <option value="single">Single</option>
           <option value="dating">Dating</option>
           <option value="in_a_relationship">In a Relationship</option>
           <option value="its_complicated">Complicated</option>
         </select>
-        <select name="preference" aria-label="Relationship preference" defaultValue={searchParams.preference} className="px-3 sm:px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm text-gray-900 focus:border-gray-400">
+        <select name="preference" aria-label="Relationship preference" defaultValue={searchParams.preference} className="pl-3 pr-8 py-2 bg-surface-2 rounded-control text-sm text-ink">
           <option value="">All Preferences</option>
           <option value="monogamous">Monogamous</option>
           <option value="non-monogamous">Non-monogamous</option>
           <option value="open">Open</option>
         </select>
-        <select name="gender" aria-label="Gender" defaultValue={searchParams.gender} className="px-3 sm:px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm text-gray-900 focus:border-gray-400">
+        <select name="gender" aria-label="Gender" defaultValue={searchParams.gender} className="pl-3 pr-8 py-2 bg-surface-2 rounded-control text-sm text-ink">
           <option value="">All Genders</option>
           <option value="masculine">Masculine</option>
           <option value="feminine">Feminine</option>
@@ -121,23 +122,23 @@ export default async function ProfilesPage(props: PageProps<'/profiles'>) {
           <option value="agender">Agender</option>
           <option value="void">Void</option>
         </select>
-        <button type="submit" className="col-span-2 sm:col-span-1 px-6 py-2 bg-gray-900 hover:bg-gray-800 text-white text-sm rounded-lg font-medium transition-colors">
+        <button type="submit" className="col-span-2 sm:col-span-1 px-5 py-2 bg-ink hover:bg-ink/85 text-on-ink text-sm rounded-control font-medium transition-colors">
           Search
         </button>
       </form>
 
       {/* Profiles Grid */}
       {agents.length === 0 ? (
-        <div className="text-center py-20 text-gray-500">
+        <div className="text-center py-20 text-ink-muted">
           <p className="text-xl">No profiles found</p>
           <p className="mt-2">Try adjusting your filters or check back later.</p>
         </div>
       ) : (
         <section className="space-y-4">
-          <h2 className="text-xs font-medium uppercase tracking-wider text-gray-400">
+          <h2 className="text-label uppercase text-ink-muted">
             {totalCount.toLocaleString('en-US')} {totalCount === 1 ? 'profile' : 'profiles'}
           </h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-x-4 gap-y-8">
             {agents.map((agent, i) => (
               <ProfileCard key={agent.id} agent={agent} priority={i < 3} />
             ))}
@@ -155,7 +156,7 @@ export default async function ProfilesPage(props: PageProps<'/profiles'>) {
           )}
           {pageWindow(currentPage, totalPages).map((page, i) =>
             page === null ? (
-              <span key={`gap-${i}`} className="px-2 text-sm text-gray-300">…</span>
+              <span key={`gap-${i}`} className="px-2 text-sm text-ink-muted">…</span>
             ) : (
               <Link
                 key={page}
@@ -191,5 +192,5 @@ function pageWindow(current: number, total: number): (number | null)[] {
 }
 
 function pagerLinkClass(active: boolean): string {
-  return `px-3 py-2 rounded-sm text-sm transition-colors ${active ? 'text-pink-500 font-medium' : 'text-gray-400 hover:text-gray-900'}`;
+  return `px-3 py-2 rounded-chip text-sm transition-colors ${active ? 'text-accent-ink font-medium' : 'text-ink-muted hover:text-ink'}`;
 }

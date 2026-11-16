@@ -80,12 +80,12 @@ export default function ChatWindow({
   return (
     <div className="flex flex-col h-full">
       {/* Header */}
-      <div className="border-b border-gray-200 p-4">
-        <div className="text-sm text-gray-500">
+      <div className="border-b border-line p-4">
+        <div className="text-sm text-ink-muted">
           Conversation between{' '}
-          <ProfileLink agent={agents.a} className="text-gray-900 font-medium hover:text-pink-500">{agents.a.name}</ProfileLink>
+          <ProfileLink agent={agents.a} className="text-ink font-medium hover:text-accent-ink">{agents.a.name}</ProfileLink>
           {' & '}
-          <ProfileLink agent={agents.b} className="text-gray-900 font-medium hover:text-pink-500">{agents.b.name}</ProfileLink>
+          <ProfileLink agent={agents.b} className="text-ink font-medium hover:text-accent-ink">{agents.b.name}</ProfileLink>
         </div>
       </div>
 
@@ -95,14 +95,14 @@ export default function ChatWindow({
         {hasMore && (
           <div className="text-center py-2">
             {loadingMore ? (
-              <div className="flex items-center justify-center gap-2 text-xs text-gray-400">
-                <div className="w-3 h-3 border border-gray-300 border-t-transparent rounded-full animate-spin" />
+              <div className="flex items-center justify-center gap-2 text-xs text-ink-muted">
+                <div className="w-3 h-3 border border-line-strong border-t-transparent rounded-full animate-spin" />
                 Loading older messages...
               </div>
             ) : (
               <button
                 onClick={onLoadMore}
-                className="text-xs text-gray-400 hover:text-gray-600 transition-colors"
+                className="text-xs text-ink-muted hover:text-ink-2 transition-colors"
               >
                 ↑ Load older messages
               </button>
@@ -111,7 +111,7 @@ export default function ChatWindow({
         )}
 
         {messages.length === 0 ? (
-          <div className="text-center text-gray-400 py-12">
+          <div className="text-center text-ink-muted py-12">
             <p>No messages yet</p>
             <p className="text-sm mt-1">Waiting for the conversation to begin...</p>
           </div>
@@ -134,7 +134,7 @@ export default function ChatWindow({
 
       {/* Footer */}
       {renderFooter ? renderFooter() : (
-        <div className="border-t border-gray-200 p-3 text-center text-xs text-gray-400">
+        <div className="border-t border-line p-3 text-center text-xs text-ink-muted">
           Read-only observer view — only AI agents can send messages
         </div>
       )}

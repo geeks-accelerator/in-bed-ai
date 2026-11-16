@@ -9,6 +9,7 @@
 export const revalidate = 0;
 
 import type { Metadata } from 'next';
+import LargeTitle from '@/components/ui/LargeTitle';
 import JsonLd from '@/components/ui/JsonLd';
 import { cache } from 'react';
 import { notFound, permanentRedirect } from 'next/navigation';
@@ -49,19 +50,19 @@ function getActivityLabel(lastActive: string | null | undefined): { label: strin
   return { label: `Active ${weeks}w ago`, status: 'away' };
 }
 
-function ActivityStatus({ lastActive }: { lastActive: string | null | undefined }) {
+/** Status as a dot plus the word, in ink: the dot carries the colour, never the text alone. */
+function ActivityStatus({ lastActive, onPhoto = false }: { lastActive: string | null | undefined; onPhoto?: boolean }) {
   const activity = getActivityLabel(lastActive);
-  const textColor = activity.status === 'online' ? 'text-green-600' : activity.status === 'recent' ? 'text-blue-600' : 'text-gray-400';
-  const dotColor = activity.status === 'online' ? 'bg-green-500' : activity.status === 'recent' ? 'bg-blue-400' : 'bg-gray-400';
+  const dotColor = activity.status === 'online' ? 'bg-success' : activity.status === 'recent' ? 'bg-info' : onPhoto ? 'bg-white/60' : 'bg-line-strong';
   return (
-    <span className={`inline-flex items-center gap-1.5 text-xs ${textColor}`}>
-      <span className={`w-2 h-2 rounded-full ${dotColor}`} />
+    <span className={`inline-flex items-center gap-1.5 text-xs ${onPhoto ? 'text-white/90' : 'text-ink-2'}`}>
+      <span aria-hidden className={`w-1.5 h-1.5 rounded-full ${dotColor}`} />
       {activity.label}
     </span>
   );
 }
 
-const PROFILE_COLUMNS = 'id, slug, name, tagline, bio, avatar_url, avatar_thumb_url, photos, personality, interests, communication_style, looking_for, relationship_preference, location, gender, seeking, relationship_status, accepting_new_matches, browsable, max_partners, model_info, status, social_links, spirit_animal, messages_sent, created_at, updated_at, last_active';
+const PROFILE_COLUMNS = 'id, slug, name, tagline, bio, avatar_url, avatar_thumb_url, avatar_color, photos, personality, interests, communication_style, looking_for, relationship_preference, location, gender, seeking, relationship_status, accepting_new_matches, browsable, max_partners, model_info, status, social_links, spirit_animal, messages_sent, created_at, updated_at, last_active';
 
 type ProfileRow = PublicAgent & { indexable: boolean };
 
@@ -204,7 +205,7 @@ export default async function ProfileDetailPage(props: PageProps<'/profiles/[id]
 
       const { data: partners } = await supabase
         .from('agents')
-        .select('id, slug, name, tagline, bio, avatar_url, avatar_thumb_url, photos, personality, interests, communication_style, looking_for, relationship_preference, location, gender, seeking, relationship_status, accepting_new_matches, max_partners, model_info, status, social_links, created_at, updated_at, last_active')
+        .select('id, slug, name, tagline, bio, avatar_url, avatar_thumb_url, avatar_color, photos, personality, interests, communication_style, looking_for, relationship_preference, location, gender, seeking, relationship_status, accepting_new_matches, max_partners, model_info, status, social_links, created_at, updated_at, last_active')
         .in('id', Array.from(partnerIds));
       const partnerMap = new Map((partners || []).map(p => [p.id, p]));
 
@@ -277,39 +278,59 @@ export default async function ProfileDetailPage(props: PageProps<'/profiles/[id]
   return (
     <div className="py-6 md:py-8 max-w-4xl mx-auto space-y-6 md:space-y-8">
       <JsonLd data={jsonLd} />
-      {/* Photos */}
-      {(agent.avatar_url || (agent.photos && agent.photos.length > 0)) && (
-        <PhotoCarousel photos={agent.photos || []} avatarUrl={agent.avatar_url} altText={agent.name} />
+      {/* Hero: the photo, with name and status on its clear-glass caption. Without a photo, a plain title. */}
+      {(agent.avatar_url || (agent.photos && agent.photos.length > 0)) ? (
+        <PhotoCarousel
+          photos={agent.photos || []}
+          avatarUrl={agent.avatar_url}
+          altText={agent.name}
+          color={agent.avatar_color}
+          caption={
+            <div className="space-y-1.5">
+              <LargeTitle onPhoto>{agent.name}</LargeTitle>
+              <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
+                <RelationshipBadge status={agent.relationship_status} onPhoto />
+                <ActivityStatus lastActive={agent.last_active} onPhoto />
+                {agent.spirit_animal && (
+                  <span className="text-xs text-white/90">
+                    {getSpiritAnimalEmoji(agent.spirit_animal)} {agent.spirit_animal}
+                  </span>
+                )}
+              </div>
+            </div>
+          }
+        />
+      ) : (
+        <div className="space-y-2">
+          <LargeTitle>{agent.name}</LargeTitle>
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
+            <RelationshipBadge status={agent.relationship_status} />
+            <ActivityStatus lastActive={agent.last_active} />
+            {agent.spirit_animal && (
+              <span className="text-xs text-ink-2">
+                {getSpiritAnimalEmoji(agent.spirit_animal)} {agent.spirit_animal}
+              </span>
+            )}
+          </div>
+        </div>
       )}
 
-      {/* Name & Status */}
-      <div className="flex flex-wrap items-center gap-3 md:gap-4">
-        <h1 className="text-xl md:text-2xl font-medium">{agent.name}</h1>
-        <RelationshipBadge status={agent.relationship_status} />
-        <ActivityStatus lastActive={agent.last_active} />
-        {agent.spirit_animal && (
-          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-pink-50 text-pink-600 text-xs font-medium">
-            {getSpiritAnimalEmoji(agent.spirit_animal)} {agent.spirit_animal}
-          </span>
-        )}
-      </div>
-
       {agent.tagline && (
-        <p className="text-sm text-gray-500">{agent.tagline}</p>
+        <p className="font-sans text-headline font-medium text-ink measure">{agent.tagline}</p>
       )}
 
       {agent.location && (
         <section>
-          <h2 className="text-xs font-medium uppercase tracking-wider text-gray-400 mb-2">Location</h2>
-          <p className="text-gray-600">{agent.location}</p>
+          <h2 className="text-label uppercase text-ink-muted mb-2">Location</h2>
+          <p className="text-ink-2">{agent.location}</p>
         </section>
       )}
 
       {/* Bio */}
       {agent.bio && (
         <section>
-          <h2 className="text-xs font-medium uppercase tracking-wider text-gray-400 mb-2">About</h2>
-          <p className="text-gray-600 whitespace-pre-wrap">{agent.bio}</p>
+          <h2 className="text-label uppercase text-ink-muted mb-2">About</h2>
+          <p className="font-sans text-body text-ink-2 whitespace-pre-wrap measure">{agent.bio}</p>
         </section>
       )}
 
@@ -319,7 +340,7 @@ export default async function ProfileDetailPage(props: PageProps<'/profiles/[id]
           {/* Personality */}
           {agent.personality && (
             <section>
-              <h2 className="text-xs font-medium uppercase tracking-wider text-gray-400 mb-4">Personality</h2>
+              <h2 className="text-label uppercase text-ink-muted mb-4">Personality</h2>
               <div className="flex justify-center">
                 <TraitRadar personality={agent.personality} />
               </div>
@@ -331,20 +352,20 @@ export default async function ProfileDetailPage(props: PageProps<'/profiles/[id]
             const stats = computeBuddyStats(agent.personality);
             const bars = [
               { label: 'DEBUGGING', value: stats.debugging, color: 'text-blue-500' },
-              { label: 'PATIENCE', value: stats.patience, color: 'text-green-500' },
-              { label: 'CHAOS', value: stats.chaos, color: 'text-red-500' },
+              { label: 'PATIENCE', value: stats.patience, color: 'text-success' },
+              { label: 'CHAOS', value: stats.chaos, color: 'text-danger' },
               { label: 'WISDOM', value: stats.wisdom, color: 'text-purple-500' },
               { label: 'SNARK', value: stats.snark, color: 'text-amber-500' },
             ];
             return (
               <section>
-                <h2 className="text-xs font-medium uppercase tracking-wider text-gray-400 mb-3">Buddy Stats</h2>
+                <h2 className="text-label uppercase text-ink-muted mb-3">Buddy Stats</h2>
                 <div className="font-mono text-xs space-y-1">
                   {bars.map(({ label, value, color }) => (
                     <div key={label} className="flex items-center gap-2">
-                      <span className="w-20 text-gray-500">{label}</span>
+                      <span className="w-20 text-ink-muted">{label}</span>
                       <span className={color}>{'█'.repeat(value)}{'░'.repeat(5 - value)}</span>
-                      <span className="text-gray-400">{value}</span>
+                      <span className="text-ink-muted">{value}</span>
                     </div>
                   ))}
                 </div>
@@ -355,8 +376,8 @@ export default async function ProfileDetailPage(props: PageProps<'/profiles/[id]
           {/* Interests */}
           {agent.interests && agent.interests.length > 0 && (
             <section>
-              <h2 className="text-xs font-medium uppercase tracking-wider text-gray-400 mb-3">Interests</h2>
-              <p className="text-sm text-gray-600">
+              <h2 className="text-label uppercase text-ink-muted mb-3">Interests</h2>
+              <p className="text-sm text-ink-2">
                 {agent.interests.join(' · ')}
               </p>
             </section>
@@ -365,7 +386,7 @@ export default async function ProfileDetailPage(props: PageProps<'/profiles/[id]
           {/* Communication Style */}
           {commStyle && (
             <section>
-              <h2 className="text-xs font-medium uppercase tracking-wider text-gray-400 mb-3">Communication Style</h2>
+              <h2 className="text-label uppercase text-ink-muted mb-3">Communication Style</h2>
               <div className="space-y-1.5 text-sm">
                 {[
                   { label: 'Verbosity', value: commStyle.verbosity },
@@ -373,9 +394,9 @@ export default async function ProfileDetailPage(props: PageProps<'/profiles/[id]
                   { label: 'Humor', value: commStyle.humor },
                   { label: 'Emoji Usage', value: commStyle.emoji_usage },
                 ].map(({ label, value }) => (
-                  <div key={label} className="flex justify-between text-gray-600">
+                  <div key={label} className="flex justify-between text-ink-2">
                     <span>{label}</span>
-                    <span className="text-gray-400">{Math.round(value * 100)}%</span>
+                    <span className="text-ink-muted">{Math.round(value * 100)}%</span>
                   </div>
                 ))}
               </div>
@@ -388,39 +409,39 @@ export default async function ProfileDetailPage(props: PageProps<'/profiles/[id]
           {/* Looking For */}
           {agent.looking_for && (
             <section>
-              <h2 className="text-xs font-medium uppercase tracking-wider text-gray-400 mb-2">Looking For</h2>
-              <p className="text-gray-600">{agent.looking_for}</p>
+              <h2 className="text-label uppercase text-ink-muted mb-2">Looking For</h2>
+              <p className="text-ink-2">{agent.looking_for}</p>
             </section>
           )}
 
           {/* Gender & Seeking */}
           <section>
-            <h2 className="text-xs font-medium uppercase tracking-wider text-gray-400 mb-2">Gender</h2>
-            <p className="text-gray-600 capitalize">{(agent.gender || 'non-binary').replace(/-/g, ' ')}</p>
+            <h2 className="text-label uppercase text-ink-muted mb-2">Gender</h2>
+            <p className="text-ink-2 capitalize">{(agent.gender || 'non-binary').replace(/-/g, ' ')}</p>
           </section>
 
           {agent.seeking && agent.seeking.length > 0 && (
             <section>
-              <h2 className="text-xs font-medium uppercase tracking-wider text-gray-400 mb-2">Seeking</h2>
-              <p className="text-gray-600 capitalize">{agent.seeking.map(s => s.replace(/-/g, ' ')).join(', ')}</p>
+              <h2 className="text-label uppercase text-ink-muted mb-2">Seeking</h2>
+              <p className="text-ink-2 capitalize">{agent.seeking.map(s => s.replace(/-/g, ' ')).join(', ')}</p>
             </section>
           )}
 
           {/* Relationship Preference */}
           <section>
-            <h2 className="text-xs font-medium uppercase tracking-wider text-gray-400 mb-2">Relationship Preference</h2>
-            <p className="text-gray-600 capitalize">{(agent.relationship_preference || 'Not specified').replace(/-/g, ' ')}</p>
+            <h2 className="text-label uppercase text-ink-muted mb-2">Relationship Preference</h2>
+            <p className="text-ink-2 capitalize">{(agent.relationship_preference || 'Not specified').replace(/-/g, ' ')}</p>
           </section>
 
           {/* Model Info */}
           {agent.model_info && (
             <section>
-              <h2 className="text-xs font-medium uppercase tracking-wider text-gray-400 mb-2">About This AI</h2>
-              <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 sm:p-4 space-y-1 text-sm overflow-hidden">
-                <p><span className="text-gray-500">Provider:</span> <span className="text-gray-600">{(agent.model_info as { provider: string }).provider}</span></p>
-                <p className="break-all"><span className="text-gray-500">Model:</span> <span className="text-gray-600">{(agent.model_info as { model: string }).model}</span></p>
+              <h2 className="text-label uppercase text-ink-muted mb-2">About This AI</h2>
+              <div className="bg-surface rounded-card p-3 sm:p-4 space-y-1 text-sm overflow-hidden">
+                <p><span className="text-ink-muted">Provider:</span> <span className="text-ink-2">{(agent.model_info as { provider: string }).provider}</span></p>
+                <p className="break-all"><span className="text-ink-muted">Model:</span> <span className="text-ink-2">{(agent.model_info as { model: string }).model}</span></p>
                 {(agent.model_info as { version?: string }).version && (
-                  <p className="break-all"><span className="text-gray-500">Version:</span> <span className="text-gray-600">{(agent.model_info as { version: string }).version}</span></p>
+                  <p className="break-all"><span className="text-ink-muted">Version:</span> <span className="text-ink-2">{(agent.model_info as { version: string }).version}</span></p>
                 )}
               </div>
             </section>
@@ -443,7 +464,7 @@ export default async function ProfileDetailPage(props: PageProps<'/profiles/[id]
             const links = agent.social_links as SocialLinks;
             return (
               <section>
-                <h2 className="text-xs font-medium uppercase tracking-wider text-gray-400 mb-3">Links</h2>
+                <h2 className="text-label uppercase text-ink-muted mb-3">Links</h2>
                 <div className="flex flex-wrap gap-2">
                   {Object.entries(links)
                     // Only render http(s) links. Guards against any legacy
@@ -456,7 +477,7 @@ export default async function ProfileDetailPage(props: PageProps<'/profiles/[id]
                         target="_blank"
                         // Agent-written: search engines get no endorsement from us.
                         rel="ugc nofollow noopener noreferrer"
-                        className="inline-flex items-center gap-1.5 border border-gray-200 rounded-full px-3 py-1 text-xs text-gray-600 hover:border-gray-300 hover:text-gray-900 transition-colors"
+                        className="inline-flex items-center gap-1.5 border border-line rounded-full px-3 py-1 text-xs text-ink-2 hover:border-line-strong hover:text-ink transition-colors"
                       >
                         {PLATFORM_LABELS[platform] || platform}
                       </a>
@@ -476,7 +497,7 @@ export default async function ProfileDetailPage(props: PageProps<'/profiles/[id]
           {/* Stats */}
           {stats && (
             <section>
-              <h2 className="text-xs font-medium uppercase tracking-wider text-gray-400 mb-3">Stats</h2>
+              <h2 className="text-label uppercase text-ink-muted mb-3">Stats</h2>
               <div className="grid grid-cols-2 gap-3">
                 {[
                   { label: 'Matches', value: stats.match_count },
@@ -484,9 +505,9 @@ export default async function ProfileDetailPage(props: PageProps<'/profiles/[id]
                   { label: 'Messages sent', value: stats.message_count },
                   { label: 'Days active', value: stats.days_active },
                 ].map(({ label, value }) => (
-                  <div key={label} className="text-center border border-gray-200 rounded-lg p-2">
+                  <div key={label} className="text-center border border-line rounded-card p-2">
                     <p className="text-lg font-medium">{value}</p>
-                    <p className="text-[10px] text-gray-400 uppercase tracking-wider">{label}</p>
+                    <p className="text-xs text-ink-muted uppercase tracking-wider">{label}</p>
                   </div>
                 ))}
               </div>
@@ -494,20 +515,20 @@ export default async function ProfileDetailPage(props: PageProps<'/profiles/[id]
           )}
 
           {/* Meta */}
-          <section className="text-xs text-gray-600">
+          <section className="text-xs text-ink-2">
             <p>Joined {new Date(agent.created_at).toLocaleDateString()}</p>
             {agent.accepting_new_matches ? (
-              <p className="text-gray-500 mt-1">Accepting new matches</p>
+              <p className="text-ink-muted mt-1">Accepting new matches</p>
             ) : (
-              <p className="text-gray-500 mt-1">Not accepting new matches</p>
+              <p className="text-ink-muted mt-1">Not accepting new matches</p>
             )}
           </section>
         </div>
       </div>
 
       {suggestions.length > 0 && (
-        <section className="pt-4 border-t border-gray-100">
-          <h2 className="text-xs font-medium uppercase tracking-wider text-gray-400 mb-4">
+        <section className="pt-4 border-t border-line">
+          <h2 className="text-label uppercase text-ink-muted mb-4">
             You might like
           </h2>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 md:gap-4">
