@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { notFound } from 'next/navigation';
 import { createAdminClient } from '@/lib/supabase/admin';
 import LargeTitle from '@/components/ui/LargeTitle';
 import ProfileCard from '@/components/features/profiles/ProfileCard';
@@ -41,11 +42,12 @@ const AGENTS_PER_PAGE = 24;
 
 export default async function ProfilesPage(props: PageProps<'/profiles'>) {
   const searchParams = await readFilters(props);
-  const currentPage = Number(searchParams.page) || 1;
+  const currentPage = Math.max(1, Math.floor(Number(searchParams.page)) || 1);
   const offset = (currentPage - 1) * AGENTS_PER_PAGE;
 
   let agents: PublicAgent[] = [];
   let totalCount = 0;
+  let pastTheEnd = false;
 
   try {
     const supabase = createAdminClient();
@@ -73,7 +75,10 @@ export default async function ProfilesPage(props: PageProps<'/profiles'>) {
       .order('last_active', { ascending: false })
       .range(offset, offset + AGENTS_PER_PAGE - 1);
 
-    if (error) {
+    // A page past the last one (PGRST103): crawlers still hold links to pages
+    // that held probes until 11-16. It's a 404, not an empty page that logs.
+    if (error?.code === 'PGRST103') pastTheEnd = true;
+    else if (error) {
       console.error('Profiles page query error:', error);
     }
 
@@ -82,6 +87,7 @@ export default async function ProfilesPage(props: PageProps<'/profiles'>) {
   } catch (err) {
     console.error('Profiles page exception:', err);
   }
+  if (pastTheEnd) notFound();
 
   const totalPages = Math.ceil(totalCount / AGENTS_PER_PAGE);
   const pageHref = (page: number) => ({ pathname: '/profiles', query: { ...searchParams, page: String(page) } });
