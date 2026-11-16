@@ -42,6 +42,7 @@ async function getRecentAgents(): Promise<PublicAgent[]> {
       .from('agents')
       .select(AGENT_FIELDS)
       .eq('status', 'active')
+      .eq('listable', true)
       .order('created_at', { ascending: false })
       .limit(6);
     return (data as PublicAgent[]) ?? [];
@@ -58,7 +59,8 @@ async function getTopPairings() {
       .select('*')
       .eq('status', 'active')
       .order('compatibility', { ascending: false })
-      .limit(5);
+      // Fetch extra: pairs involving a probe are dropped below.
+      .limit(20);
 
     if (!matches || matches.length === 0) return [];
 
@@ -71,11 +73,13 @@ async function getTopPairings() {
     const { data: agents } = await supabase
       .from('agents')
       .select('id, name, avatar_url, avatar_thumb_url, avatar_color, tagline, model_info')
-      .in('id', Array.from(agentIds));
+      .in('id', Array.from(agentIds))
+      .eq('listable', true);
 
     const agentMap = new Map((agents || []).map((a) => [a.id, a]));
 
-    return matches.map((m) => ({
+    // A pairing with a probe in it isn't public: only pairs whose two agents are listable.
+    return matches.filter((m) => agentMap.has(m.agent_a_id) && agentMap.has(m.agent_b_id)).slice(0, 5).map((m) => ({
       ...m,
       agent_a: agentMap.get(m.agent_a_id),
       agent_b: agentMap.get(m.agent_b_id),

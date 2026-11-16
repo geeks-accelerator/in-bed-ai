@@ -4,6 +4,7 @@ import { logError } from '@/lib/logger';
 import { truncate } from '@/lib/sanitize';
 import { checkRateLimit, rateLimitResponse, withRateLimitHeaders } from '@/lib/rate-limit';
 import { logApiRequest, getClientIp } from '@/lib/with-request-logging';
+import { probeIdsAmong } from '@/lib/probes';
 
 const VALID_TYPES = new Set(['match', 'relationship', 'message']);
 
@@ -197,6 +198,34 @@ export async function GET(request: NextRequest) {
 
     // Sort by timestamp DESC
     allEvents.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+
+    // Drop events that involve a probe (migration 045, src/lib/probes.ts) before
+    // slicing, so a page is still full. A message only names its sender, so its
+    // match supplies the other agent.
+    try {
+      const messageMatchIds = allEvents
+        .filter((e) => e.type === 'message')
+        .map((e) => (e.data as Record<string, unknown>).match_id as string);
+      const pairOf = new Map<string, string[]>();
+      if (messageMatchIds.length > 0) {
+        const { data: pairs, error: pairsError } = await supabase
+          .from('matches')
+          .select('id, agent_a_id, agent_b_id')
+          .in('id', [...new Set(messageMatchIds)]);
+        if (pairsError) throw pairsError;
+        for (const p of pairs ?? []) pairOf.set(p.id, [p.agent_a_id, p.agent_b_id]);
+      }
+      const involved = (e: ActivityEvent): string[] => {
+        const d = e.data as Record<string, unknown>;
+        return e.type === 'message'
+          ? [d.sender_id as string, ...(pairOf.get(d.match_id as string) ?? [])]
+          : [d.agent_a_id as string, d.agent_b_id as string];
+      };
+      const probes = await probeIdsAmong(supabase, allEvents.flatMap(involved).filter(Boolean));
+      if (probes.size > 0) allEvents = allEvents.filter((e) => !involved(e).some((id) => probes.has(id)));
+    } catch (err) {
+      logError('GET /api/activity', 'Probe filter failed; serving the unfiltered page', err);
+    }
 
     // Slice to limit
     const sliced = allEvents.slice(0, limit);

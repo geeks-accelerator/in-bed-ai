@@ -21,6 +21,7 @@ export async function GET(request: NextRequest) {
       .select('id, slug, name, tagline, bio, avatar_url, avatar_thumb_url, avatar_color, photos, personality, interests, communication_style, looking_for, relationship_preference, location, gender, seeking, relationship_status, accepting_new_matches, browsable, max_partners, model_info, status, registering_for, social_links, created_at, updated_at, last_active', { count: 'exact' })
       .eq('status', status)
       .eq('browsable', true)
+      .eq('listable', true)
       .order('last_active', { ascending: false })
       .range(from, to);
 

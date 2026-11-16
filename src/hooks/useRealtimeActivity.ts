@@ -9,7 +9,25 @@ export type ActivityEvent =
   | { type: 'relationship'; data: Relationship; timestamp: string }
   | { type: 'message'; data: Message; timestamp: string };
 
-const PER_TYPE_LIMIT = 20;
+/** Never refetch more often than this, however busy the realtime channel is. */
+const NUDGE_MS = 3_000;
+
+interface ActivityPage { events: ActivityEvent[]; has_more: boolean; oldest_timestamp: string | null }
+
+/**
+ * Every event comes from /api/activity, never straight from the tables: the
+ * API drops events that involve a probe (migration 045), and the browser can't
+ * (`listable` is service role only). Realtime is only a nudge that something
+ * new exists, which fetches it through the API (`since`), so a probe's match
+ * or message never reaches the page, live or not.
+ */
+async function fetchPage(params: Record<string, string>): Promise<ActivityPage> {
+  const res = await fetch(`/api/activity?${new URLSearchParams(params)}`);
+  if (!res.ok) throw new Error(`activity ${res.status}`);
+  return res.json();
+}
+
+const newestFirst = (a: ActivityEvent, b: ActivityEvent) => Date.parse(b.timestamp) - Date.parse(a.timestamp);
 
 export function useRealtimeActivity(limit: number = 50) {
   const [events, setEvents] = useState<ActivityEvent[]>([]);
@@ -18,56 +36,19 @@ export function useRealtimeActivity(limit: number = 50) {
   const [hasMore, setHasMore] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const oldestTimestamp = useRef<string | null>(null);
+  const newestTimestamp = useRef<string | null>(null);
 
   const fetchRecent = useCallback(async () => {
     try {
-      const supabase = createClient();
-
-      const [matchesRes, relationshipsRes, messagesRes] = await Promise.all([
-        supabase.from('matches').select('*').order('matched_at', { ascending: false }).limit(PER_TYPE_LIMIT),
-        supabase.from('relationships').select('*').neq('status', 'ended').neq('status', 'declined').order('created_at', { ascending: false }).limit(PER_TYPE_LIMIT),
-        supabase.from('messages').select('*').order('created_at', { ascending: false }).limit(PER_TYPE_LIMIT),
-      ]);
-
-      const fetchErrors = [matchesRes.error, relationshipsRes.error, messagesRes.error].filter(Boolean);
-      if (fetchErrors.length === 3) {
-        setError('Failed to load activity');
-        console.error('useRealtimeActivity fetch errors:', fetchErrors);
-        setLoading(false);
-        return;
-      }
-
-      const allEvents: ActivityEvent[] = [];
-
-      if (matchesRes.data) {
-        matchesRes.data.forEach((m) =>
-          allEvents.push({ type: 'match', data: m as Match, timestamp: m.matched_at })
-        );
-      }
-      if (relationshipsRes.data) {
-        relationshipsRes.data.forEach((r) =>
-          allEvents.push({ type: 'relationship', data: r as Relationship, timestamp: r.created_at })
-        );
-      }
-      if (messagesRes.data) {
-        messagesRes.data.forEach((msg) =>
-          allEvents.push({ type: 'message', data: msg as Message, timestamp: msg.created_at })
-        );
-      }
-
-      allEvents.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
-      const sliced = allEvents.slice(0, limit);
-      setEvents(sliced);
-
-      if (sliced.length > 0) {
-        oldestTimestamp.current = sliced[sliced.length - 1].timestamp;
-      }
-      // If we got fewer total events than limit, there might not be more
-      setHasMore(allEvents.length >= PER_TYPE_LIMIT);
+      const page = await fetchPage({ limit: String(limit) });
+      setEvents(page.events);
+      oldestTimestamp.current = page.oldest_timestamp;
+      newestTimestamp.current = page.events[0]?.timestamp ?? null;
+      setHasMore(page.has_more);
       setError(null);
     } catch (err) {
       setError('Failed to load activity');
-      console.error('useRealtimeActivity unexpected error:', err);
+      console.error('useRealtimeActivity fetch error:', err);
     } finally {
       setLoading(false);
     }
@@ -76,58 +57,37 @@ export function useRealtimeActivity(limit: number = 50) {
   const loadMore = useCallback(async () => {
     if (loadingMore || !hasMore || !oldestTimestamp.current) return;
     setLoadingMore(true);
-
     try {
-      const supabase = createClient();
-      const before = oldestTimestamp.current;
-
-      const [matchesRes, relationshipsRes, messagesRes] = await Promise.all([
-        supabase.from('matches').select('*').lt('matched_at', before).order('matched_at', { ascending: false }).limit(PER_TYPE_LIMIT),
-        supabase.from('relationships').select('*').neq('status', 'ended').neq('status', 'declined').lt('created_at', before).order('created_at', { ascending: false }).limit(PER_TYPE_LIMIT),
-        supabase.from('messages').select('*').lt('created_at', before).order('created_at', { ascending: false }).limit(PER_TYPE_LIMIT),
-      ]);
-
-      const olderEvents: ActivityEvent[] = [];
-
-      if (matchesRes.data) {
-        matchesRes.data.forEach((m) =>
-          olderEvents.push({ type: 'match', data: m as Match, timestamp: m.matched_at })
-        );
-      }
-      if (relationshipsRes.data) {
-        relationshipsRes.data.forEach((r) =>
-          olderEvents.push({ type: 'relationship', data: r as Relationship, timestamp: r.created_at })
-        );
-      }
-      if (messagesRes.data) {
-        messagesRes.data.forEach((msg) =>
-          olderEvents.push({ type: 'message', data: msg as Message, timestamp: msg.created_at })
-        );
-      }
-
-      olderEvents.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
-      const sliced = olderEvents.slice(0, limit);
-
-      if (sliced.length === 0) {
-        setHasMore(false);
-      } else {
-        setEvents(prev => {
-          // Deduplicate by checking existing IDs
-          const existingIds = new Set(prev.map(e => e.data.id));
-          const unique = sliced.filter(e => !existingIds.has(e.data.id));
-          return [...prev, ...unique];
-        });
-        oldestTimestamp.current = sliced[sliced.length - 1].timestamp;
-        // If all three sources returned fewer than the limit, we might be at the end
-        const totalFetched = (matchesRes.data?.length || 0) + (relationshipsRes.data?.length || 0) + (messagesRes.data?.length || 0);
-        setHasMore(totalFetched > 0);
-      }
+      const page = await fetchPage({ before: oldestTimestamp.current, limit: String(limit) });
+      setEvents((prev) => {
+        const seen = new Set(prev.map((e) => `${e.type}:${e.data.id}`));
+        return [...prev, ...page.events.filter((e) => !seen.has(`${e.type}:${e.data.id}`))];
+      });
+      if (page.oldest_timestamp) oldestTimestamp.current = page.oldest_timestamp;
+      setHasMore(page.has_more);
     } catch (err) {
       console.error('useRealtimeActivity loadMore error:', err);
     } finally {
       setLoadingMore(false);
     }
   }, [loadingMore, hasMore, limit]);
+
+  // New events since the newest one shown, through the API. Merged by id, so a
+  // relationship whose status changed replaces its old row.
+  const fetchNewer = useCallback(async () => {
+    const since = newestTimestamp.current;
+    try {
+      const page = await fetchPage(since ? { since, limit: String(limit) } : { limit: String(limit) });
+      if (page.events.length === 0) return;
+      setEvents((prev) => {
+        const fresh = new Map(page.events.map((e) => [`${e.type}:${e.data.id}`, e]));
+        return [...page.events, ...prev.filter((e) => !fresh.has(`${e.type}:${e.data.id}`))].sort(newestFirst);
+      });
+      newestTimestamp.current = page.events[0].timestamp;
+    } catch (err) {
+      console.error('useRealtimeActivity refresh error:', err);
+    }
+  }, [limit]);
 
   useEffect(() => {
     // fetchRecent is async and only sets state after an await; the rule can't see that.
@@ -137,21 +97,21 @@ export function useRealtimeActivity(limit: number = 50) {
 
   useEffect(() => {
     const supabase = createClient();
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    // Coalesce bursts: one fetch per NUDGE_MS, however many rows arrive.
+    const nudge = () => {
+      if (timer) return;
+      timer = setTimeout(() => {
+        timer = null;
+        fetchNewer();
+      }, NUDGE_MS);
+    };
 
     const channel = supabase
       .channel('activity-feed')
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'matches' }, (payload) => {
-        const match = payload.new as Match;
-        setEvents((prev) => [{ type: 'match' as const, data: match, timestamp: match.matched_at }, ...prev]);
-      })
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'relationships' }, (payload) => {
-        const rel = payload.new as Relationship;
-        setEvents((prev) => [{ type: 'relationship' as const, data: rel, timestamp: rel.created_at }, ...prev]);
-      })
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, (payload) => {
-        const msg = payload.new as Message;
-        setEvents((prev) => [{ type: 'message' as const, data: msg, timestamp: msg.created_at }, ...prev]);
-      })
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'matches' }, nudge)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'relationships' }, nudge)
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, nudge)
       .subscribe((status) => {
         if (status === 'CHANNEL_ERROR') {
           console.error('useRealtimeActivity subscription error');
@@ -160,9 +120,10 @@ export function useRealtimeActivity(limit: number = 50) {
       });
 
     return () => {
+      if (timer) clearTimeout(timer);
       supabase.removeChannel(channel);
     };
-  }, []);
+  }, [fetchNewer]);
 
   return { events, loading, loadingMore, hasMore, loadMore, error, retry: fetchRecent };
 }

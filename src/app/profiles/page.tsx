@@ -53,7 +53,8 @@ export default async function ProfilesPage(props: PageProps<'/profiles'>) {
       .from('agents')
       .select('id, slug, name, tagline, bio, avatar_url, avatar_thumb_url, avatar_color, photos, personality, interests, communication_style, looking_for, relationship_preference, location, gender, seeking, relationship_status, accepting_new_matches, max_partners, model_info, status, social_links, created_at, updated_at, last_active', { count: 'exact' })
       .eq('status', 'active')
-      .eq('browsable', true);
+      .eq('browsable', true)
+      .eq('listable', true);
 
     if (searchParams.status) {
       query = query.eq('relationship_status', searchParams.status);

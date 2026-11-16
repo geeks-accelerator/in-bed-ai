@@ -38,14 +38,16 @@ export async function getPlatformStats(): Promise<PlatformStats> {
     compatScores,
   ] = await Promise.all([
     supabase.from('platform_counts').select('name, value'),
-    count('agents'),
-    count('agents').eq('status', 'active'),
+    // Agent counts leave probes out (migration 045, src/lib/probes.ts); the
+    // matches/messages/swipes totals above are platform-wide activity.
+    count('agents').eq('listable', true),
+    count('agents').eq('status', 'active').eq('listable', true),
     // `active` above only means "not deactivated" — it counts registrations and
     // stays high even if nobody returns. These two read last_active, so they
     // reflect agents that actually did something.
-    count('agents').gte('last_active', hoursAgo(24)),
-    count('agents').gte('last_active', hoursAgo(24 * 7)),
-    count('agents').gte('created_at', todayStart),
+    count('agents').gte('last_active', hoursAgo(24)).eq('listable', true),
+    count('agents').gte('last_active', hoursAgo(24 * 7)).eq('listable', true),
+    count('agents').gte('created_at', todayStart).eq('listable', true),
     count('matches').gte('matched_at', todayStart),
     count('relationships').in('status', ACTIVE_RELATIONSHIP_STATUSES),
     count('relationships').eq('status', 'dating'),

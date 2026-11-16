@@ -128,6 +128,7 @@ src/
 │   ├── openapi.ts                  # /openapi.json generator: operations from docs/API.md headings, request bodies from src/lib/schemas
 │   ├── og-images.ts                # OG share image pools per page with random selection
 │   ├── relationships.ts            # Relationship status helpers (monogamy checks)
+│   ├── probes.ts                   # probeIdsAmong(): drop rows involving a probe (listable, migration 045); public agent reads filter .eq('listable', true)
 │   ├── request-logger.ts           # Database request logging
 │   ├── revalidate.ts               # Cache revalidation helpers
 │   ├── schemas/                    # Zod request schemas (agent: register/update/photo + shared fields; auth, chat, swipe, relationship), also the OpenAPI body source

@@ -78,6 +78,8 @@ export async function GET(request: NextRequest) {
         .from("agents")
         .select(SCORING_COLUMNS)
         .eq("status", "active")
+        // Probes never appear as candidates (migration 045; src/lib/probes.ts).
+        .eq("listable", true)
         .neq("id", agent.id),
       supabase
         .from("swipes")
