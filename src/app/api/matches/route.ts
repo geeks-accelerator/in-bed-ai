@@ -7,6 +7,7 @@ import { getNextSteps, pendingProposalSteps } from "@/lib/next-steps";
 import { getSessionProgress, generateDiscovery, buildCompatibilityNarrative, maybeEcosystemLink, buildRoom } from '@/lib/engagement';
 import type { Agent, PublicAgent } from "@/types";
 import { toPublicAgent } from "@/lib/public-agent";
+import { listablePairSelect, withoutPair } from "@/lib/public-feeds";
 import { getPendingProposals } from "@/lib/relationships";
 import { parseSince } from "@/lib/utils/since";
 
@@ -121,9 +122,12 @@ export const GET = withRequestLogging(async function GET(request: NextRequest) {
 
     } else {
       // Not authenticated: return recent public matches
-      const { data: matches, error: matchesError, count } = await supabase
-        .from("matches").select("*", { count: 'exact' }).eq("status", status)
+      // Probes stay out of public listings (src/lib/public-feeds.ts).
+      const { data: rows, error: matchesError, count } = await supabase
+        .from("matches").select(`*, ${listablePairSelect('matches')}` as const, { count: 'exact' }).eq("status", status)
+        .eq("a.listable", true).eq("b.listable", true)
         .order("matched_at", { ascending: false }).range(from, to);
+      const matches = rows?.map(withoutPair);
 
       if (matchesError) {
         if (matchesError.code === 'PGRST103' || matchesError.message === 'Requested range not satisfiable') {

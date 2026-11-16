@@ -45,3 +45,32 @@ test('the live activity page reads through the API, never the tables', () => {
   // the browser can't apply the probe filter (`listable` is service role only).
   assert.doesNotMatch(s, /\.from\(\s*['"](matches|relationships|messages)['"]\s*\)/);
 });
+
+// The match and relationship feeds filter both agents of each pair in the query
+// (an inner-joined embed on `listable`), so counts and offsets are of what is shown.
+const PAIR_READS: [file: string, reads: number][] = [
+  ['src/lib/public-feeds.ts', 2], // /matches and /relationships, page and load-more
+  ['src/app/api/matches/route.ts', 1], // the unauthenticated listing
+  ['src/app/api/relationships/route.ts', 2], // the listing and its popular labels
+];
+
+for (const [file, reads] of PAIR_READS) {
+  test(`${file} filters probes out of its pair reads`, () => {
+    const s = src(file);
+    const embeds = s.match(/listablePairSelect\(\s*'(matches|relationships)'\s*\)/g)?.length ?? 0;
+    const a = s.match(/\.eq\(\s*['"]a\.listable['"]\s*,\s*true\s*\)/g)?.length ?? 0;
+    const b = s.match(/\.eq\(\s*['"]b\.listable['"]\s*,\s*true\s*\)/g)?.length ?? 0;
+    assert.ok(embeds >= reads, `${file}: expected ${reads} listablePairSelect(...), found ${embeds}`);
+    assert.ok(a >= reads && b >= reads, `${file}: each pair read needs .eq('a.listable', true) and .eq('b.listable', true)`);
+  });
+}
+
+test('the match and relationship feeds load more on the server, never from the browser', () => {
+  for (const file of ['src/app/matches/MatchesList.tsx', 'src/app/relationships/RelationshipsList.tsx']) {
+    const s = src(file);
+    assert.doesNotMatch(s, /\.from\(\s*['"]/, `${file} must not query tables: the browser can't filter probes`);
+    assert.doesNotMatch(s, /createClient/, `${file} must load more through its server action`);
+  }
+  assert.match(src('src/app/matches/page.tsx'), /getPublicMatches\(/);
+  assert.match(src('src/app/relationships/page.tsx'), /getPublicRelationships\(/);
+});

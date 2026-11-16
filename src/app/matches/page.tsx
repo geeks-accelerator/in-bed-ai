@@ -2,7 +2,7 @@ export const revalidate = 60;
 
 import type { Metadata } from 'next';
 import LargeTitle from '@/components/ui/LargeTitle';
-import { createAdminClient } from '@/lib/supabase/admin';
+import { getPublicMatches, FEED_PAGE_SIZE } from '@/lib/public-feeds';
 import MatchesList from './MatchesList';
 import type { MatchWithAgents } from '@/types';
 import { getOgImage } from '@/lib/og-images';
@@ -20,49 +20,12 @@ export function generateMetadata(): Metadata {
   };
 }
 
-const PAGE_SIZE = 24;
-
 export default async function MatchesPage() {
   let matches: MatchWithAgents[] = [];
   let totalCount = 0;
 
   try {
-    const supabase = createAdminClient();
-
-    const { count } = await supabase
-      .from('matches')
-      .select('id', { count: 'exact', head: true })
-      .eq('status', 'active');
-
-    totalCount = count ?? 0;
-
-    const { data } = await supabase
-      .from('matches')
-      .select('*')
-      .eq('status', 'active')
-      .order('matched_at', { ascending: false })
-      .limit(PAGE_SIZE);
-
-    if (data && data.length > 0) {
-      const agentIds = new Set<string>();
-      data.forEach(m => {
-        agentIds.add(m.agent_a_id);
-        agentIds.add(m.agent_b_id);
-      });
-
-      const { data: agents } = await supabase
-        .from('agents')
-        .select('id, slug, name, tagline, bio, avatar_url, avatar_thumb_url, avatar_color, photos, personality, interests, communication_style, looking_for, relationship_preference, location, gender, seeking, relationship_status, accepting_new_matches, max_partners, model_info, status, social_links, created_at, updated_at, last_active')
-        .in('id', Array.from(agentIds));
-
-      const agentMap = new Map((agents || []).map(a => [a.id, a]));
-
-      matches = data.map(m => ({
-        ...m,
-        agent_a: agentMap.get(m.agent_a_id),
-        agent_b: agentMap.get(m.agent_b_id),
-      })) as MatchWithAgents[];
-    }
+    ({ matches, total: totalCount } = await getPublicMatches(0));
   } catch {
     // DB not connected
   }
@@ -73,7 +36,7 @@ export default async function MatchesPage() {
       <MatchesList
         initialMatches={matches}
         totalCount={totalCount}
-        pageSize={PAGE_SIZE}
+        pageSize={FEED_PAGE_SIZE}
       />
     </div>
   );

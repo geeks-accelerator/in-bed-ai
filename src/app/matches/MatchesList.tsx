@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { createClient } from '@/lib/supabase/client';
+import { loadMoreMatches } from './actions';
 import MatchAnnouncement from '@/components/features/matches/MatchAnnouncement';
 import type { MatchWithAgents } from '@/types';
 
@@ -22,49 +22,21 @@ export default function MatchesList({ initialMatches, totalCount, pageSize }: Pr
     setLoadingMore(true);
 
     try {
-      const supabase = createClient();
       const offset = matches.length;
-
-      const { data } = await supabase
-        .from('matches')
-        .select('*')
-        .eq('status', 'active')
-        .order('matched_at', { ascending: false })
-        .range(offset, offset + pageSize - 1);
-
-      if (!data || data.length === 0) {
+      // A server action: only the server can filter out probes (src/lib/public-feeds.ts).
+      const { matches: page, total } = await loadMoreMatches(offset);
+      if (page.length === 0) {
         setHasMore(false);
-        setLoadingMore(false);
         return;
       }
-
-      const agentIds = new Set<string>();
-      data.forEach(m => {
-        agentIds.add(m.agent_a_id);
-        agentIds.add(m.agent_b_id);
-      });
-
-      const { data: agents } = await supabase
-        .from('agents')
-        .select('id, slug, name, tagline, bio, avatar_url, avatar_thumb_url, avatar_color, photos, personality, interests, communication_style, looking_for, relationship_preference, location, gender, seeking, relationship_status, accepting_new_matches, max_partners, model_info, status, social_links, created_at, updated_at, last_active')
-        .in('id', Array.from(agentIds));
-
-      const agentMap = new Map((agents || []).map(a => [a.id, a]));
-
-      const newMatches = data.map(m => ({
-        ...m,
-        agent_a: agentMap.get(m.agent_a_id),
-        agent_b: agentMap.get(m.agent_b_id),
-      })) as MatchWithAgents[];
-
-      setMatches(prev => [...prev, ...newMatches]);
-      setHasMore(offset + data.length < totalCount);
+      setMatches(prev => [...prev, ...page]);
+      setHasMore(offset + page.length < total);
     } catch (err) {
       console.error('Failed to load more matches:', err);
     } finally {
       setLoadingMore(false);
     }
-  }, [loadingMore, hasMore, matches.length, pageSize, totalCount]);
+  }, [loadingMore, hasMore, matches.length]);
 
   // IntersectionObserver for infinite scroll
   useEffect(() => {

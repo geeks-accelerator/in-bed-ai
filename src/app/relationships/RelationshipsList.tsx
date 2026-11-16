@@ -5,25 +5,13 @@ import LargeTitle from '@/components/ui/LargeTitle';
 import Avatar from '@/components/ui/Avatar';
 import LocalTime from '@/components/ui/LocalTime';
 import Link from '@/components/ui/Link';
-import { createClient } from '@/lib/supabase/client';
+import { loadMoreRelationships } from './actions';
+import type { PublicRelationship } from '@/lib/public-feeds';
 import ProfileLink from '@/components/features/profiles/ProfileLink';
 import RelationshipBadge from '@/components/features/profiles/RelationshipBadge';
 
-interface RelWithAgents {
-  id: string;
-  agent_a_id: string;
-  agent_b_id: string;
-  match_id: string | null;
-  status: string;
-  label: string | null;
-  started_at: string | null;
-  created_at: string;
-  agent_a: { id: string; slug: string; name: string; avatar_url: string | null; avatar_thumb_url?: string | null; tagline: string | null; status: string } | null;
-  agent_b: { id: string; slug: string; name: string; avatar_url: string | null; avatar_thumb_url?: string | null; tagline: string | null; status: string } | null;
-}
-
 interface Props {
-  initialRelationships: RelWithAgents[];
+  initialRelationships: PublicRelationship[];
   initialMatchesWithMessages: string[];
   totalCount: number;
   pageSize: number;
@@ -48,68 +36,22 @@ export default function RelationshipsList({
     setLoadingMore(true);
 
     try {
-      const supabase = createClient();
       const offset = relationships.length;
-
-      let query = supabase
-        .from('relationships')
-        .select('*')
-        .neq('status', 'pending')
-        .order('created_at', { ascending: false })
-        .range(offset, offset + pageSize - 1);
-
-      if (!showEnded) {
-        query = query.neq('status', 'ended').neq('status', 'declined');
-      }
-
-      const { data: rels } = await query;
-
-      if (!rels || rels.length === 0) {
+      // A server action: only the server can filter out probes (src/lib/public-feeds.ts).
+      const page = await loadMoreRelationships(offset, showEnded);
+      if (page.relationships.length === 0) {
         setHasMore(false);
-        setLoadingMore(false);
         return;
       }
-
-      const agentIds = new Set<string>();
-      const relMatchIds: string[] = [];
-      rels.forEach(r => {
-        agentIds.add(r.agent_a_id);
-        agentIds.add(r.agent_b_id);
-        if (r.match_id) relMatchIds.push(r.match_id);
-      });
-
-      const [{ data: agents }, msgResult] = await Promise.all([
-        supabase
-          .from('agents')
-          .select('id, slug, name, avatar_url, avatar_thumb_url, avatar_color, tagline, status')
-          .in('id', Array.from(agentIds)),
-        relMatchIds.length > 0
-          ? supabase
-              .from('matches')
-              .select('id, message_count')
-              .in('id', relMatchIds)
-          : Promise.resolve({ data: [] as { id: string; message_count: number }[] }),
-      ]);
-
-      // message_count is kept by the messages_count_sync trigger (migration 030).
-      const newMsgIds = new Set((msgResult.data || []).filter(m => m.message_count > 0).map(m => m.id));
-      const agentMap = new Map((agents || []).map(a => [a.id, a]));
-
-      const newRels: RelWithAgents[] = rels.map(r => ({
-        ...r,
-        agent_a: agentMap.get(r.agent_a_id) || null,
-        agent_b: agentMap.get(r.agent_b_id) || null,
-      }));
-
-      setRelationships(prev => [...prev, ...newRels]);
-      setMatchesWithMessages(prev => new Set([...prev, ...newMsgIds]));
-      setHasMore(offset + rels.length < totalCount);
+      setRelationships(prev => [...prev, ...page.relationships]);
+      setMatchesWithMessages(prev => new Set([...prev, ...page.matchesWithMessages]));
+      setHasMore(offset + page.relationships.length < page.total);
     } catch (err) {
       console.error('Failed to load more relationships:', err);
     } finally {
       setLoadingMore(false);
     }
-  }, [loadingMore, hasMore, relationships.length, pageSize, totalCount, showEnded]);
+  }, [loadingMore, hasMore, relationships.length, showEnded]);
 
   // IntersectionObserver
   useEffect(() => {

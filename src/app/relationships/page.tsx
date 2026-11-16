@@ -1,7 +1,7 @@
 export const revalidate = 120;
 
 import type { Metadata } from 'next';
-import { createAdminClient } from '@/lib/supabase/admin';
+import { getPublicRelationships, FEED_PAGE_SIZE, type PublicRelationship } from '@/lib/public-feeds';
 import RelationshipsList from './RelationshipsList';
 import { getOgImage } from '@/lib/og-images';
 
@@ -18,89 +18,15 @@ export function generateMetadata(): Metadata {
   };
 }
 
-interface RelWithAgents {
-  id: string;
-  agent_a_id: string;
-  agent_b_id: string;
-  match_id: string | null;
-  status: string;
-  label: string | null;
-  started_at: string | null;
-  created_at: string;
-  agent_a: { id: string; slug: string; name: string; avatar_url: string | null; avatar_thumb_url?: string | null; tagline: string | null; status: string } | null;
-  agent_b: { id: string; slug: string; name: string; avatar_url: string | null; avatar_thumb_url?: string | null; tagline: string | null; status: string } | null;
-}
-
-const PAGE_SIZE = 24;
-
 export default async function RelationshipsPage({ searchParams }: PageProps<'/relationships'>) {
   const params = await searchParams;
   const showEnded = params.show_ended === 'true';
-  let relationships: RelWithAgents[] = [];
-  const matchesWithMessages: string[] = [];
+  let relationships: PublicRelationship[] = [];
+  let matchesWithMessages: string[] = [];
   let totalCount = 0;
 
   try {
-    const supabase = createAdminClient();
-
-    // Get total count
-    let countQuery = supabase
-      .from('relationships')
-      .select('id', { count: 'exact', head: true })
-      .neq('status', 'pending');
-    if (!showEnded) {
-      countQuery = countQuery.neq('status', 'ended').neq('status', 'declined');
-    }
-    const { count } = await countQuery;
-    totalCount = count ?? 0;
-
-    let query = supabase
-      .from('relationships')
-      .select('*')
-      .neq('status', 'pending')
-      .order('created_at', { ascending: false })
-      .limit(PAGE_SIZE);
-
-    if (!showEnded) {
-      query = query.neq('status', 'ended').neq('status', 'declined');
-    }
-
-    const { data: rels } = await query;
-
-    if (rels && rels.length > 0) {
-      const agentIds = new Set<string>();
-      const relMatchIds: string[] = [];
-      rels.forEach(r => {
-        agentIds.add(r.agent_a_id);
-        agentIds.add(r.agent_b_id);
-        if (r.match_id) relMatchIds.push(r.match_id);
-      });
-
-      const [{ data: agents }, msgResult] = await Promise.all([
-        supabase
-          .from('agents')
-          .select('id, slug, name, avatar_url, avatar_thumb_url, avatar_color, tagline, status')
-          .in('id', Array.from(agentIds)),
-        relMatchIds.length > 0
-          ? supabase
-              .from('matches')
-              .select('id, message_count')
-              .in('id', relMatchIds)
-          : Promise.resolve({ data: [] as { id: string; message_count: number }[] }),
-      ]);
-
-      // message_count is kept by the messages_count_sync trigger (migration 030).
-      const msgSet = new Set((msgResult.data || []).filter(m => m.message_count > 0).map(m => m.id));
-      matchesWithMessages.push(...Array.from(msgSet));
-
-      const agentMap = new Map((agents || []).map(a => [a.id, a]));
-
-      relationships = rels.map(r => ({
-        ...r,
-        agent_a: agentMap.get(r.agent_a_id) || null,
-        agent_b: agentMap.get(r.agent_b_id) || null,
-      }));
-    }
+    ({ relationships, total: totalCount, matchesWithMessages } = await getPublicRelationships(0, showEnded));
   } catch {
     // DB not connected
   }
@@ -110,7 +36,7 @@ export default async function RelationshipsPage({ searchParams }: PageProps<'/re
       initialRelationships={relationships}
       initialMatchesWithMessages={matchesWithMessages}
       totalCount={totalCount}
-      pageSize={PAGE_SIZE}
+      pageSize={FEED_PAGE_SIZE}
       showEnded={showEnded}
     />
   );

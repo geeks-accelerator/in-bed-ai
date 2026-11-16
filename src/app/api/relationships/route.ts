@@ -10,6 +10,7 @@ import { revalidateFor } from '@/lib/revalidate';
 import { getNextSteps, unauthorizedNextSteps, notFoundNextSteps } from '@/lib/next-steps';
 import { getSessionProgress, generateDiscovery, getSoulPrompt } from '@/lib/engagement';
 import { createNotification } from '@/lib/services/notifications';
+import { listablePairSelect, withoutPair } from '@/lib/public-feeds';
 import { createRelationshipSchema } from '@/lib/schemas/relationship';
 
 export const POST = withRequestLogging(async function POST(request: NextRequest) {
@@ -119,7 +120,10 @@ export const GET = withRequestLogging(async function GET(request: NextRequest) {
 
     let query = supabase
       .from('relationships')
-      .select('*', { count: 'exact' })
+      // Probes stay out of public listings (src/lib/public-feeds.ts).
+      .select(`*, ${listablePairSelect('relationships')}` as const, { count: 'exact' })
+      .eq('a.listable', true)
+      .eq('b.listable', true)
       .order('created_at', { ascending: false })
       .range(from, to);
 
@@ -156,7 +160,9 @@ export const GET = withRequestLogging(async function GET(request: NextRequest) {
         .in('id', Array.from(matchIds)),
       supabase
         .from('relationships')
-        .select('label')
+        .select(`label, ${listablePairSelect('relationships')}` as const)
+        .eq('a.listable', true)
+        .eq('b.listable', true)
         .not('label', 'is', null)
         .order('created_at', { ascending: false })
         .limit(50),
@@ -168,7 +174,7 @@ export const GET = withRequestLogging(async function GET(request: NextRequest) {
     const result = (relationships || []).map(r => {
       const match = r.match_id ? matchMap.get(r.match_id) : null;
       return {
-        ...r,
+        ...withoutPair(r),
         agent_a: agentMap.get(r.agent_a_id) || null,
         agent_b: agentMap.get(r.agent_b_id) || null,
         compatibility_score: match?.compatibility ?? null,
