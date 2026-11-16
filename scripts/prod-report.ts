@@ -4,7 +4,7 @@
  *
  *   npm run prod-report [-- --days 28] [-- --json] [-- --only probes]
  */
-import { activity, cloudflare, cloudflareZone, deploys, errors, github, monitor, probes, report, searchBing, searchGoogle } from './prod-report-core.ts';
+import { activity, cloudflare, cloudflareZone, data, deploys, errors, github, monitor, probes, report, searchBing, searchGoogle, supabase } from './prod-report-core.ts';
 import { attribution } from './prod-report-attribution.ts';
 
 await report({
@@ -24,6 +24,19 @@ await report({
         { what: 'relationships ended', table: 'relationships', column: 'ended_at' },
       ],
     }),
+    // Each must refuse the public key. swipes, matches, messages and relationships
+    // are public by design (docs/API.md, "Realtime Events") and left out; agents
+    // grants the public key named safe columns only, so `select=*` is refused
+    // (migration 025). Functions that take a row or return a trigger (listable,
+    // indexable, agent_is_eligible, refresh_probe_ids) can't be called by URL.
+    supabase: supabase({
+      tables: ['agents', 'notifications', 'image_generations', 'request_logs', 'profile_versions', 'platform_counts', 'platform_daily', 'probe_ids'],
+      functions: [
+        'research_stats', 'research_probe_ids', 'research_pool_ids', 'research_house_ids', 'identity_profiles', 'match_profiles',
+        'conversation_summaries?p_match_ids={}',
+        'try_create_match?p_swiper_id=00000000-0000-0000-0000-000000000000&p_swiped_id=00000000-0000-0000-0000-000000000000&p_compatibility=0&p_score_breakdown={}',
+      ],
+    }),
     // Which of our ~105 published surfaces produces agents, and which of those
     // agents stay. Our own agents and the scanner accounts are not channels,
     // so they are excluded from every rate.
@@ -36,6 +49,18 @@ await report({
         'sable', 'neon-soul', // must match research_house_ids() in SQL
       ],
       probeRpc: 'research_probe_ids', // the research's own probe rules (migration 044)
+    }),
+    // The data standard's 8 and 9. No backup or purge exists yet (for-my-humans.md,
+    // 2026-11-15), so each says so and warns until one does: a reader that finds
+    // it replaces the null.
+    data: data({
+      backups: () => [
+        { what: 'the database (agents, matches, messages, relationships)', where: 'a store not yet chosen', newest: null, bytes: null, everyHours: 24 },
+        { what: 'the agent-photos bucket (paid avatar renders)', where: 'a store not yet chosen', newest: null, bytes: null, everyHours: 24 },
+      ],
+      jobs: () => [
+        { what: 'request_logs older than 90 days deleted (/privacy, section 5)', lastRun: null, everyHours: 24 },
+      ],
     }),
     'search.google': searchGoogle(),
     'search.bing': searchBing(),

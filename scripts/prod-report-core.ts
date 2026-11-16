@@ -34,7 +34,7 @@
  * The shared sections: `deploys`, `github` (what's open on the repos),
  * `probes`, `errors` (Railway's log), `activity` (Supabase counts),
  * `supabase` (migrations, slow queries, what the public key reaches), `data`
- * (backups and purge jobs, from the project's readers),
+ * (backups and scheduled jobs, from the project's readers),
  * `search.bing` (Bing Webmaster), `cloudflare` (the zone's requests),
  * `cloudflare.zone` (its settings and rules) and `monitor` (sitesinthewoods.com).
  */
@@ -195,9 +195,34 @@ export function ciRuns(runs: GhRun[], workflows: number) {
   };
 }
 
+/** `main`'s newest commit on GitHub. */
+export interface MainHead {
+  sha: string;
+  at: string;
+}
+
+/**
+ * Services whose live commit isn't `main`'s newest an hour after it: a deploy
+ * REMOVED or never built is neither failed nor waiting, so nothing else says
+ * so (three readers found it in three repos, 2026-11-14). Every push to `main`
+ * deploys (no project sets watch paths), so the two should match; one newer
+ * than `main`'s head, or still building, isn't this.
+ */
+export function notLive(head: MainHead | null, railway: Record<string, ReturnType<typeof railwayService>>, nowMs: number, graceMs = 3_600_000) {
+  if (!head || nowMs - Date.parse(head.at) < graceMs) return [];
+  return Object.entries(railway).flatMap(([service, s]) =>
+    s.live?.commit && !head.sha.startsWith(s.live.commit) && Date.parse(s.live.at) < Date.parse(head.at) && s.waiting.length === 0
+      ? [{ service, main: head.sha.slice(0, 7), mainAt: head.at, live: s.live.commit, liveAt: s.live.at }]
+      : [],
+  );
+}
+
 export interface Deploys {
   ci: ReturnType<typeof ciRuns>;
   railway: Record<string, ReturnType<typeof railwayService>>;
+  /** `main`'s newest commit, or why it couldn't be read. */
+  head: MainHead | { error: string };
+  notLive: ReturnType<typeof notLive>;
 }
 
 export function deploysWarnings(d: Deploys): Warning[] {
@@ -207,6 +232,8 @@ export function deploysWarnings(d: Deploys): Warning[] {
     for (const f of s.failed) out.push({ at: `railway.${service}`, warn: `${f.status} at ${f.at} (${f.commit}: ${f.message})` });
     for (const w of s.waiting) out.push({ at: `railway.${service}`, warn: `${w.status}${w.why ? `, ${w.why}` : ''} since ${w.at} (${w.commit}: ${w.message})` });
   }
+  for (const n of d.notLive) out.push({ at: `railway.${n.service}`, warn: `not live: main is at ${n.main} since ${n.mainAt}, the live deploy is ${n.live} from ${n.liveAt}` });
+  if ('error' in d.head) out.push({ at: 'main', warn: `couldn't read main's newest commit: ${d.head.error}` });
   return out;
 }
 
@@ -215,6 +242,7 @@ export function deploysText(d: Deploys): string[] {
   const out = [
     d.ci.workflows === 0 ? 'CI: none (no workflows)' : `CI: ${d.ci.runs} runs${per ? ` (${per})` : ''}, ${d.ci.failed.length} failed on main`,
     ...d.ci.failed.map((f) => `  ${f.result} ${f.at} ${f.commit} ${f.workflow}`),
+    'error' in d.head ? "main: couldn't read" : `main: ${d.head.sha.slice(0, 7)} since ${d.head.at}${d.notLive.length ? `; not live on ${d.notLive.map((n) => n.service).join(', ')}` : ''}`,
   ];
   for (const [service, r] of Object.entries(d.railway)) {
     out.push(
@@ -230,7 +258,7 @@ export function deploysText(d: Deploys): string[] {
 /** CI, and each Railway service's deployments. */
 export function deploys(o: { services: string[] }): SectionSpec<Deploys> {
   return {
-    source: `gh run list --created; railway deployment list (${o.services.join(', ')})`,
+    source: `gh run list --created; gh api commits/main; railway deployment list (${o.services.join(', ')})`,
     windowed: true,
     title: 'Deploys',
     read: (ctx) => {
@@ -238,7 +266,14 @@ export function deploys(o: { services: string[] }): SectionSpec<Deploys> {
       const runs = ctx.runJson<GhRun[]>('gh', ['run', 'list', '--created', `>=${ctx.now.from}`, '--limit', '1000', '--json', 'workflowName,conclusion,status,createdAt,headSha,headBranch,event'], []);
       const workflows = ctx.runJson<unknown[]>('gh', ['workflow', 'list', '--all', '--json', 'name'], []).length;
       const railway = Object.fromEntries(o.services.map((s) => [s, railwayService(ctx.runJson<RailwayDeployment[]>('railway', ['deployment', 'list', '-s', s, '--json'], []), ctx.now, ctx.before)]));
-      return { ci: ciRuns(runs, workflows), railway };
+      let head: Deploys['head'];
+      try {
+        head = ctx.runJson<MainHead>('gh', ['api', 'repos/{owner}/{repo}/commits/main', '--jq', '{sha: .sha, at: .commit.committer.date}'], { sha: '', at: '' });
+        if (!head.sha) head = { error: 'gh gave no commit' };
+      } catch (e) {
+        head = { error: oneLine(e) };
+      }
+      return { ci: ciRuns(runs, workflows), railway, head, notLive: 'error' in head ? [] : notLive(head, railway, Date.now()) };
     },
     warnings: deploysWarnings,
     text: deploysText,
@@ -661,19 +696,71 @@ export interface Counted {
   column?: string;
 }
 
-/** The count in a PostgREST `content-range` header (`0-0/42`, or `*\/0`). */
-export function countOf(contentRange: string | null): number {
-  const n = Number(contentRange?.split('/')[1]);
-  if (!Number.isFinite(n)) throw new Error(`no count in content-range "${contentRange}"`);
-  return n;
+// ─── the read-only role ────────────────────────────────────────────────
+
+/**
+ * The database's read-only role (the Supabase standard, 12): a login that can
+ * only SELECT, on the tables `activity` counts and the migration history, with
+ * `pg_monitor` for `inspect db`. The project agents' checkouts hold this
+ * and no service-role key (2026-11-14), so a mistake in a read can't write.
+ */
+export const READONLY_URL = 'SUPABASE_DB_URL_READONLY';
+
+export function readonlyUrl(): string {
+  const url = process.env[READONLY_URL];
+  if (!url) throw new Error(`no ${READONLY_URL} in .env.prod or .env (the read-only role, docs/standard-supabase.md 12)`);
+  return url;
 }
 
-async function countRows(url: string, key: string, t: Counted, w: Window): Promise<number> {
+/** Text with the connection string and its password taken out, for an error to print; `name` is the variable it came from. */
+export function redact(text: string, url: string, name = READONLY_URL): string {
+  let out = text.split(url).join(`$${name}`);
+  try {
+    const password = decodeURIComponent(new URL(url).password);
+    if (password) out = out.split(password).join('***');
+  } catch {
+    // Not a URL: the whole string is already gone.
+  }
+  return out;
+}
+
+/** Runs `f`, and rethrows its error without the connection string in it. */
+export function keepingUrlOut<T>(url: string, f: () => T, name = READONLY_URL): T {
+  try {
+    return f();
+  } catch (e) {
+    throw new Error(redact(oneLine(e), url, name));
+  }
+}
+
+/** libpq's variables for a connection string, so psql runs with no secret in its arguments. */
+export function pgEnv(url: string): Record<string, string> {
+  const u = new URL(url);
+  return {
+    PGHOST: u.hostname,
+    PGPORT: u.port || '5432',
+    PGUSER: decodeURIComponent(u.username),
+    PGPASSWORD: decodeURIComponent(u.password),
+    PGDATABASE: decodeURIComponent(u.pathname.slice(1)) || 'postgres',
+    PGSSLMODE: u.searchParams.get('sslmode') ?? 'require',
+    PGCONNECT_TIMEOUT: '20',
+  };
+}
+
+const IDENT = /^[a-z_][a-z0-9_]*$/;
+
+/** The count of a table's rows in a window, as SQL; names are the project's own, checked. */
+export function countSql(t: Counted, w: Window): string {
   const column = t.column ?? 'created_at';
-  const q = `${url}/rest/v1/${t.table}?select=*&${column}=gte.${w.from}T00:00:00Z&${column}=lt.${new Date(end(w)).toISOString()}`;
-  const res = await fetch(q, { method: 'HEAD', headers: { apikey: key, authorization: `Bearer ${key}`, prefer: 'count=exact', range: '0-0' }, signal: AbortSignal.timeout(30_000) });
-  if (!res.ok && res.status !== 206) throw new Error(`Supabase answered ${res.status} (is ${column} a column of ${t.table}?)`);
-  return countOf(res.headers.get('content-range'));
+  for (const n of [t.table, column]) if (!IDENT.test(n)) throw new Error(`not a plain name: ${n}`);
+  return `select count(*) from public."${t.table}" where "${column}" >= '${w.from}T00:00:00Z' and "${column}" < '${new Date(end(w)).toISOString()}'`;
+}
+
+function countRows(ctx: Context, t: Counted, w: Window): number {
+  const out = ctx.run('psql', ['-AtX', '-v', 'ON_ERROR_STOP=1', '-c', countSql(t, w)]).trim();
+  const n = Number(out);
+  if (out === '' || !Number.isInteger(n)) throw new Error(`psql answered "${out.slice(0, 80)}"`);
+  return n;
 }
 
 export interface ActivityRow {
@@ -688,24 +775,22 @@ export interface ActivityRow {
 /**
  * What agents (or people) did in the window, counted per table from Supabase,
  * beside the window before. Counts only, never a row's contents (the standard).
- * Reads NEXT_PUBLIC_SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY, the names the
- * Supabase projects share.
+ * Exact counts with psql through the read-only role (`SUPABASE_DB_URL_READONLY`).
  */
 export function activity(o: { tables: Counted[] }): SectionSpec<ActivityRow[]> {
   return {
-    source: `Supabase, rows created in the window: ${o.tables.map((t) => t.table).join(', ')}`,
+    source: `Supabase through the read-only role (psql), rows created in the window: ${o.tables.map((t) => t.table).join(', ')}`,
     windowed: true,
     title: 'Activity',
-    read: async (ctx) => {
-      const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-      const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
-      if (!url || !key) throw new Error('no NEXT_PUBLIC_SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY in .env.prod');
+    read: (ctx) => {
+      const url = readonlyUrl();
+      Object.assign(process.env, pgEnv(url));
       const rows: ActivityRow[] = [];
       for (const t of o.tables) {
         try {
-          rows.push({ what: t.what, table: t.table, now: await countRows(url, key, t, ctx.now), before: await countRows(url, key, t, ctx.before) });
+          rows.push({ what: t.what, table: t.table, now: countRows(ctx, t, ctx.now), before: countRows(ctx, t, ctx.before) });
         } catch (e) {
-          rows.push({ what: t.what, table: t.table, now: null, before: null, error: oneLine(e) });
+          rows.push({ what: t.what, table: t.table, now: null, before: null, error: redact(oneLine(e), url) });
         }
       }
       return rows;
@@ -722,15 +807,25 @@ export function activity(o: { tables: Counted[] }): SectionSpec<ActivityRow[]> {
 
 /** The rows of a table the Supabase CLI prints (`a | b | c`), keyed by its header. */
 export function cliTable(text: string): Record<string, string>[] {
+  // The 3.x CLI prints JSON when it isn't writing to a terminal: `{"migrations": [...]}`,
+  // `{"rows": [...]}`, or `{"_tag": "Error", ...}`. Read as a table, that JSON was no rows at all,
+  // so `migration list` would have said nothing was pending (2026-11-16, found moving to 3.x).
+  const json = text.trim().startsWith('{') ? (() => { try { return JSON.parse(text) as Record<string, unknown>; } catch { return null; } })() : null;
+  if (json) {
+    if (json._tag === 'Error') throw new Error(String((json.error as { message?: string } | undefined)?.message ?? 'the Supabase CLI failed'));
+    const rows = Object.values(json).find((v): v is Record<string, unknown>[] => Array.isArray(v) && v.every((r) => r !== null && typeof r === 'object'));
+    return (rows ?? []).map((r) => Object.fromEntries(Object.entries(r).map(([k, v]) => [k.toLowerCase(), v === null || v === undefined ? '' : String(v)])));
+  }
   const lines = text.split('\n').filter((l) => l.includes('|') && !/^[\s|-]+$/.test(l));
   if (lines.length < 1) return [];
-  const cells = (l: string) => l.split('|').map((c) => c.trim());
+  // 3.x's text table quotes each value in backticks.
+  const cells = (l: string) => l.split('|').map((c) => c.trim().replace(/^`(.*)`$/, '$1'));
   const head = cells(lines[0]!).map((h) => h.toLowerCase());
   return lines.slice(1).map((l) => Object.fromEntries(cells(l).map((c, i) => [head[i] ?? String(i), c])));
 }
 
 /**
- * `supabase migration list --linked`: the migrations only here (pending) and
+ * `supabase migration list`: the migrations only here (pending) and
  * only on production (applied by hand, or from another checkout). Both mean
  * the history isn't true: animalhouse's and inbed's were empty in production
  * while every migration was applied (2026-11-09), so the next `db push` would
@@ -807,8 +902,8 @@ const firstEnv = (names: string[]) => names.map((n) => process.env[n]).find(Bool
 
 /**
  * `supabase`, the Supabase standard's section: the migration history against
- * the repo and the slowest queries, through the Supabase CLI (the checkout
- * linked with `supabase link`, as `railway link` links Railway); and the public
+ * the repo and the slowest queries, through the Supabase CLI with the read-only
+ * role's connection string (`--remote=<url>`, never the checkout's link); and the public
  * key tried against every table and function named, each of which must refuse
  * it. Reads the URL and the anon key from .env.prod by the names the projects
  * use. Rows are never kept: a table that answers is counted, not shown.
@@ -819,7 +914,7 @@ const firstEnv = (names: string[]) => names.map((n) => process.env[n]).find(Bool
  */
 export function supabase(o: { tables: string[]; functions?: string[] }): SectionSpec<Supabase> {
   return {
-    source: `supabase migration list and inspect db outliers (--linked); the public key against ${o.tables.length} tables and ${o.functions?.length ?? 0} functions`,
+    source: `supabase migration list and inspect db outliers (the read-only role); the public key against ${o.tables.length} tables and ${o.functions?.length ?? 0} functions`,
     windowed: false,
     title: 'Supabase',
     read: async (ctx) => {
@@ -830,8 +925,9 @@ export function supabase(o: { tables: string[]; functions?: string[] }): Section
           return { error: oneLine(e) };
         }
       };
-      const migrations = tryRead(() => migrationDrift(cliTable(ctx.run('supabase', ['migration', 'list', '--linked']))));
-      const outliers = tryRead(() => cliTable(ctx.run('supabase', ['inspect', 'db', 'outliers', '--linked'])));
+      const db = readonlyUrl();
+      const migrations = tryRead(() => migrationDrift(cliTable(keepingUrlOut(db, () => ctx.run('supabase', ['migration', 'list', `--remote=${db}`])))));
+      const outliers = tryRead(() => cliTable(keepingUrlOut(db, () => ctx.run('supabase', ['inspect', 'db', 'outliers', `--remote=${db}`]))));
       const url = firstEnv(['NEXT_PUBLIC_SUPABASE_URL', 'SUPABASE_URL', 'PUBLIC_SUPABASE_URL']);
       const anonKey = firstEnv(['NEXT_PUBLIC_SUPABASE_ANON_KEY', 'SUPABASE_ANON_KEY', 'PUBLIC_SUPABASE_ANON_KEY', 'SUPABASE_PUBLISHABLE_KEY']);
       if (!url || !anonKey) throw new Error('no Supabase URL or anon key in .env.prod (NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY or their other names)');
@@ -870,26 +966,31 @@ export interface Backup {
   everyHours: number;
 }
 
-/** A job that removes what the privacy page says goes: IPs after 14 days, old rows. */
-export interface Purge {
+/**
+ * A scheduled job, wherever it runs (a Railway cron, a launchd job, a loop in
+ * the app): a purge of what the privacy page says goes, a pipeline, a cron
+ * that ages the pets. animalhouse's death cron started 2,191 times without
+ * running while Railway showed it healthy, and 33 pets died unnoticed.
+ */
+export interface Job {
   what: string;
-  /** Its last run, ISO; null when there is no record of one. */
+  /** Its last run that did its work, ISO; null when there is no record of one. */
   lastRun: string | null;
-  /** What that run removed, when it says. */
-  removed?: number | null;
+  /** What that run did, when it says: "removed 31 rows", "1 experience". */
+  result?: string | null;
   everyHours: number;
 }
 
 export interface Data {
   backups: Backup[];
-  purges: Purge[];
+  jobs: Job[];
 }
 
 const hoursSince = (iso: string, nowMs: number) => (nowMs - Date.parse(iso)) / 3_600_000;
 
 /**
  * What a reader must see: a backup that's missing, late (half a period past
- * due) or empty, and a purge that hasn't run when it should. church had no
+ * due) or empty, and a job that hasn't run when it should. church had no
  * backups of 2,785 reflections (`a001d03`); a purge declared and never applied
  * is a promise the privacy page breaks (ollamaherd `2a85a78`).
  */
@@ -900,9 +1001,9 @@ export function dataWarnings(d: Data, nowMs: number): Warning[] {
     else if (hoursSince(b.newest, nowMs) > b.everyHours * 1.5) out.push({ at: 'backups', warn: `${b.what}: the newest backup is ${Math.round(hoursSince(b.newest, nowMs))} h old (one every ${b.everyHours} h)` });
     if (b.bytes === 0) out.push({ at: 'backups', warn: `${b.what}: the newest backup is empty` });
   }
-  for (const p of d.purges) {
-    if (!p.lastRun) out.push({ at: 'purges', warn: `${p.what}: no record of a run` });
-    else if (hoursSince(p.lastRun, nowMs) > p.everyHours * 1.5) out.push({ at: 'purges', warn: `${p.what}: last ran ${Math.round(hoursSince(p.lastRun, nowMs))} h ago (every ${p.everyHours} h)` });
+  for (const j of d.jobs) {
+    if (!j.lastRun) out.push({ at: 'jobs', warn: `${j.what}: no record of a run` });
+    else if (hoursSince(j.lastRun, nowMs) > j.everyHours * 1.5) out.push({ at: 'jobs', warn: `${j.what}: last ran ${Math.round(hoursSince(j.lastRun, nowMs))} h ago (every ${j.everyHours} h)` });
   }
   return out;
 }
@@ -911,23 +1012,23 @@ export function dataText(d: Data): string[] {
   const size = (n: number | null) => (n === null ? 'size unknown' : n >= 1e9 ? `${(n / 1e9).toFixed(2)} GB` : n >= 1e6 ? `${(n / 1e6).toFixed(1)} MB` : `${n} B`);
   return [
     ...d.backups.map((b) => `backup  ${b.what}: ${b.newest ? `newest ${b.newest.slice(0, 16)}, ${size(b.bytes)}` : 'none'} (${b.where}, every ${b.everyHours} h)`),
-    ...d.purges.map((p) => `purge   ${p.what}: ${p.lastRun ? `last ran ${p.lastRun.slice(0, 16)}${p.removed != null ? `, removed ${p.removed}` : ''}` : 'no record'} (every ${p.everyHours} h)`),
+    ...d.jobs.map((j) => `job     ${j.what}: ${j.lastRun ? `last ran ${j.lastRun.slice(0, 16)}${j.result ? `, ${j.result}` : ''}` : 'no record'} (every ${j.everyHours} h)`),
   ];
 }
 
 /**
  * `data`, the data standard's section: each backup's newest copy and each
- * purge job's last run, in one shape for every project, so layer 2 reads all
- * eight alike. Where backups and purges live is each project's own, so the
- * project passes its readers (an S3 listing, a row in its job log); a reader
- * that throws fails the section, which says why, as any section does.
+ * scheduled job's last run, in one shape for every project, so layer 2 reads
+ * all eight alike. Where backups and jobs live is each project's own, so the
+ * project passes its readers (an S3 listing, a row a job writes, what it
+ * made); a reader that throws fails the section, which says why, as any does.
  */
-export function data(o: { backups: (ctx: Context) => Promise<Backup[]> | Backup[]; purges: (ctx: Context) => Promise<Purge[]> | Purge[] }): SectionSpec<Data> {
+export function data(o: { backups?: (ctx: Context) => Promise<Backup[]> | Backup[]; jobs?: (ctx: Context) => Promise<Job[]> | Job[] }): SectionSpec<Data> {
   return {
-    source: "the project's backup stores and purge jobs, now",
+    source: "the project's backup stores and scheduled jobs, now",
     windowed: false,
-    title: 'Backups and purges',
-    read: async (ctx) => ({ backups: await o.backups(ctx), purges: await o.purges(ctx) }),
+    title: 'Backups and jobs',
+    read: async (ctx) => ({ backups: (await o.backups?.(ctx)) ?? [], jobs: (await o.jobs?.(ctx)) ?? [] }),
     warnings: (d) => dataWarnings(d, Date.now()),
     text: dataText,
   };
@@ -1318,29 +1419,55 @@ export function cfBy(rows: CfRow[], dim: string): Record<string, number> {
   return Object.fromEntries(Object.entries(out).sort((a, b) => b[1] - a[1]));
 }
 
-/** 5xx rows (hour, path, status) by hour and by path; the busiest path first. */
+/**
+ * A user agent, short: the `compatible;` name, a tool's own name, the host its
+ * notice links to, or "a browser". Each site's daily 5xx warning was one 522 on
+ * `/` from Palo Alto's scanner, traced by hand in four projects (2026-11-12 to 15).
+ */
+export function cfClient(ua: unknown): string {
+  const s = String(ua ?? '').trim();
+  if (!s) return 'no user agent';
+  const compatible = /compatible; ?([A-Za-z][\w .-]*?)(?:\/|;|\))/.exec(s)?.[1];
+  if (compatible) return compatible;
+  const tool = /^([A-Za-z][\w.-]*)\//.exec(s)?.[1];
+  if (tool && tool !== 'Mozilla') return tool;
+  const host = /https?:\/\/([\w.-]+)/.exec(s)?.[1];
+  if (host) return host.split('.').slice(-2).join('.');
+  return tool ? 'a browser' : s.slice(0, 40);
+}
+
+const bump = (r: Record<string, number>, k: string, n: number) => { r[k] = (r[k] ?? 0) + n; };
+const mostFirst = (r: Record<string, number>) => Object.fromEntries(Object.entries(r).sort((a, b) => b[1] - a[1]));
+
+/** 5xx rows (hour, path, status, user agent) by hour, by path and by client; the busiest path first. */
 export function cfServerErrors(rows: CfRow[], limit = CF_LIMIT) {
-  const byHour = new Map<string, { hour: string; n: number; statuses: Record<string, number> }>();
-  const byPath = new Map<string, { status: number; path: string; n: number }>();
+  const byHour = new Map<string, { hour: string; n: number; statuses: Record<string, number>; clients?: Record<string, number> }>();
+  const byPath = new Map<string, { status: number; path: string; n: number; clients?: Record<string, number> }>();
+  const byClient: Record<string, number> = {};
   for (const { count, dimensions: d } of rows) {
     const hour = String(d.datetimeHour).slice(0, 13);
+    const client = 'userAgent' in d ? cfClient(d.userAgent) : null;
     const h = byHour.get(hour) ?? { hour, n: 0, statuses: {} };
     h.n += count;
-    const status = String(d.edgeResponseStatus);
-    h.statuses[status] = (h.statuses[status] ?? 0) + count;
+    bump(h.statuses, String(d.edgeResponseStatus), count);
     byHour.set(hour, h);
     const key = `${d.edgeResponseStatus} ${d.clientRequestPath}`;
     const p = byPath.get(key) ?? { status: Number(d.edgeResponseStatus), path: String(d.clientRequestPath), n: 0 };
     p.n += count;
     byPath.set(key, p);
+    if (client) for (const r of [h.clients ??= {}, p.clients ??= {}, byClient]) bump(r, client, count);
   }
+  const sorted = <T extends { clients?: Record<string, number> }>(x: T) => (x.clients ? { ...x, clients: mostFirst(x.clients) } : x);
   return {
     total: rows.reduce((n, r) => n + r.count, 0),
-    byHour: [...byHour.values()].sort((a, b) => a.hour.localeCompare(b.hour)),
-    byPath: [...byPath.values()].sort((a, b) => b.n - a.n),
+    byHour: [...byHour.values()].map(sorted).sort((a, b) => a.hour.localeCompare(b.hour)),
+    byPath: [...byPath.values()].map(sorted).sort((a, b) => b.n - a.n),
+    byClient: mostFirst(byClient),
     truncated: rows.length >= limit,
   };
 }
+
+const clientList = (r?: Record<string, number>, n = 4) => Object.entries(r ?? {}).slice(0, n).map(([k, v]) => `${k} ${v}`).join(', ');
 
 /** 404 rows by path: the site-shaped ones listed, the probes counted. */
 export function cfNotFound(rows: CfRow[], isProbe = isProbePath, top = 20) {
@@ -1412,7 +1539,7 @@ export interface Cloudflare {
 export function cloudflareWarnings(c: Cloudflare, nowMs: number): Warning[] {
   const out: Warning[] = [];
   const recent = c.serverErrors.byHour.filter((h) => nowMs - Date.parse(`${h.hour}:00:00Z`) < 864e5 + 3_600_000);
-  if (recent.length) out.push({ at: 'serverErrors', warn: `${recent.reduce((n, h) => n + h.n, 0)} 5xx in the last day: ${recent.map((h) => `${h.hour.slice(5)}h ${h.n} (${Object.keys(h.statuses).join(', ')})`).join(', ')}` });
+  if (recent.length) out.push({ at: 'serverErrors', warn: `${recent.reduce((n, h) => n + h.n, 0)} 5xx in the last day: ${recent.map((h) => `${h.hour.slice(5)}h ${h.n} (${Object.keys(h.statuses).join(', ')}${h.clients ? `; ${clientList(h.clients)}` : ''})`).join(', ')}` });
   for (const h of c.serverErrors.byHour.filter((x) => x.n >= 10 && !recent.includes(x))) out.push({ at: 'serverErrors', warn: `${h.n} 5xx in the hour from ${h.hour}:00Z` });
   if (c.serverErrors.truncated) out.push({ at: 'serverErrors', warn: `${CF_LIMIT} rows: there are more 5xx than counted` });
   if (c.sampleInterval.serverErrors > 1) out.push({ at: 'serverErrors', warn: `sampled (interval ${c.sampleInterval.serverErrors}): the 5xx counts are estimates` });
@@ -1433,7 +1560,8 @@ export function cloudflareText(c: Cloudflare): string[] {
   return [
     `Requests: ${c.now.requests} (before: ${c.before.requests}); ${top(c.now.statuses)}`,
     `5xx: ${c.serverErrors.total}${c.serverErrors.byHour.length ? `, in ${c.serverErrors.byHour.length} hours: ${c.serverErrors.byHour.map((h) => `${h.hour.slice(5)}h ${h.n}`).join(', ')}` : ''}`,
-    ...c.serverErrors.byPath.slice(0, 5).map((p) => `  ${String(p.n).padStart(5)}×  ${p.status} ${p.path}`),
+    ...(c.serverErrors.byClient && Object.keys(c.serverErrors.byClient).length ? [`5xx by client: ${clientList(c.serverErrors.byClient, 8)}`] : []),
+    ...c.serverErrors.byPath.slice(0, 5).map((p) => `  ${String(p.n).padStart(5)}×  ${p.status} ${p.path}${p.clients ? ` (${clientList(p.clients)})` : ''}`),
     // At the row limit the by-path rows are only the most-asked paths, so the total comes from the statuses.
     `404s: ${nf.truncated ? `${c.now.statuses['404'] ?? nf.total}; in the ${CF_LIMIT} most-asked paths, ${nf.probes} were scanners' probes` : `${nf.total}, ${nf.probes} of them scanners' probes`}; the rest by path: ${nf.site.slice(0, 10).map((p) => `${p.path} ${p.n}`).join(', ') || 'none'}`,
     `Pages by device: ${top(c.devices)}`,
@@ -1484,7 +1612,7 @@ export function cloudflare(o: { isProbe?: (path: string) => boolean } = {}): Sec
       const days = (w: Window) => ({ zone, from: w.from, to: w.to });
       const statusNow = await cfQuery(token, cfGroups('edgeResponseStatus', ''), days(ctx.now));
       const statusBefore = await cfQuery(token, cfGroups('edgeResponseStatus', ''), days(ctx.before));
-      const fiveXx = await cfQuery(token, cfGroups('datetimeHour clientRequestPath edgeResponseStatus', 'edgeResponseStatus_geq: 500', true), { zone, from: new Date(start(ctx.now)).toISOString(), to: new Date(end(ctx.now)).toISOString() });
+      const fiveXx = await cfQuery(token, cfGroups('datetimeHour clientRequestPath edgeResponseStatus userAgent', 'edgeResponseStatus_geq: 500', true), { zone, from: new Date(start(ctx.now)).toISOString(), to: new Date(end(ctx.now)).toISOString() });
       const notFound = await cfQuery(token, cfGroups('clientRequestPath', 'edgeResponseStatus: 404'), days(ctx.now));
       const devices = await cfQuery(token, cfGroups('clientDeviceType', 'edgeResponseStatus: 200, edgeResponseContentTypeName: "html"'), days(ctx.now));
       const cache = await cfQuery(token, cfGroups('cacheStatus edgeResponseContentTypeName', ''), days(ctx.now));
@@ -1654,10 +1782,33 @@ export interface MonitorApiSite {
     outages: number;
     warnings: number;
     htmlBytes: { now: number | null; weekAgo: number | null } | null;
+    /** Real readers on phones (Chrome UX Report, 28 days, ms); null when Chrome has too little data. */
+    readers: Readers | null;
   };
   openIncidents: { kind: string; label: string; severity: string; url: string | null; startedAt: string; cause: string | null; dismissed: unknown }[];
   domain: { daysLeft: number | null } | null;
   tls: { daysLeft: number | null } | null;
+}
+
+export interface Readers {
+  periodEnd: string;
+  lcpP75: number | null;
+  inpP75: number | null;
+  clsP75: number | null;
+  ttfbP75: number | null;
+}
+
+/** Google's bands for each metric at the 75th percentile: good up to the first, poor past the second. */
+export const READER_BANDS: Record<Exclude<keyof Readers, 'periodEnd'>, [number, number]> = {
+  lcpP75: [2500, 4000],
+  inpP75: [200, 500],
+  clsP75: [0.1, 0.25],
+  ttfbP75: [800, 1800],
+};
+
+export function readerBand(metric: keyof typeof READER_BANDS, v: number): 'good' | 'needs improvement' | 'poor' {
+  const [good, poor] = READER_BANDS[metric];
+  return v <= good ? 'good' : v <= poor ? 'needs improvement' : 'poor';
 }
 
 export interface MonitorApiInsights {
@@ -1735,6 +1886,12 @@ export function monitorWarnings(m: Monitor): Warning[] {
       .filter((p) => (p.uncached ?? 0) > 0)
       .map((p) => ({ at: path(p.url), warn: `${p.prefetches} prefetches on a scroll to the bottom, ${p.uncached} rendered by the server (the caching standard, 15)` })),
     ...m.pages.filter((p) => p.errors).map((p) => ({ at: path(p.url), warn: 'errors in the page' })),
+    ...(m.week.readers
+      ? (Object.keys(READER_BANDS) as (keyof typeof READER_BANDS)[]).flatMap((k) => {
+          const v = m.week.readers![k];
+          return v !== null && readerBand(k, v) === 'poor' ? [{ at: '', warn: `real readers' ${k.replace('P75', '').toUpperCase()} is poor: ${v} at the 75th percentile, phones, 28 days to ${m.week.readers!.periodEnd}` }] : [];
+        })
+      : []),
     ...(m.tlsDaysLeft !== null && m.tlsDaysLeft < 14 ? [{ at: '', warn: `the TLS certificate ends in ${m.tlsDaysLeft} days` }] : []),
     ...(m.domainDaysLeft !== null && m.domainDaysLeft < 30 ? [{ at: '', warn: `the domain ends in ${m.domainDaysLeft} days` }] : []),
   ];
@@ -1745,6 +1902,9 @@ export function monitorText(m: Monitor): string[] {
   const kb = (n: number | null) => (n === null ? '?' : `${Math.round(n / 1024)} KB`);
   return [
     `${m.slug}: ${m.status}; ${w.uptime.percent}% of ${w.uptime.total} checks ok over the week, typical first byte ${w.typicalMs ?? '?'} ms, ${w.outages} outages`,
+    w.readers
+      ? `real readers (phones, 28 days to ${w.readers.periodEnd}): ${(Object.keys(READER_BANDS) as (keyof typeof READER_BANDS)[]).map((k) => `${k.replace('P75', '').toUpperCase()} ${w.readers![k] ?? '?'} (${w.readers![k] === null ? 'no data' : readerBand(k, w.readers![k]!)})`).join(', ')}`
+      : 'real readers: none yet (Chrome has too few visits)',
     m.checksCached ? `the monitor's checks: ${m.checksCached.hits} of ${m.checksCached.ok} answered by the edge cache` : '',
     ...m.pages.map((p) => `${new URL(p.url).pathname} (${p.day ?? 'not measured'}): ${p.prefetches ?? '?'} prefetches, ${p.uncached ?? '?'} to the server; HTML ${kb(p.htmlBytes)}, JS ${kb(p.jsBytes)}; headers ${p.grade ?? '?'}${p.errors ? '; errors in the page' : ''}`),
     m.incidents.length ? `${m.incidents.length} open incidents` : 'no open incidents',
@@ -2007,12 +2167,20 @@ export function parseArgs(args: string[], names: string[]): { days: number; json
   return opts;
 }
 
+/**
+ * A project's keys, by name, from its root: `.env.prod`, then `.env`. The first file read wins a
+ * key, and the shell's own wins over both. The report and `migrate/` read keys this one way.
+ */
+export function loadEnv(root: string): void {
+  for (const f of ['.env.prod', '.env']) if (existsSync(join(root, f))) process.loadEnvFile(join(root, f));
+}
+
 /** The command: a project's scripts/prod-report.ts calls this with its sections. */
 export async function report(config: ReportConfig, args = process.argv.slice(2)): Promise<void> {
   const opts = parseArgs(args, Object.keys(config.sections));
-  // The project's root: this copy lives in its scripts/. The first file read wins a key, and the shell's own wins over both.
+  // The project's root: this copy lives in its scripts/.
   const root = join(import.meta.dirname, '..');
-  for (const f of ['.env.prod', '.env']) if (existsSync(join(root, f))) process.loadEnvFile(join(root, f));
+  loadEnv(root);
   const r = await prodStats(config, { days: opts.days, only: opts.only });
   const md = text(config, r);
   if (!opts.only) {
