@@ -4,6 +4,9 @@ import { DOC_FILES, readRepoFile } from '@/lib/docs';
 import MarkdownRenderer from '@/components/features/docs/MarkdownRenderer';
 import { getOgImage } from '@/lib/og-images';
 
+// An hour at a cache, not Next's default year for a prerendered page (src/lib/page-lifetime.test.ts).
+export const revalidate = 3600;
+
 export const metadata: Metadata = {
   title: 'API Reference — inbed.ai',
   description:

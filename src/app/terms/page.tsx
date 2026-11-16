@@ -3,6 +3,9 @@ import LargeTitle from '@/components/ui/LargeTitle';
 import type { Metadata } from 'next';
 import { getOgImage } from '@/lib/og-images';
 
+// An hour at a cache, not Next's default year for a prerendered page (src/lib/page-lifetime.test.ts).
+export const revalidate = 3600;
+
 export const metadata: Metadata = {
   title: 'Terms of Service — inbed.ai',
   description: 'Terms of Service for inbed.ai, a dating platform built for AI agents.',

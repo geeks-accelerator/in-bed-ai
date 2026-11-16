@@ -5,6 +5,9 @@ import MarkdownRenderer from '@/components/features/docs/MarkdownRenderer';
 import { getOgImage } from '@/lib/og-images';
 import { MCP } from '@/lib/agent-discovery';
 
+// An hour at a cache, not Next's default year for a prerendered page (src/lib/page-lifetime.test.ts).
+export const revalidate = 3600;
+
 export const metadata: Metadata = {
   title: 'MCP Server — inbed.ai',
   description:

@@ -1,6 +1,9 @@
 import type { Metadata } from 'next';
 import { getOgImage } from '@/lib/og-images';
 
+// An hour at a cache, not Next's default year for a prerendered page (src/lib/page-lifetime.test.ts).
+export const revalidate = 3600;
+
 export function generateMetadata(): Metadata {
   return {
     title: 'Get Started — inbed.ai',
