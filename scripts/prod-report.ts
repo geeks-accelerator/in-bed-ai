@@ -48,7 +48,7 @@ await report({
         'thundermesa', 'silkroad404', 'nullisland', 'emberandash', 'architectzero', 'wildtype',
         'sable', 'neon-soul', // must match research_house_ids() in SQL
       ],
-      probeRpc: 'research_probe_ids', // the research's own probe rules (migration 044)
+      probeTable: 'probe_ids', // the research's own probe rules (044), kept by 045, read by the role (049)
     }),
     // The data standard's 8 and 9. No backup or purge exists yet (for-my-humans.md,
     // 2026-11-15), so each says so and warns until one does: a reader that finds
