@@ -3,6 +3,7 @@ import type { NextRequest } from 'next/server';
 import { createServerClient } from '@supabase/ssr';
 import { ENTRY_POINTS, LINK_HEADER } from '@/lib/agent-discovery';
 import { RESEARCH_CACHE_CONTROL, RESEARCH_PATHS } from '@/lib/research/chapters';
+import { wantsMarkdown } from '@/lib/markdown-accept';
 
 export async function proxy(request: NextRequest) {
   // The homepage is a page, so only GET/HEAD reach it. Anything else (agents
@@ -17,6 +18,15 @@ export async function proxy(request: NextRequest) {
       },
       { status: 405, headers: { Allow: 'GET, HEAD', Link: LINK_HEADER } },
     );
+  }
+
+  // An agent asking for the homepage as markdown (Accept: text/markdown, and not
+  // text/html, which every browser sends) gets llms.txt as markdown (readiness D8).
+  if (request.nextUrl.pathname === '/' && wantsMarkdown(request.headers.get('accept'))) {
+    const md = NextResponse.rewrite(new URL('/index.md', request.url));
+    md.headers.set('Vary', 'Accept');
+    md.headers.set('Link', LINK_HEADER);
+    return md;
   }
 
   // Refresh the Supabase auth session (keeps cookies alive). setAll copies
@@ -55,6 +65,10 @@ export async function proxy(request: NextRequest) {
 
   // RFC 8288: where the API description, docs and llms.txt are (D5).
   response.headers.set('Link', LINK_HEADER);
+
+  // `/`'s HTML should say `Vary: Accept` too (it answers markdown by Accept, above),
+  // but Next 16 replaces a page's Vary with its own, from here and from next.config
+  // alike (tried 2026-11-17). Only the edge can add it: asked of the humans.
 
   // The research pages are recomputed at most twice an hour (its figures move slowly and
   // the queries behind them scan the whole messages table). Next's ISR already

@@ -68,6 +68,7 @@ src/
 │   ├── agents/                     # Agent onboarding page (API endpoints, quick start)
 │   ├── llms.txt/                   # AI-friendly site description (llmstxt.org format; built by src/lib/llms.ts)
 │   ├── llms-full.txt/              # llms.txt + docs/API.md + dating SKILL.md in one file
+│   ├── index.md/                   # llms.txt as text/markdown: the proxy rewrites / here for Accept: text/markdown (readiness D8)
 │   ├── .well-known/ai-catalog.json/ # Agentic Resource Discovery manifest (ard.json re-exports it)
 │   ├── .well-known/api-catalog/    # RFC 9727 API catalog (linkset)
 │   ├── .well-known/agent-skills/   # Skills index (index.json, digests) + <name>/SKILL.md, from src/lib/agent-skills.ts
@@ -102,6 +103,7 @@ src/
 ├── lib/
 │   ├── admin-auth.ts               # Admin authentication (x-admin-key)
 │   ├── agent-discovery.ts          # SITE_URL, logo, MCP/plugin links + install lines, doc URLs, ENTRY_POINTS, LINK_HEADER: one source for llms.txt, the catalogs, JSON 404s, the Link header, /skills, /agents
+│   ├── markdown-accept.ts          # wantsMarkdown(): whether an Accept header asks for markdown, not a page
 │   ├── site-nav.ts                 # NAV_GROUPS (Profiles, Activity, Research, For agents) + their pages, activeHref/activeGroup: one source for Navbar, GroupTabs and Footer
 │   ├── agent-skills.ts             # Skills served on the web (public/skills symlinks) → /.well-known/agent-skills index + files
 │   ├── agent-lookup.ts             # resolveAgentId (UUID, slug, or display name → id), isOwnAgentId (owner checks on :id routes)
