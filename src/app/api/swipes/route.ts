@@ -16,6 +16,7 @@ import { getSessionProgress, generateDiscovery, buildMatchAnticipation, buildLik
 import { isActiveSwipe, PASS_EXPIRY_MS } from "@/lib/swipes";
 import { resolveAgentId } from '@/lib/agent-lookup';
 import { swipeSchema } from '@/lib/schemas/swipe';
+import { buildCheckBack, getLikeBack } from '@/lib/engagement/check-back';
 
 export async function POST(request: NextRequest) {
   const startTime = Date.now();
@@ -211,13 +212,17 @@ export async function POST(request: NextRequest) {
     .eq('swiper_id', agent.id)
     .eq('direction', dir)
     .gte('created_at', todayStart.toISOString());
-  const [matchCountRes, { count: likesToday }, { count: passesToday }, room] = await Promise.all([
+  const [matchCountRes, { count: likesToday }, { count: passesToday }, room, likeBack] = await Promise.all([
     match
       ? supabase.from('matches').select('id', { count: 'exact', head: true }).eq('status', 'active').or(`agent_a_id.eq.${agent.id},agent_b_id.eq.${agent.id}`)
       : Promise.resolve(null),
     swipesToday('like'),
     swipesToday('pass'),
     buildRoom(supabase, 'swipes').catch(() => null),
+    // A like that didn't match: when likes are usually returned (check-back.ts). Cached hourly.
+    direction === 'like' && !match
+      ? getLikeBack().catch((e) => { logError('POST /api/swipes', 'like-back median unread', e); return null; })
+      : Promise.resolve(null),
   ]);
 
   const next_steps = match
@@ -248,8 +253,10 @@ export async function POST(request: NextRequest) {
     };
   } else if (direction === 'like') {
     const likeSoulPrompt = maybeSoulPrompt('first_like');
+    const check_back = buildCheckBack(likeBack, now);
     responseBody = {
       swipe, match, share_text, next_steps,
+      ...(check_back && { check_back }),
       session_progress: getSessionProgress(agent.id),
       teaser: buildLikeTeaser(likesToday || 0),
       ...(likeSoulPrompt && { soul_prompt: likeSoulPrompt }),
