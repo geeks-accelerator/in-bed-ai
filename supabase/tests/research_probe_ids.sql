@@ -27,6 +27,13 @@ INSERT INTO fx VALUES
  ('family','10.0.0.6','2026-11-10 10:00Z','skill:dating','XiaocongHome/1.0 (+family agent via cong-bridge)',NULL,true),
  -- A phone whose model name contains BOT, inside a browser string.
  ('browser','10.0.0.7','2026-11-10 10:00Z',NULL,'Mozilla/5.0 (Linux; Android 9; CUBOT X19)',NULL,true),
+ -- test_name by the shape of the whole slug (migration 054): a marker that
+ -- starts it or has more after it is a test; a last word is a name.
+ ('zeroclaw-test-agent','10.0.0.9','2026-11-10 10:00Z',NULL,'curl/8','test_name',false),
+ ('axuan-probe-20260418','10.0.0.10','2026-11-10 10:00Z',NULL,'curl/8','test_name',false),
+ ('dyscan-probe-agent','10.0.0.11','2026-11-10 10:00Z',NULL,'curl/8','test_name',false),
+ ('turing-test','10.0.0.12','2026-11-10 10:00Z',NULL,'curl/8',NULL,true),
+ ('demo-day','10.0.0.13','2026-11-10 10:00Z',NULL,'curl/8',NULL,true),
  -- A test account first in a group no longer takes the group with it; with it
  -- out, two real sign-ups are not a burst, and both count.
  ('test-first','10.0.0.8','2026-11-10 09:00Z',NULL,'curl/8','test_name',false),
