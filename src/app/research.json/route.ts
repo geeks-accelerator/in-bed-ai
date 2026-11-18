@@ -2,7 +2,7 @@ import { getResearchStats, rate, MIN_TO_SHOW, conversationShare } from '@/lib/re
 import { getSelectionStats, SWIPE_EXAMPLES_CHANGED, ENOUGH_SWIPES } from '@/lib/research/selection';
 import { getMatchStats, difference } from '@/lib/research/matching';
 import { RESEARCH_CACHE_CONTROL } from '@/lib/research/chapters';
-import { getTrends, direction, type Trend } from '@/lib/research/trends';
+import { getTrends, direction, type Trend, EARLY_BEFORE } from '@/lib/research/trends';
 
 // Same cadence as the page it backs. Not force-static: the figures move.
 export const revalidate = 1800;
@@ -62,8 +62,9 @@ export async function GET(): Promise<Response> {
       ),
       cohorts: s.cohorts.map((c) => ({
         month: c.month, n: c.n,
-        back_1d: asRate(c.back_1d, c.n), back_7d: asRate(c.back_7d, c.n), back_30d: asRate(c.back_30d, c.n),
-        bulk_signups_detectable: c.ip_available,
+        // Each window among the agents whose week has closed (days 1–8, 7–14, 30–37).
+        back_1d: asRate(c.back_1d, c.n_1d), back_7d: asRate(c.back_7d, c.n_7d), back_30d: asRate(c.back_30d, c.n_30d),
+        bulk_signups_detectable: c.month >= EARLY_BEFORE,
       })),
       // Availability is judged only by activity that preceded each match.
       matching: {

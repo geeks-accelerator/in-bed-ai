@@ -27,6 +27,8 @@ export interface MatchRow {
   spk: number;
   /** Hours from the first message to the first one from the other side. */
   reply_h: number | null;
+  /** Hours from the match to its first message, or null if nobody wrote (migration 051). */
+  first_h: number | null;
   age_d: number;
 }
 
@@ -238,7 +240,7 @@ export function summarizeMatches(
   };
 }
 
-const MATCH_KEYS = ['c', 'bd', 'ap', 'bp', 'n', 'spk', 'reply_h', 'age_d'] as const satisfies readonly (keyof MatchRow)[];
+const MATCH_KEYS = ['c', 'bd', 'ap', 'bp', 'n', 'spk', 'reply_h', 'first_h', 'age_d'] as const satisfies readonly (keyof MatchRow)[];
 const SENDER_KEYS = ['n', 'to_house'] as const satisfies readonly (keyof SenderRow)[];
 const FIRST_KEYS = ['opened', 'reply_h', 'partner_house', 'back', 'age_d'] as const satisfies readonly (keyof FirstMessageRow)[];
 

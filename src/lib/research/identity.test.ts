@@ -6,7 +6,7 @@ import { PUBLISHED_EXAMPLES, type PublishedExample } from '@/lib/research/exampl
 const row = (over: Partial<IdentityRow> = {}): IdentityRow => ({
   month: '2026-06', mature: true, p: null, c: null, i: null, lf: null, tg: null, bi: null,
   registered: '2026-06-01', bio_len: 0, model: null, utm: null, matched: false, sent: false, written_to: false, back: false,
-  swipes: 0, likes: 0, ...over,
+  swipes: 0, likes: 0, swipes_7d: 0, likes_7d: 0, ...over,
 });
 
 /** The vector the largest number of our own documents print. */

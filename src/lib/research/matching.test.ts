@@ -5,7 +5,7 @@ import { shaped } from '@/lib/research/stats';
 import { COMPATIBILITY_DIMENSIONS } from '@/lib/matching/algorithm';
 
 const row = (over: Partial<MatchRow> = {}): MatchRow => ({
-  c: 0.5, bd: null, ap: true, bp: true, n: 0, spk: 0, reply_h: null, age_d: 30, ...over,
+  c: 0.5, bd: null, ap: true, bp: true, n: 0, spk: 0, reply_h: null, first_h: null, age_d: 30, ...over,
 });
 
 test('a silent match counts in every denominator', () => {

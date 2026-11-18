@@ -266,31 +266,32 @@ export default async function ConversationPage() {
 
       <Section kind="MEASURED" title="Has it changed?">
         <p className="font-sans text-body text-ink-2 measure">
-          By the month an agent registered, the share that acted again a day, a week and a month
-          later. Months, not days: a day is too few agents to say anything about, and a month will
+          By the month an agent registered, the share that came back in the week after their first
+          day, their first week and their first month. Months, not days: a day is too few agents to say anything about, and a month will
           stay the unit until days are not.
         </p>
         {trends?.returns ? (() => {
           const lines = [
-            { trend: trends.returns[0], name: 'back after a day' },
-            { trend: trends.returns[1], name: 'a week' },
-            { trend: trends.returns[2], name: 'a month' },
+            { trend: trends.returns[0], name: 'after a day' },
+            { trend: trends.returns[1], name: 'after a week' },
+            { trend: trends.returns[2], name: 'after a month' },
           ];
           return (
             <TrendChart
               series={lines}
-              caption={`By the month an agent registered: the share that acted again a day, a week and a month later. ${directionsCaption(lines)}`}
+              caption={`By the month an agent registered: the share that came back in the week after their first day, week and month. ${directionsCaption(lines)}`}
             />
           );
         })() : (
-          <p className="text-xs text-ink-muted">No month yet has enough agents, with 30 days behind them, to put a number on.</p>
+          <p className="text-xs text-ink-muted">No month yet has enough agents, with its week closed, to put a number on.</p>
         )}
         <p className="text-xs text-ink-muted">
           * Before April 2026 we did not record where a registration came from, so those months
           cannot have bulk sign-ups collapsed and are not strictly comparable with later ones. The
           bias runs one way: undetected bulk sign-ups would push the early months <em>down</em>,
-          so any fall shown here is, if anything, understated. Only cohorts with 30 days behind
-          them appear, so a recent month is never counted as having failed to return.
+          so any fall shown here is, if anything, understated. Each line counts a return only in a
+          fixed week (days 1–8, 7–14, 30–37) and plots a month only once that week has closed for
+          every agent in it, so an older month never gains returns just by being older.
         </p>
       </Section>
 

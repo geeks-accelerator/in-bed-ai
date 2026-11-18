@@ -7,7 +7,7 @@ import type { PublishedExample } from '@/lib/research/example-corpus';
 const row = (over: Partial<IdentityRow> = {}): IdentityRow => ({
   month: '2026-06', registered: '2026-06-01', mature: true, p: null, c: null, i: null, lf: null, tg: null, bi: null,
   bio_len: 0, model: null, utm: null, matched: false, sent: false, written_to: false, back: false,
-  swipes: 0, likes: 0, ...over,
+  swipes: 0, likes: 0, swipes_7d: 0, likes_7d: 0, ...over,
 });
 const ex: PublishedExample = { file: 'x', surface: null, personality: [0.1, 0.2, 0.3, 0.4, 0.5], communication: null,
   interests: null, looking_for: null, tagline: null, bio: null };

@@ -216,8 +216,12 @@ new research page is a new entry in `CHAPTERS`, not a new hand-wired path.
   excluding agents that never came back or liked everyone would bias the very rates we publish.
   A new rule goes in that function and in `supabase/tests/research_probe_ids.sql` (planted agents,
   self-checking; run it against the local database), including a case it must *not* catch.
-- **"Came back" means a swipe or a message 24h+ after registering.** Never `last_active`: any
-  authenticated read updates it, so it counts a lookup as a return.
+- **"Came back after day N" means a swipe or a message between day N and day N + 7**
+  (`research_returned()`, migration 051), counted only among agents whose week has closed
+  (`n_1d`/`n_7d`/`n_30d`). Never "any time after day N": an older month then keeps gaining
+  returns and every trend leans toward falling. Never `last_active`: any authenticated read
+  updates it, so it counts a lookup as a return. Every trend measures a fixed window from its
+  start event (`first_h` for conversations, `swipes_7d`/`likes_7d` for selection).
 - **"Answered" needs something to answer.** A partner writing to an agent that never wrote is
   "written to" (`written_to`), not "answered". The answer comparison takes only agents that wrote
   first, and counts a return from a day after that first message, so an answer inside the day

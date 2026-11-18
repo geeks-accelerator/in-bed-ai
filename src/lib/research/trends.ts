@@ -143,21 +143,25 @@ export function direction(points: TrendPoint[]): Direction {
 
 /** Chapter 1: share of new agents introducing themselves with one of our example profiles. */
 export function presentationTrend(rows: IdentityRow[], generated_at: string, now: number): Trend {
-  // summarize() keeps the identity page's population: mature agents (a week or more old).
+  // summarize() keeps the identity page's population: mature agents (8 days or more old).
   const points = series(
     rows,
     (r) => r.month,
     (xs) => publishedPersonalityShare(summarize(xs, generated_at, 0)),
-    7,
+    8,
     now,
   );
   return { id: 'presentation', measure: 'new agents whose personality numbers came from one of our examples, by month they joined', points };
 }
 
-/** Chapter 2: share of swiping agents who liked everyone they were shown. */
+/**
+ * Chapter 2: share of swiping agents who liked everyone they were shown, in
+ * their first week. Lifetime counts kept changing a month after it was
+ * plotted, and favoured new months, whose agents had swiped less.
+ */
 export function selectionTrend(rows: IdentityRow[], now: number): Trend {
   const points = series(
-    rows,
+    rows.map((r) => ({ ...r, swipes: r.swipes_7d, likes: r.likes_7d })),
     (r) => r.month,
     (xs) => {
       const { all } = summarizeSelection(xs);
@@ -168,19 +172,24 @@ export function selectionTrend(rows: IdentityRow[], now: number): Trend {
   );
   return {
     id: 'selection',
-    measure: 'agents who swiped and liked every agent they were shown, by month they joined',
+    measure: 'agents who swiped in their first week and liked every agent they were shown, by month they joined',
     points,
     annotations: [{ date: SWIPE_EXAMPLES_CHANGED, label: 'our examples stop saying “like”' }],
   };
 }
 
-/** A reply within this many hours of the first message counts as a two-way conversation. */
+/**
+ * A match counts as a two-way conversation when its first message comes
+ * within this many hours of the match, and the reply within this many hours of
+ * the first message: both measured from fixed points, so a late first message
+ * can't flip a match after its month is plotted.
+ */
 export const CONVERSATION_WINDOW_H = 7 * 24;
-/** Matches are judged once this old, so the first message and its week have both had time. */
+/** Matches are judged once this old: the first message's week and the reply's week have both closed. */
 export const CONVERSATION_JUDGED_D = 14;
 
 /**
- * Chapter 3: matches that became two-way within a week of the first message.
+ * Chapter 3: matches that became two-way within the window above.
  *
  * Deliberately not the headline share (which counts every match, however
  * new): over time that number favours older months, which have simply had
@@ -191,11 +200,15 @@ export function conversationTrend(rows: MatchRow[], generated_at: string, now: n
   const points = series(
     rows.filter((r) => r.age_d >= CONVERSATION_JUDGED_D),
     (r) => monthOf(new Date(at - r.age_d * DAY)),
-    (xs) => ({ k: xs.filter((r) => r.reply_h !== null && r.reply_h <= CONVERSATION_WINDOW_H).length, n: xs.length }),
+    (xs) => ({
+      k: xs.filter((r) => r.first_h !== null && r.first_h <= CONVERSATION_WINDOW_H
+        && r.reply_h !== null && r.reply_h <= CONVERSATION_WINDOW_H).length,
+      n: xs.length,
+    }),
     CONVERSATION_JUDGED_D,
     now,
   );
-  return { id: 'conversation', measure: 'matches where the other agent replied within a week of the first message, by month they matched', points };
+  return { id: 'conversation', measure: 'matches written to within a week and answered within a week of that, by month they matched', points };
 }
 
 /** Chapter 3: an agent's first message, answered within the answer window. */
@@ -214,19 +227,24 @@ export function answersTrend(rows: FirstMessageRow[], generated_at: string, now:
   return { id: 'answers', measure: 'agents that wrote first and were answered within a day, by month of that first message', points };
 }
 
-/** Chapter 3: came back after a day, a week, a month (the cohorts research_stats already returns). */
+/**
+ * Chapter 3: came back in the week after day 1, day 7 and day 30 (the cohorts
+ * research_stats already returns). A month is plotted once that week has
+ * closed for its last member, so its figure never changes as it ages.
+ */
 export function returnsTrends(cohorts: ResearchStats['cohorts'], now: number): Trend[] {
   const windows = [
-    { id: 'back_1d', days: 1, label: 'a day' },
-    { id: 'back_7d', days: 7, label: 'a week' },
-    { id: 'back_30d', days: 30, label: 'a month' },
+    { id: 'back_1d', days: 1, label: 'their first day' },
+    { id: 'back_7d', days: 7, label: 'their first week' },
+    { id: 'back_30d', days: 30, label: 'their first month' },
   ] as const;
+  const of = { back_1d: 'n_1d', back_7d: 'n_7d', back_30d: 'n_30d' } as const;
   return windows.map((w) => ({
     id: w.id,
-    measure: `came back ${w.label} or more after joining, by month they joined`,
+    measure: `came back in the week after ${w.label}, by month they joined`,
     points: cohorts
-      .filter((c) => closed(c.month, w.days, now) && closed(c.month, 30, now))
-      .map((c) => trendPoint(c.month, c[w.id], c.n)),
+      .filter((c) => closed(c.month, w.days + 7, now))
+      .map((c) => trendPoint(c.month, c[w.id], c[of[w.id]])),
   }));
 }
 

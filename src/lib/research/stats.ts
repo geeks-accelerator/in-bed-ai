@@ -23,7 +23,15 @@ export interface ResearchStats {
     probes: Record<ProbeReason, number>;
   };
   shape: { bucket: 'silent' | 'one_agent' | 'both_spoke'; n: number; median_messages: number }[];
-  cohorts: { month: string; n: number; back_1d: number; back_7d: number; back_30d: number; ip_available: boolean }[];
+  /**
+   * Came back by month joined (migration 051): `back_Nd` is a swipe or message
+   * between day N and day N + 7, counted among `n_Nd`, the agents whose week
+   * has closed. `n` is every agent of the month at least 8 days old.
+   */
+  cohorts: {
+    month: string; n: number;
+    n_1d: number; back_1d: number; n_7d: number; back_7d: number; n_30d: number; back_30d: number;
+  }[];
   dimensions: { dimension: string; mean: number; sd: number; n: number }[];
   effort: { signal: string; yes_n: number; yes_back: number; no_n: number; no_back: number }[];
   attribution: { surface: string; n: number; returned: number }[] | null;
@@ -209,8 +217,12 @@ export type ProbeReason = (typeof PROBE_REASONS)[number];
  * probe counts the method note states (absent before migration 044, which must
  * read as a failed read, not as "nothing excluded").
  */
+const COHORT_KEYS = ['month', 'n', 'n_1d', 'back_1d', 'n_7d', 'back_7d', 'n_30d', 'back_30d'] as const;
+
 export function usableResearchStats(d: unknown): d is ResearchStats {
   if (!shaped(d, RESEARCH_KEYS)) return false;
+  // Cohorts from before migration 051 have no per-window n: a failed read.
+  if (!shaped((d as { cohorts: unknown }).cohorts, COHORT_KEYS)) return false;
   const probes = (d as { totals?: { probes?: unknown } }).totals?.probes;
   return shaped(probes, PROBE_REASONS) &&
     PROBE_REASONS.every((r) => typeof (probes as Record<string, unknown>)[r] === 'number');

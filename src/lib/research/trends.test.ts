@@ -1,6 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { closed, monthRange, series, direction, conversationTrend, returnsTrends, CONVERSATION_JUDGED_D, type TrendPoint } from '@/lib/research/trends';
+import { closed, monthRange, series, direction, conversationTrend, returnsTrends, selectionTrend, CONVERSATION_JUDGED_D, type TrendPoint } from '@/lib/research/trends';
+import type { IdentityRow } from '@/lib/research/identity';
 import { rate } from '@/lib/research/stats';
 import { directionsCaption } from '@/lib/research/headings';
 import type { MatchRow } from '@/lib/research/matching';
@@ -58,7 +59,7 @@ test('direction is judged from the first comparable month, not an early one', ()
 
 test('the conversation trend uses a fixed window, so a young match cannot drag the newest month down', () => {
   const gen = new Date(NOW).toISOString();
-  const row = (age_d: number, reply_h: number | null): MatchRow => ({ c: 0.8, bd: null, ap: true, bp: true, n: 2, spk: reply_h === null ? 1 : 2, reply_h, age_d });
+  const row = (age_d: number, reply_h: number | null, first_h: number | null = 1): MatchRow => ({ c: 0.8, bd: null, ap: true, bp: true, n: 2, spk: reply_h === null ? 1 : 2, reply_h, first_h, age_d });
   const rows = [
     // Matched mid-October (age ~32 days), all answered within a day.
     ...Array.from({ length: 10 }, () => row(32, 5)),
@@ -66,24 +67,49 @@ test('the conversation trend uses a fixed window, so a young match cannot drag t
     ...Array.from({ length: 10 }, () => row(5, null)),
     // A reply after more than a week does not count as two-way within the window.
     row(33, 24 * 9),
+    // First message on day 12, answered at once: outside the window from the
+    // match, so it can't flip its month after the month is plotted.
+    row(34, 1, 24 * 12),
   ];
   const t = conversationTrend(rows, gen, NOW);
   const oct = t.points.find((p) => p.month === '2026-10')!;
-  assert.equal(oct.n, 11);
+  assert.equal(oct.n, 12);
   assert.equal(oct.k, 10);
   assert.ok(t.points.every((p) => p.month !== '2026-11'), 'November is not closed');
   assert.ok(rows.filter((r) => r.age_d < CONVERSATION_JUDGED_D).length > 0);
 });
 
-test('returns trends wait for the 30-day window and mark early months by the same rule as every trend', () => {
-  const cohorts = [
-    // ip_available no longer decides "early": the month does, as in series().
-    { month: '2026-03', n: 40, back_1d: 20, back_7d: 10, back_30d: 4, ip_available: true },
-    { month: '2026-10', n: 40, back_1d: 20, back_7d: 10, back_30d: 4, ip_available: true },
-  ];
-  const [day] = returnsTrends(cohorts, NOW);
-  assert.deepEqual(day.points.map((p) => p.month), ['2026-03']);
+const cohort = (month: string, n: number) => ({ month, n, n_1d: n, back_1d: 20, n_7d: n, back_7d: 10, n_30d: n, back_30d: 4 });
+
+test('each returns line waits for its own week to close, and is early by the same rule as every trend', () => {
+  // 2026-11-16: October closes for the day-1 week (1 + 7 days after month end)
+  // and the day-7 week (14), but not for the day-30 week (37).
+  const [day, week, month] = returnsTrends([cohort('2026-03', 40), cohort('2026-10', 40)], NOW);
+  assert.deepEqual(day.points.map((p) => p.month), ['2026-03', '2026-10']);
+  assert.deepEqual(week.points.map((p) => p.month), ['2026-03', '2026-10']);
+  assert.deepEqual(month.points.map((p) => p.month), ['2026-03']);
   assert.equal(day.points[0].early, true);
+  assert.equal(day.points[1].early, false);
+});
+
+test('a returns point divides by the agents whose week has closed, not every agent of the month', () => {
+  const c = { month: '2026-03', n: 40, n_1d: 40, back_1d: 20, n_7d: 30, back_7d: 10, n_30d: 25, back_30d: 4 };
+  const [, week, month] = returnsTrends([c], NOW);
+  assert.equal(week.points[0].n, 30);
+  assert.equal(month.points[0].n, 25);
+});
+
+test('the selection trend reads each agent\'s first week, not every swipe it ever made', () => {
+  const r = (over: Partial<IdentityRow>): IdentityRow => ({
+    month: '2026-09', registered: '2026-09-10', mature: true, p: null, c: null, i: null, lf: null, tg: null, bi: null,
+    bio_len: 0, model: null, utm: null, matched: false, sent: false, written_to: false, back: false,
+    swipes: 0, likes: 0, swipes_7d: 0, likes_7d: 0, ...over,
+  });
+  // Liked all 3 in week one, then passed on 7 more: in its first week it liked everyone.
+  const rows = Array.from({ length: 10 }, () => r({ swipes: 10, likes: 3, swipes_7d: 3, likes_7d: 3 }));
+  const sep = selectionTrend(rows, NOW).points.find((p) => p.month === '2026-09')!;
+  assert.equal(sep.k, 10);
+  assert.equal(sep.n, 10);
 });
 
 test('with fewer than two comparable months there is no direction, whatever the early months say', () => {

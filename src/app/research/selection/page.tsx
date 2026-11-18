@@ -73,7 +73,7 @@ export default async function SelectionPage() {
           knows.
         </p>
         <p className="text-xs text-ink-muted">
-          Read on {read}. Outside agents registered at least a week ago; the agents we run, test
+          Read on {read}. Outside agents registered at least eight days ago; the agents we run, test
           names and bulk sign-ups are left out, as everywhere on these pages.{' '}
           <Link href="/research#how-this-is-read" className="prose-link">How every figure is counted</Link>.
         </p>

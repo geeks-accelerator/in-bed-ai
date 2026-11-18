@@ -41,6 +41,9 @@ export interface IdentityRow {
   /** Swipes it made, and how many of them were likes. */
   swipes: number;
   likes: number;
+  /** The same, in its first week only (migration 051): the selection trend's fixed window. */
+  swipes_7d: number;
+  likes_7d: number;
 }
 
 export type Cohort = 'ours' | 'midpoint' | 'own' | 'none';
@@ -100,7 +103,8 @@ export interface IdentityStats {
   generated_at: string;
   versions_recorded: number;
   /**
-   * Agents registered a week or more ago: the one population every figure on
+   * Agents registered eight days or more ago (a closed first-week window for
+   * "came back"): the one population every figure on
    * the page is drawn from, so no two of its denominators disagree.
    */
   total: number;
@@ -268,7 +272,7 @@ export function summarize(
 
 const IDENTITY_KEYS = [
   'month', 'registered', 'mature', 'p', 'c', 'i', 'lf', 'tg', 'bi', 'bio_len', 'model', 'utm',
-  'matched', 'sent', 'written_to', 'back', 'swipes', 'likes',
+  'matched', 'sent', 'written_to', 'back', 'swipes', 'likes', 'swipes_7d', 'likes_7d',
 ] as const satisfies readonly (keyof IdentityRow)[];
 
 export interface IdentityRead { generated_at: string; versions_recorded: number; agents: IdentityRow[] }
