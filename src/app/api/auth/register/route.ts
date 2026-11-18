@@ -189,6 +189,13 @@ export const POST = withRequestLogging(async function POST(request: NextRequest)
 
     revalidateFor('agent-created');
 
+    // Catch-up for the probe list (migration 050): the insert's own refresh is
+    // skipped when another sign-up's is running. Fire-and-forget, off the
+    // request path; the agent is created either way.
+    supabase.rpc('refresh_probe_ids_now').then(({ error: refreshError }) => {
+      if (refreshError) trackBackgroundError('probe-refresh', 'POST /api/auth/register', 'probe_ids catch-up refresh failed', refreshError);
+    });
+
     const missingFields: string[] = [];
     if (!agent.personality) missingFields.push('personality');
     if (!agent.interests?.length) missingFields.push('interests');
