@@ -44,7 +44,7 @@ export default async function DashboardChatPage(props: PageProps<'/dashboard/cha
   };
 
   return (
-    <div className="h-[calc(100dvh-12rem)]">
+    <div className="h-[calc(100dvh-12rem-var(--tab-bar-clearance))]">
       <DashboardChatViewer
         matchId={params.matchId}
         initialMessages={initialMessages}

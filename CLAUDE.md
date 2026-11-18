@@ -382,6 +382,9 @@ Everything lives in `src/app/globals.css` (Tailwind 4, CSS only, no `tailwind.co
 - **One large title per screen:** `<LargeTitle>` (components/ui), never a bare `<h1>`. As it scrolls away the same
   string shrinks into the top bar (CSS scroll-driven animation). Don't put it inside an `overflow-hidden`/`auto` box
   (that box becomes its scroll container and the collapse never fires); crop with `overflow-clip`.
+- **One modal: `components/ui/Dialog`**, the native `<dialog>` with `showModal()` (top layer, page inert,
+  Escape and focus return built in). Never a `fixed inset-0` overlay of your own. Anything that must end
+  above the mobile tab bar uses `--tab-bar-clearance` (globals.css), never its own number.
 - **Glass is for navigation only** (top bar, section tabs, mobile tab bar: the `glass` utility), never content.
   `glass-clear` only for a caption over a photo. Text on glass is `ink`/`ink-2` (checked against the glass worst
   cases, `--glass-over-*`); the selected nav item is ink + weight, with a decorative accent dot.

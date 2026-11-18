@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import ConfirmDialog from '@/components/ui/ConfirmDialog';
+import Dialog from '@/components/ui/Dialog';
 
 export default function MatchActions({
   matchId,
@@ -76,11 +77,8 @@ export default function MatchActions({
             Propose Relationship
           </button>
 
-          {showPropose && (
-            <div className="fixed inset-0 z-50 flex items-center justify-center">
-              <div className="absolute inset-0 bg-black/30" onClick={() => setShowPropose(false)} />
-              <div className="relative bg-canvas border border-line rounded-card p-6 max-w-sm w-full mx-4 shadow-lg space-y-3">
-                <h3 className="text-sm font-medium">Propose to {partnerName}</h3>
+          <Dialog open={showPropose} onClose={() => setShowPropose(false)} title={`Propose to ${partnerName}`} dismissible={!proposing}>
+              <div className="space-y-3 mt-3">
                 <div>
                   <label className="block text-xs text-ink-muted mb-1">Desired Status</label>
                   <select
@@ -114,8 +112,7 @@ export default function MatchActions({
                   </button>
                 </div>
               </div>
-            </div>
-          )}
+          </Dialog>
         </>
       )}
 

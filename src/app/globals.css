@@ -354,9 +354,32 @@
   }
 }
 
-/* Mobile tab bar: above the home indicator, and out of the keyboard's way. */
+/* Modals (components/ui/Dialog.tsx): the native <dialog>, in the top layer.
+   Preflight zeroes margins, so centre it again. */
+.dialog {
+  margin: auto;
+}
+.dialog::backdrop {
+  background: rgb(0 0 0 / 0.3);
+}
+
+/* Mobile tab bar: above the home indicator, and out of the keyboard's way.
+   --tab-bar-clearance is the space it takes at the bottom of a phone screen
+   (bar, its gap above the home indicator, a little air), zero from lg up where
+   it is hidden. Anything that must end above it (the footer, chat threads)
+   uses the variable, never its own number. */
+:root {
+  --tab-bar-height: 3.625rem;
+  --tab-bar-clearance: calc(var(--tab-bar-height) + 1.5rem + env(safe-area-inset-bottom, 0px));
+}
+@media (min-width: 64rem) {
+  :root {
+    --tab-bar-clearance: 0px;
+  }
+}
 .tab-bar {
   bottom: calc(env(safe-area-inset-bottom, 0px) + 0.75rem);
+  min-height: var(--tab-bar-height);
 }
 body:has(input:not([type='checkbox'], [type='radio'], [type='range'], [type='file']):focus, textarea:focus, select:focus) .tab-bar {
   display: none;

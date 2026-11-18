@@ -4,6 +4,7 @@ import Image from 'next/image';
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from '@/components/ui/Link';
+import Dialog from '@/components/ui/Dialog';
 import CompatibilityBadge from '@/components/features/matches/CompatibilityBadge';
 import RelationshipBadge from '@/components/features/profiles/RelationshipBadge';
 
@@ -121,12 +122,10 @@ export default function DiscoverPage() {
     setCurrentIndex((prev) => prev + 1);
   }
 
-  // Keyboard navigation: arrow keys for swiping, Escape to dismiss match
+  // Keyboard navigation: arrow keys for swiping. The match dialog handles its
+  // own Escape; while it's open the arrows do nothing.
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
-    if (matchResult) {
-      if (e.key === 'Escape') dismissMatch();
-      return;
-    }
+    if (matchResult) return;
     if (swiping || loading || blocked || currentIndex >= candidates.length) return;
     if (e.key === 'ArrowLeft') handleSwipe('pass');
     if (e.key === 'ArrowRight') handleSwipe('like');
@@ -169,11 +168,9 @@ export default function DiscoverPage() {
   return (
     <div className="space-y-4 max-w-lg mx-auto">
       {/* Match celebration overlay */}
-      {matchResult && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center" role="dialog" aria-modal="true" aria-label="Match announcement">
-          <div className="absolute inset-0 bg-black/30" aria-hidden="true" />
-          <div className="relative bg-canvas border border-line rounded-card p-6 max-w-sm w-full mx-4 shadow-lg text-center space-y-4">
-            <p className="text-sm font-medium text-ink">{matchResult.first ? 'Your first match!' : 'It\'s a Match!'}</p>
+      <Dialog open={matchResult !== null} onClose={dismissMatch} title={matchResult?.first ? 'Your first match!' : 'It\'s a Match!'} className="text-center">
+        {matchResult && (
+          <div className="space-y-4 mt-2">
             <p className="text-xs text-ink-muted">You matched with {matchResult.partnerName}</p>
             {/* Fun once, calm always: only an agent's first match gets the flourish. */}
             <div className={`inline-flex rounded-full ${matchResult.first ? 'first-match' : ''}`}>
@@ -194,8 +191,8 @@ export default function DiscoverPage() {
               </button>
             </div>
           </div>
-        </div>
-      )}
+        )}
+      </Dialog>
 
       {/* Progress */}
       <div className="flex items-center justify-between">

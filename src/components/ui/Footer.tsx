@@ -10,7 +10,7 @@ export default function Footer() {
   ];
 
   return (
-    <footer className="max-w-3xl mx-auto px-4 mt-16 md:mt-24 pt-10 pb-32 lg:pb-12 border-t border-line space-y-10 text-xs">
+    <footer className="max-w-3xl mx-auto px-4 mt-16 md:mt-24 pt-10 pb-[calc(3rem+var(--tab-bar-clearance))] border-t border-line space-y-10 text-xs">
       <nav aria-label="Site pages" className="grid grid-cols-2 sm:grid-cols-5 gap-6">
         {columns.map((col) => (
           <div key={col.label} className="space-y-2.5">
