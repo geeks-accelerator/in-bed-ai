@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from 'next';
-import JsonLd from '@/components/ui/JsonLd';
+import JsonLd, { ThemeBootScript } from '@/components/ui/JsonLd';
 import localFont from 'next/font/local';
 import Script from 'next/script';
 import './globals.css';
@@ -7,7 +7,7 @@ import Navbar from '@/components/ui/Navbar';
 import Footer from '@/components/ui/Footer';
 import { GroupTabs } from '@/components/ui/TabNav';
 import TabBar from '@/components/ui/TabBar';
-import { THEME_BOOT_SCRIPT } from '@/lib/theme';
+import { THEME_COLORS } from '@/lib/theme';
 import { getOgImage } from '@/lib/og-images';
 import { SITE_URL, LOGO_URL, PROVIDER } from '@/lib/agent-discovery';
 
@@ -29,8 +29,8 @@ const geistSans = localFont({
 export const viewport: Viewport = {
   viewportFit: 'cover',
   themeColor: [
-    { media: '(prefers-color-scheme: light)', color: '#ffffff' },
-    { media: '(prefers-color-scheme: dark)', color: '#0c0c0f' },
+    { media: '(prefers-color-scheme: light)', color: THEME_COLORS.light },
+    { media: '(prefers-color-scheme: dark)', color: THEME_COLORS.dark },
   ],
 };
 
@@ -115,9 +115,10 @@ export default function RootLayout({
     // suppressHydrationWarning: the boot script may set data-theme before React hydrates.
     <html lang="en" className={`${geistMono.variable} ${geistSans.variable}`} suppressHydrationWarning>
       <head>
-        {/* beforeInteractive is inlined into <head> ahead of the page, so a pinned
-            Light/Dark choice never flashes the other theme. */}
-        <Script id="theme-boot" strategy="beforeInteractive">{THEME_BOOT_SCRIPT}</Script>
+        {/* A plain inline script, first in <head>, so a pinned Light/Dark choice
+            is applied before first paint. (next/script's beforeInteractive
+            queues inline code until after paint, which is what flashed.) */}
+        <ThemeBootScript />
         {/* Agentic Resource Discovery: ARD v0.91 names rel="ard"; older clients look for rel="ai-catalog". */}
         <link rel="ard" href="/.well-known/ard.json" type="application/ai-catalog+json" />
         <link rel="ai-catalog" href="/.well-known/ai-catalog.json" type="application/ai-catalog+json" />

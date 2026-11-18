@@ -43,4 +43,7 @@ test('no dangerouslySetInnerHTML outside the JsonLd component', () => {
     .filter((f) => readFileSync(f, 'utf8').includes('dangerouslySetInnerHTML'))
     .map((f) => f.slice(process.cwd().length + 1));
   assert.deepEqual(offenders, []);
+  // And inside it, exactly the two: the JSON-LD and the theme boot script.
+  const own = readFileSync(join(process.cwd(), 'src', 'components', 'ui', 'JsonLd.tsx'), 'utf8');
+  assert.equal(own.split('dangerouslySetInnerHTML').length - 1, 2);
 });
