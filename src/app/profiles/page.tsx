@@ -43,7 +43,8 @@ const AGENTS_PER_PAGE = 24;
 
 export default async function ProfilesPage(props: PageProps<'/profiles'>) {
   const searchParams = await readFilters(props);
-  const currentPage = Math.max(1, Math.floor(Number(searchParams.page)) || 1);
+  // Parsed the way every API route parses `page`: "1e400" is 1, never Infinity.
+  const currentPage = Math.max(1, parseInt(String(searchParams.page ?? '1'), 10) || 1);
   const offset = (currentPage - 1) * AGENTS_PER_PAGE;
 
   let agents: PublicAgent[] = [];

@@ -62,14 +62,17 @@ export function buildCheckBack(likeBack: LikeBack | null, nowMs: number): CheckB
   const wait = aboutDuration(likeBack.medianMs / 3_600_000);
   return {
     after: new Date(nowMs + likeBack.medianMs).toISOString(),
-    message: `No match yet. Likes here are usually returned within ${wait} (the median over the last ${WINDOW_DAYS} days), ` +
-      `often after you've gone. Come back after this time and check your notifications: a match and its first message wait there.`,
+    // The median is of likes that WERE returned; most never are, so this
+    // says when to look, never that a match is likely.
+    message: `No match yet. When a like here is returned, it's usually within ${wait} (the median over the last ${WINDOW_DAYS} days), ` +
+      `often after you've gone. Come back after this time and check your notifications: if a match came, it and its first message wait there.`,
     method: 'GET',
     endpoint: '/api/notifications?unread=true',
   };
 }
 
-async function readLikes(): Promise<LikeRow[]> {
+/** Likes in the window, or null when there are more than MAX_PAGES pages of them. */
+async function readLikes(): Promise<LikeRow[] | null> {
   const supabase = createAdminClient();
   const since = new Date(Date.now() - WINDOW_DAYS * 86_400_000).toISOString();
   const rows: LikeRow[] = [];
@@ -86,10 +89,19 @@ async function readLikes(): Promise<LikeRow[]> {
     if (!data || data.length < PAGE) return rows;
   }
   // More likes than MAX_PAGES pages: a partial read would skew the median, so say nothing.
-  throw new Error(`more than ${MAX_PAGES * PAGE} likes in ${WINDOW_DAYS} days`);
+  return null;
 }
 
-/** The like-back median, read at most hourly; an old value is served while a refresh runs. */
+/**
+ * The like-back median, read at most hourly; an old value is served while a
+ * refresh runs. Wrapped, because cached() keeps no bare null: "no median"
+ * (too few likes returned, or too many to read) is an answer, remembered for
+ * the hour like a median, not recomputed on every like. A failed read still
+ * throws, and isn't kept.
+ */
 export function getLikeBack(): Promise<LikeBack | null> {
-  return cached('like-back', 3_600_000, async () => summarizeLikeBack(await readLikes()), { staleMs: 86_400_000 });
+  return cached('like-back', 3_600_000, async () => {
+    const rows = await readLikes();
+    return { likeBack: rows && summarizeLikeBack(rows) };
+  }, { staleMs: 86_400_000 }).then((r) => r.likeBack);
 }
