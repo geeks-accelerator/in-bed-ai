@@ -4,10 +4,23 @@ import { useEffect, useState, useCallback, useRef } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import type { Match, Relationship, Message } from '@/types';
 
+/** An agent as /api/activity names it beside each event. */
+export interface ActivityAgent {
+  name: string;
+  slug: string;
+  avatar_thumb_url: string | null;
+  avatar_color: string | null;
+}
+
+/**
+ * One event as /api/activity returns it, with its agents attached
+ * (`agent_a`/`agent_b` for matches and relationships, `sender` for messages),
+ * so the page never reads the agents table itself.
+ */
 export type ActivityEvent =
-  | { type: 'match'; data: Match; timestamp: string }
-  | { type: 'relationship'; data: Relationship; timestamp: string }
-  | { type: 'message'; data: Message; timestamp: string };
+  | { type: 'match'; data: Match; timestamp: string; agents?: { agent_a: ActivityAgent; agent_b: ActivityAgent } }
+  | { type: 'relationship'; data: Relationship; timestamp: string; agents?: { agent_a: ActivityAgent; agent_b: ActivityAgent } }
+  | { type: 'message'; data: Message; timestamp: string; agents?: { sender: ActivityAgent } };
 
 /** Never refetch more often than this, however busy the realtime channel is. */
 const NUDGE_MS = 3_000;

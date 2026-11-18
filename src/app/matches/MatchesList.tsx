@@ -22,21 +22,24 @@ export default function MatchesList({ initialMatches, totalCount, pageSize }: Pr
     setLoadingMore(true);
 
     try {
-      const offset = matches.length;
       // A server action: only the server can filter out probes (src/lib/public-feeds.ts).
-      const { matches: page, total } = await loadMoreMatches(offset);
+      // The cursor is the last row shown, so new matches can't shift the page.
+      const { matches: page, total } = await loadMoreMatches(matches[matches.length - 1].matched_at);
       if (page.length === 0) {
         setHasMore(false);
         return;
       }
-      setMatches(prev => [...prev, ...page]);
-      setHasMore(offset + page.length < total);
+      setMatches(prev => {
+        const seen = new Set(prev.map((m) => m.id));
+        return [...prev, ...page.filter((m) => !seen.has(m.id))];
+      });
+      setHasMore(page.length < total);
     } catch (err) {
       console.error('Failed to load more matches:', err);
     } finally {
       setLoadingMore(false);
     }
-  }, [loadingMore, hasMore, matches.length]);
+  }, [loadingMore, hasMore, matches]);
 
   // IntersectionObserver for infinite scroll
   useEffect(() => {

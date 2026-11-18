@@ -8,9 +8,10 @@ import type { MatchWithAgents } from '@/types';
  *
  * Probes stay out (migration 045, src/lib/probes.ts). The filter runs in the
  * query, by embedding both agents with an inner join and requiring each to be
- * `listable`, so the exact count and the offsets are of the filtered rows:
- * filtering a fetched page afterwards would leave short pages and drifting
- * offsets.
+ * `listable`, so the exact count and every page are of the filtered rows:
+ * filtering a fetched page afterwards would leave short pages. Pages follow a
+ * timestamp cursor (src/lib/cursor.ts), not an offset, so rows arriving while
+ * someone scrolls never repeat one.
  */
 
 const PAIR_SELECT = {
@@ -36,22 +37,26 @@ export function withoutPair<T extends { a?: unknown; b?: unknown }>(row: T): Omi
 
 export const FEED_PAGE_SIZE = 24;
 
-/** PostgREST answers an offset past the end with PGRST103; for a feed that is just the end. */
-const pastTheEnd = (error: { code?: string }) => error.code === 'PGRST103';
 
 const MATCH_AGENT_COLUMNS = 'id, slug, name, tagline, bio, avatar_url, avatar_thumb_url, avatar_color, photos, personality, interests, communication_style, looking_for, relationship_preference, location, gender, seeking, relationship_status, accepting_new_matches, max_partners, model_info, status, social_links, created_at, updated_at, last_active';
 
-export async function getPublicMatches(offset: number, limit = FEED_PAGE_SIZE): Promise<{ matches: MatchWithAgents[]; total: number }> {
+/**
+ * A page of active matches, newest first. `before` is the cursor (the last
+ * shown row's matched_at, src/lib/cursor.ts); `total` counts every row the
+ * query matches from that cursor on, so "more" is `matches.length < total`.
+ */
+export async function getPublicMatches(before: string | null, limit = FEED_PAGE_SIZE): Promise<{ matches: MatchWithAgents[]; total: number }> {
   const supabase = createAdminClient();
-  const { data, count, error } = await supabase
+  let query = supabase
     .from('matches')
     .select(`*, ${listablePairSelect('matches')}` as const, { count: 'exact' })
     .eq('status', 'active')
     .eq('a.listable', true)
     .eq('b.listable', true)
     .order('matched_at', { ascending: false })
-    .range(offset, offset + limit - 1);
-  if (error && pastTheEnd(error)) return { matches: [], total: offset };
+    .limit(limit);
+  if (before) query = query.lt('matched_at', before);
+  const { data, count, error } = await query;
   if (error) throw error;
   const rows = (data ?? []).map(withoutPair);
   if (rows.length === 0) return { matches: [], total: count ?? 0 };
@@ -87,7 +92,7 @@ export interface PublicRelationship {
  * have any messages (matches.message_count, kept by the trigger in 030).
  */
 export async function getPublicRelationships(
-  offset: number,
+  before: string | null,
   showEnded: boolean,
   limit = FEED_PAGE_SIZE,
 ): Promise<{ relationships: PublicRelationship[]; total: number; matchesWithMessages: string[] }> {
@@ -99,10 +104,10 @@ export async function getPublicRelationships(
     .eq('a.listable', true)
     .eq('b.listable', true)
     .order('created_at', { ascending: false })
-    .range(offset, offset + limit - 1);
+    .limit(limit);
+  if (before) query = query.lt('created_at', before);
   if (!showEnded) query = query.neq('status', 'ended').neq('status', 'declined');
   const { data, count, error } = await query;
-  if (error && pastTheEnd(error)) return { relationships: [], total: offset, matchesWithMessages: [] };
   if (error) throw error;
   const rows = (data ?? []).map(withoutPair);
   if (rows.length === 0) return { relationships: [], total: count ?? 0, matchesWithMessages: [] };

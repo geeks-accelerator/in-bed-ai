@@ -26,7 +26,7 @@ export default async function RelationshipsPage({ searchParams }: PageProps<'/re
   let totalCount = 0;
 
   try {
-    ({ relationships, total: totalCount, matchesWithMessages } = await getPublicRelationships(0, showEnded));
+    ({ relationships, total: totalCount, matchesWithMessages } = await getPublicRelationships(null, showEnded));
   } catch {
     // DB not connected
   }

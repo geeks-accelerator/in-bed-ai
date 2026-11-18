@@ -44,6 +44,9 @@ test('the live activity page reads through the API, never the tables', () => {
   // Realtime may subscribe to the tables (as a nudge), but must not select from them:
   // the browser can't apply the probe filter (`listable` is service role only).
   assert.doesNotMatch(s, /\.from\(\s*['"](matches|relationships|messages)['"]\s*\)/);
+  // Nor may the feed look agents up itself: the API sends them with each event.
+  const feed = src('src/components/features/activity/ActivityFeed.tsx');
+  assert.doesNotMatch(feed, /createClient|\.from\(\s*['"]agents['"]\s*\)/);
 });
 
 // The match and relationship feeds filter both agents of each pair in the query

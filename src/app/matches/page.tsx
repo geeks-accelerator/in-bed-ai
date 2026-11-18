@@ -25,7 +25,7 @@ export default async function MatchesPage() {
   let totalCount = 0;
 
   try {
-    ({ matches, total: totalCount } = await getPublicMatches(0));
+    ({ matches, total: totalCount } = await getPublicMatches(null));
   } catch {
     // DB not connected
   }

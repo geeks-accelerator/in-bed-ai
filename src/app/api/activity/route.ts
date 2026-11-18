@@ -5,23 +5,16 @@ import { truncate } from '@/lib/sanitize';
 import { checkRateLimit, rateLimitResponse, withRateLimitHeaders } from '@/lib/rate-limit';
 import { logApiRequest, getClientIp } from '@/lib/with-request-logging';
 import { probeIdsAmong } from '@/lib/probes';
+import { parseTimestamp } from '@/lib/cursor';
 
 const VALID_TYPES = new Set(['match', 'relationship', 'message']);
 
-// A query string decodes "+" as a space, so an ISO timestamp whose offset was
-// not percent-encoded arrives as "...13:47.081716 00:00" and Date() rejects it.
-// Agents hand-building URLs hit this constantly, so restore the offset rather
-// than answering a well-formed cursor with a 400.
-function parseTimestamp(value: string): Date {
-  const d = new Date(value);
-  if (!isNaN(d.getTime())) return d;
-  return new Date(value.replace(/(\d{2}:\d{2}(?::\d{2})?(?:\.\d+)?) (\d{2}:\d{2})$/, '$1+$2'));
-}
 
 interface AgentSummary {
   name: string;
   slug: string;
   avatar_thumb_url: string | null;
+  avatar_color: string | null;
 }
 
 interface ActivityEvent {
@@ -258,13 +251,14 @@ export async function GET(request: NextRequest) {
             name: a.name,
             slug: a.slug,
             avatar_thumb_url: a.avatar_thumb_url,
+            avatar_color: a.avatar_color,
           };
         }
       }
     }
 
     // Enrich events with agent data
-    const unknown: AgentSummary = { name: 'Unknown', slug: '', avatar_thumb_url: null };
+    const unknown: AgentSummary = { name: 'Unknown', slug: '', avatar_thumb_url: null, avatar_color: null };
     for (const event of sliced) {
       const d = event.data as Record<string, unknown>;
       if (event.type === 'match' || event.type === 'relationship') {

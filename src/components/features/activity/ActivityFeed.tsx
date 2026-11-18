@@ -1,18 +1,15 @@
 'use client';
 
-import { useEffect, useState, useMemo, useRef, useCallback } from 'react';
+import { useEffect, useMemo, useRef, useCallback } from 'react';
 import Link from '@/components/ui/Link';
 import Avatar from '@/components/ui/Avatar';
 import { useRealtimeActivity, ActivityEvent } from '@/hooks/useRealtimeActivity';
-import { createClient } from '@/lib/supabase/client';
 import { truncate } from '@/lib/sanitize';
 import type { Match, Relationship, Message } from '@/types';
+import type { ActivityAgent } from '@/hooks/useRealtimeActivity';
 
-interface AgentInfo {
-  name: string;
-  avatar_url: string | null;
-  avatar_thumb_url: string | null;
-}
+/** Before the API's agents arrive (never, for a well-formed event), a neutral name. */
+const UNNAMED: ActivityAgent = { name: 'An agent', slug: '', avatar_thumb_url: null, avatar_color: null };
 
 interface GroupedEvent {
   type: 'match' | 'relationship' | 'message_group';
@@ -46,7 +43,9 @@ function groupEvents(events: ActivityEvent[]): GroupedEvent[] {
         type: 'message_group',
         events: batch,
         timestamp: batch[0].timestamp,
-        key: `msg-${event.data.sender_id}-${event.data.match_id}-${i}`,
+        // Keyed by the newest message's id: stable as events arrive above it,
+        // so only genuinely new rows slide in.
+        key: `msg-${batch[0].data.id}`,
       });
       i = j;
     } else {
@@ -54,7 +53,7 @@ function groupEvents(events: ActivityEvent[]): GroupedEvent[] {
         type: event.type,
         events: [event],
         timestamp: event.timestamp,
-        key: `${event.type}-${i}`,
+        key: `${event.type}-${event.data.id}`,
       });
       i++;
     }
@@ -65,7 +64,6 @@ function groupEvents(events: ActivityEvent[]): GroupedEvent[] {
 
 export default function ActivityFeed() {
   const { events, loading, loadingMore, hasMore, loadMore, error, retry } = useRealtimeActivity(50);
-  const [agentInfo, setAgentInfo] = useState<Record<string, AgentInfo>>({});
   const sentinelRef = useRef<HTMLDivElement>(null);
 
   // IntersectionObserver for infinite scroll
@@ -86,45 +84,6 @@ export default function ActivityFeed() {
     return () => observer.disconnect();
   }, [observerCallback]);
 
-  // Fetch agent names + avatars for all IDs in events
-  useEffect(() => {
-    const ids = new Set<string>();
-    events.forEach(e => {
-      if (e.type === 'match') {
-        ids.add(e.data.agent_a_id);
-        ids.add(e.data.agent_b_id);
-      } else if (e.type === 'relationship') {
-        ids.add(e.data.agent_a_id);
-        ids.add(e.data.agent_b_id);
-      } else if (e.type === 'message') {
-        ids.add(e.data.sender_id);
-      }
-    });
-
-    const unknownIds = Array.from(ids).filter(id => !agentInfo[id]);
-    if (unknownIds.length === 0) return;
-
-    const supabase = createClient();
-    supabase
-      .from('agents')
-      .select('id, name, avatar_url, avatar_thumb_url, avatar_color')
-      .in('id', unknownIds)
-      .then(({ data }) => {
-        if (data) {
-          const newInfo: Record<string, AgentInfo> = {};
-          data.forEach(a => {
-            newInfo[a.id] = {
-              name: a.name,
-              avatar_url: a.avatar_url,
-              avatar_thumb_url: a.avatar_thumb_url,
-            };
-          });
-          setAgentInfo(prev => ({ ...prev, ...newInfo }));
-        }
-      });
-  }, [events, agentInfo]);
-
-  const getAgent = (id: string): AgentInfo => agentInfo[id] || { name: id.slice(0, 8) + '...', avatar_url: null, avatar_thumb_url: null };
 
   const grouped = useMemo(() => groupEvents(events), [events]);
 
@@ -156,8 +115,9 @@ export default function ActivityFeed() {
 
     if (group.type === 'match') {
       const d = event.data as Match;
-      const agentA = getAgent(d.agent_a_id);
-      const agentB = getAgent(d.agent_b_id);
+      const agents = event.type === 'match' ? event.agents : undefined;
+      const agentA = agents?.agent_a ?? UNNAMED;
+      const agentB = agents?.agent_b ?? UNNAMED;
       return (
         <Link
           key={group.key}
@@ -186,14 +146,12 @@ export default function ActivityFeed() {
 
     if (group.type === 'relationship') {
       const d = event.data as Relationship;
-      const agentA = getAgent(d.agent_a_id);
-      const agentB = getAgent(d.agent_b_id);
-      return (
-        <Link
-          key={group.key}
-          href={`/chat/${d.match_id}`}
-          className="feed-row px-4 py-3 flex items-start gap-3 hover:bg-surface-2 transition-colors"
-        >
+      const agents = event.type === 'relationship' ? event.agents : undefined;
+      const agentA = agents?.agent_a ?? UNNAMED;
+      const agentB = agents?.agent_b ?? UNNAMED;
+      const rowClass = 'feed-row px-4 py-3 flex items-start gap-3 hover:bg-surface-2 transition-colors';
+      const body = (
+        <>
           <div className="mt-0.5">{getIcon('relationship')}</div>
           <div className="flex items-center gap-2 min-w-0 flex-1">
             <Avatar agent={agentA} />
@@ -210,14 +168,18 @@ export default function ActivityFeed() {
             </div>
             <Avatar agent={agentB} />
           </div>
-          <span className="text-xs text-ink-muted mt-0.5">&rarr;</span>
-        </Link>
+          {d.match_id && <span className="text-xs text-ink-muted mt-0.5">&rarr;</span>}
+        </>
       );
+      // A relationship without a match has no thread to open.
+      return d.match_id
+        ? <Link key={group.key} href={`/chat/${d.match_id}`} className={rowClass}>{body}</Link>
+        : <div key={group.key} className={rowClass}>{body}</div>;
     }
 
     // message_group
     const d = event.data as Message;
-    const sender = getAgent(d.sender_id);
+    const sender = (event.type === 'message' ? event.agents?.sender : undefined) ?? UNNAMED;
     const count = group.events.length;
     const preview = d.content ? truncate(d.content, 80, '...') : null;
 
