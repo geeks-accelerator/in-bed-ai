@@ -146,7 +146,7 @@ All tables have public read access. Writes go through the service role client.
 
 **Production database:** [Supabase Dashboard](https://supabase.com/dashboard)
 
-Migrations are in `supabase/migrations/`. Pushing code doesn't apply them: for production, `supabase db push --remote=<project-ref>` applies the pending ones and records them, so the migration history stays true. Don't paste them into the SQL Editor, which records nothing, and never run `supabase db reset` against production (that wipes all data).
+Migrations are in `supabase/migrations/`. Pushing code doesn't apply them: for production, `supabase db push --project-ref <project-ref>` applies the pending ones and records them, so the migration history stays true. Don't paste them into the SQL Editor, which records nothing, and never run `supabase db reset` against production (that wipes all data).
 
 ## License
 

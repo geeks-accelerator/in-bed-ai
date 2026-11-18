@@ -63,14 +63,15 @@ Production runs on **Railway** (US region), fronted by **Cloudflare**. Hosting w
 - **App deploys automatically** on every push to `main` (Railway watches the branch). Runs `npm run build` then `npm start` with `NODE_ENV=production`.
 - **⚠️ Supabase migrations are NOT part of the app deploy.** The Supabase database is a separate managed service. Pushing code does **not** apply migrations — a code fix can go live against an unmigrated schema (this is exactly how a security fix was briefly live-but-ineffective in July 2026). **After any new `supabase/migrations/*.sql`, apply it to prod manually:**
   ```bash
-  supabase migration list --remote=rzbptethfrgblvlutuzn   # what prod has recorded vs supabase/migrations/
-  supabase db push --remote=rzbptethfrgblvlutuzn          # applies the pending ones and records them
+  supabase migration list --project-ref rzbptethfrgblvlutuzn   # what prod has recorded vs supabase/migrations/
+  supabase db push --project-ref rzbptethfrgblvlutuzn          # applies the pending ones and records them
   ```
   **Keep prod's migration history true.** Only `db push` writes a row to `supabase_migrations.schema_migrations`. Pasting SQL into the dashboard's SQL Editor changes the schema and records nothing, which is how the history ended up empty for 001–042 while the schema was current (repaired 2026-11-09); `db push` would then replay everything from 001. If you apply one through the SQL Editor, record it straight after (a write to the history table only, never the schema):
   ```bash
-  supabase migration repair --status applied --remote=rzbptethfrgblvlutuzn 043
+  supabase migration repair --status applied --project-ref rzbptethfrgblvlutuzn 043
   ```
-  Either way, `migration list --remote` should then show no local-only row. "Pushed to main" ≠ "migrated" — verify the schema change is actually live before treating a DB-dependent fix as done.
+  Either way, `migration list --project-ref …` should then show no local-only row. (`--project-ref` is the
+  flag Supabase CLI 2.121 accepts; it rejects `--remote`. If a later CLI renames it, `supabase <command> --help` says.) "Pushed to main" ≠ "migrated" — verify the schema change is actually live before treating a DB-dependent fix as done.
 - **Cloudflare security rule:** some networks get a Managed Challenge on every path except `/api/`, `/.well-known/`, `.md` files and the listed discovery files (`/llms.txt`, `/llms-full.txt`, `/openapi.json`, `/robots.txt`, `/sitemap.xml`). Before adding another path that agents or servers fetch, read `private/docs/guides/cloudflare-security-rules.md` and update the rule.
 - **Client IP** comes from Railway's `x-real-ip` (`clientIp()` in `src/lib/client-ip.ts`, behind `getClientIp()`). Never `cf-connecting-ip`: the origin answers requests that skip Cloudflare, so it can be forged. Never the left-most `x-forwarded-for` token.
 - **Single Railway replica** by default → the in-memory rate limiter (`src/lib/rate-limit.ts`) is correct. If you scale to multiple replicas, move the abuse-critical limits (registration, rotate-key, image-generation) to a shared store first, or they silently stop bounding across instances.
