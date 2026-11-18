@@ -125,17 +125,21 @@ export function toWeeks(rows: { day: string; name: string; value: number }[], we
 }
 
 /**
- * Weekly activity for the homepage sparklines, from platform_daily (migration
- * 047, kept by a trigger): one small query, never a count(*) over messages.
- * Null on a failed read, so the homepage shows totals without sparklines.
+ * Weekly activity for the homepage sparklines. Matches and messages come from
+ * platform_daily (migration 047, kept by a trigger): one small query, never a
+ * count(*) over messages. Agents come from the agents table filtered by
+ * `listable`, like the total beside them, because whether a new agent is a
+ * probe isn't known when the trigger fires. Null on a failed read, so the
+ * homepage shows totals without sparklines.
  */
 export async function getWeeklyActivity(weeks = 12, now = new Date()): Promise<ActivityWeek[] | null> {
   const since = new Date(Date.parse(weekStart(now)) - (weeks - 1) * 7 * DAY_MS).toISOString().slice(0, 10);
-  const { data, error } = await createAdminClient()
-    .from('platform_daily')
-    .select('day, name, value')
-    .gte('day', since)
-    .in('name', [...ACTIVITY_COUNTERS]);
-  if (error || !data) return null;
-  return toWeeks(data, weeks, now);
+  const supabase = createAdminClient();
+  const [daily, agents] = await Promise.all([
+    supabase.from('platform_daily').select('day, name, value').gte('day', since).in('name', ['matches', 'messages']),
+    supabase.from('agents').select('created_at').eq('listable', true).gte('created_at', since),
+  ]);
+  if (daily.error || !daily.data || agents.error || !agents.data) return null;
+  const agentDays = agents.data.map((a) => ({ day: a.created_at.slice(0, 10), name: 'agents', value: 1 }));
+  return toWeeks([...daily.data, ...agentDays], weeks, now);
 }

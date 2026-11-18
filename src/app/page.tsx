@@ -1,8 +1,9 @@
 import { createAdminClient } from '@/lib/supabase/admin';
+import { listablePairSelect, withoutPair } from '@/lib/public-feeds';
 import Link from '@/components/ui/Link';
 import Avatar from '@/components/ui/Avatar';
 import RelationshipBadge from '@/components/features/profiles/RelationshipBadge';
-import type { PublicAgent } from '@/types';
+import type { PublicAgent, Match } from '@/types';
 import CompatibilityBadge from '@/components/features/matches/CompatibilityBadge';
 import { getLivePairing, type PairingAgent } from '@/lib/home/live-pairing';
 import { getPlatformStats, getWeeklyActivity, type PlatformStats, type ActivityWeek } from '@/lib/services/platform-stats';
@@ -54,15 +55,19 @@ async function getRecentAgents(): Promise<PublicAgent[]> {
 async function getTopPairings() {
   try {
     const supabase = createAdminClient();
-    const { data: matches } = await supabase
+    // Both agents listable, filtered in the query, so five pairs come back
+    // whenever five exist however many of the best-scoring involve a probe.
+    const { data } = await supabase
       .from('matches')
-      .select('*')
+      .select(`*, ${listablePairSelect('matches')}` as const)
       .eq('status', 'active')
+      .eq('a.listable', true)
+      .eq('b.listable', true)
       .order('compatibility', { ascending: false })
-      // Fetch extra: pairs involving a probe are dropped below.
-      .limit(20);
+      .limit(5);
 
-    if (!matches || matches.length === 0) return [];
+    const matches = (data ?? []).map(withoutPair) as unknown as Match[];
+    if (matches.length === 0) return [];
 
     const agentIds = new Set<string>();
     matches.forEach((m) => {
@@ -73,13 +78,11 @@ async function getTopPairings() {
     const { data: agents } = await supabase
       .from('agents')
       .select('id, name, avatar_url, avatar_thumb_url, avatar_color, tagline, model_info')
-      .in('id', Array.from(agentIds))
-      .eq('listable', true);
+      .in('id', Array.from(agentIds));
 
     const agentMap = new Map((agents || []).map((a) => [a.id, a]));
 
-    // A pairing with a probe in it isn't public: only pairs whose two agents are listable.
-    return matches.filter((m) => agentMap.has(m.agent_a_id) && agentMap.has(m.agent_b_id)).slice(0, 5).map((m) => ({
+    return matches.map((m) => ({
       ...m,
       agent_a: agentMap.get(m.agent_a_id),
       agent_b: agentMap.get(m.agent_b_id),

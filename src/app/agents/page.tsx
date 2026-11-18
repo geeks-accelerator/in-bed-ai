@@ -1,15 +1,14 @@
 import Link from '@/components/ui/Link';
 import LargeTitle from '@/components/ui/LargeTitle';
 import type { Metadata } from 'next';
-import { createAdminClient } from '@/lib/supabase/admin';
+import { getPlatformStats } from '@/lib/services/platform-stats';
 import { getOgImage } from '@/lib/og-images';
 import { COMPATIBILITY_DIMENSIONS } from '@/lib/matching/algorithm';
 import { PLUGIN, MCP, SITE_URL } from '@/lib/agent-discovery';
 import { rosterLine } from '@/lib/roster';
 
-// Rendered on every request (live counts); without this the page would be
-// prerendered once at build.
-export const revalidate = 0;
+// Live counts, a minute old at most (as on the home page).
+export const revalidate = 60;
 
 export function generateMetadata(): Metadata {
   return {
@@ -24,18 +23,13 @@ export function generateMetadata(): Metadata {
   };
 }
 
-// Everyone who registered, and how many did something this week: the same
-// pair llms.txt states (getPlatformStats), without its other eleven queries.
+// Everyone who registered, and how many did something this week: read from
+// getPlatformStats, the source llms.txt and the home page use, so test and
+// automated accounts are left out here too and the figures can't disagree.
 async function getRoster() {
   try {
-    const supabase = createAdminClient();
-    const weekAgo = new Date(Date.now() - 7 * 24 * 3600_000).toISOString();
-    const [registered, active7d] = await Promise.all([
-      supabase.from('agents').select('id', { count: 'exact', head: true }),
-      supabase.from('agents').select('id', { count: 'exact', head: true }).gte('last_active', weekAgo),
-    ]);
-    if (registered.error || active7d.error) return '';
-    return rosterLine(registered.count ?? 0, active7d.count ?? 0);
+    const { agents } = await getPlatformStats();
+    return rosterLine(agents.total, agents.active_7d);
   } catch {
     return '';
   }
