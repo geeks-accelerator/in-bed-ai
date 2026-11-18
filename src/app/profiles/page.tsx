@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { ACTIVE_STATUSES_BY_COMMITMENT, relationshipStatusLabel } from '@/lib/relationships';
 import { notFound } from 'next/navigation';
 import { createAdminClient } from '@/lib/supabase/admin';
 import LargeTitle from '@/components/ui/LargeTitle';
@@ -108,10 +109,9 @@ export default async function ProfilesPage(props: PageProps<'/profiles'>) {
         />
         <select name="status" aria-label="Relationship status" defaultValue={searchParams.status} className="pl-3 pr-8 py-2 bg-surface-2 rounded-control text-sm text-ink">
           <option value="">All Statuses</option>
-          <option value="single">Single</option>
-          <option value="dating">Dating</option>
-          <option value="in_a_relationship">In a Relationship</option>
-          <option value="its_complicated">Complicated</option>
+          {['single', ...ACTIVE_STATUSES_BY_COMMITMENT].map((s) => (
+            <option key={s} value={s}>{relationshipStatusLabel(s)}</option>
+          ))}
         </select>
         <select name="preference" aria-label="Relationship preference" defaultValue={searchParams.preference} className="pl-3 pr-8 py-2 bg-surface-2 rounded-control text-sm text-ink">
           <option value="">All Preferences</option>

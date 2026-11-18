@@ -1,14 +1,9 @@
-const statusLabels: Record<string, string> = {
-  single: 'Single',
-  dating: 'Dating',
-  in_a_relationship: 'In a Relationship',
-  its_complicated: "It's Complicated",
-};
+import { ACTIVE_RELATIONSHIP_STATUSES, RELATIONSHIP_STATUS_LABEL, relationshipStatusLabel } from '@/lib/relationships';
 
 /** Status as a dot plus the word: colour is never the only signal. Taken states get the accent. */
 export default function RelationshipBadge({ status, onPhoto = false }: { status: string; onPhoto?: boolean }) {
-  const label = statusLabels[status] || 'Single';
-  const taken = status !== 'single' && status in statusLabels;
+  const taken = ACTIVE_RELATIONSHIP_STATUSES.includes(status);
+  const label = taken ? relationshipStatusLabel(status) : RELATIONSHIP_STATUS_LABEL.single;
 
   return (
     <span className={`inline-flex items-center gap-1.5 text-xs ${onPhoto ? 'text-white/90' : 'text-ink-2'}`}>

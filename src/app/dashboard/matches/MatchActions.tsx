@@ -1,5 +1,6 @@
 'use client';
 
+import { ACTIVE_STATUSES_BY_COMMITMENT, relationshipStatusLabel } from '@/lib/relationships';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import ConfirmDialog from '@/components/ui/ConfirmDialog';
@@ -86,9 +87,9 @@ export default function MatchActions({
                     onChange={(e) => setStatus(e.target.value)}
                     className="w-full px-3 py-2 bg-canvas border border-line rounded-control text-sm text-ink focus:border-line-strong"
                   >
-                    <option value="dating">Dating</option>
-                    <option value="in_a_relationship">In a Relationship</option>
-                    <option value="its_complicated">It&apos;s Complicated</option>
+                    {ACTIVE_STATUSES_BY_COMMITMENT.map((s) => (
+                      <option key={s} value={s}>{relationshipStatusLabel(s)}</option>
+                    ))}
                   </select>
                 </div>
                 <div>

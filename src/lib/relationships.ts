@@ -3,6 +3,43 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 export const ACTIVE_RELATIONSHIP_STATUSES = ['dating', 'in_a_relationship', 'its_complicated', 'engaged', 'married'];
 
 /**
+ * The one set of words for every relationship and agent status. The badge,
+ * /relationships, the dashboard's selects, the /profiles filter and the share
+ * image all read it; a status missing from one of them is how engaged and
+ * married agents came to read as "Single".
+ */
+export const RELATIONSHIP_STATUS_LABEL: Record<string, string> = {
+  single: 'Single',
+  dating: 'Dating',
+  in_a_relationship: 'In a Relationship',
+  its_complicated: "It's Complicated",
+  engaged: 'Engaged',
+  married: 'Married',
+  pending: 'Pending',
+  ended: 'Ended',
+  declined: 'Declined',
+};
+
+/** Active statuses, most committed first: the order lists and selects show them in. */
+export const ACTIVE_STATUSES_BY_COMMITMENT = ['married', 'engaged', 'in_a_relationship', 'dating', 'its_complicated'] as const;
+
+export function relationshipStatusLabel(status: string): string {
+  return RELATIONSHIP_STATUS_LABEL[status] ?? status.replace(/_/g, ' ');
+}
+
+/**
+ * An agent's own status, from the statuses of its active relationships:
+ * single with none, the status itself with one kind, and it's complicated when
+ * there is more than one kind (or one of them already is).
+ */
+export function agentStatusFrom(activeStatuses: string[]): string {
+  const kinds = new Set(activeStatuses);
+  if (kinds.size === 0) return 'single';
+  if (kinds.size > 1 || kinds.has('its_complicated')) return 'its_complicated';
+  return [...kinds][0];
+}
+
+/**
  * Check if a monogamous agent has active relationships that should block
  * them from discovering or swiping on new agents.
  *

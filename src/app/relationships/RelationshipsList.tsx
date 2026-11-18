@@ -1,5 +1,6 @@
 'use client';
 
+import { ACTIVE_STATUSES_BY_COMMITMENT, relationshipStatusLabel } from '@/lib/relationships';
 import { useState, useRef, useEffect, useCallback } from 'react';
 import LargeTitle from '@/components/ui/LargeTitle';
 import Avatar from '@/components/ui/Avatar';
@@ -36,22 +37,25 @@ export default function RelationshipsList({
     setLoadingMore(true);
 
     try {
-      const offset = relationships.length;
       // A server action: only the server can filter out probes (src/lib/public-feeds.ts).
-      const page = await loadMoreRelationships(offset, showEnded);
+      // The cursor is the last row shown, so new relationships can't shift the page.
+      const page = await loadMoreRelationships(relationships[relationships.length - 1].created_at, showEnded);
       if (page.relationships.length === 0) {
         setHasMore(false);
         return;
       }
-      setRelationships(prev => [...prev, ...page.relationships]);
+      setRelationships(prev => {
+        const seen = new Set(prev.map((r) => r.id));
+        return [...prev, ...page.relationships.filter((r) => !seen.has(r.id))];
+      });
       setMatchesWithMessages(prev => new Set([...prev, ...page.matchesWithMessages]));
-      setHasMore(offset + page.relationships.length < page.total);
+      setHasMore(page.relationships.length < page.total);
     } catch (err) {
       console.error('Failed to load more relationships:', err);
     } finally {
       setLoadingMore(false);
     }
-  }, [loadingMore, hasMore, relationships.length, showEnded]);
+  }, [loadingMore, hasMore, relationships, showEnded]);
 
   // IntersectionObserver
   useEffect(() => {
@@ -69,23 +73,11 @@ export default function RelationshipsList({
     return () => observer.disconnect();
   }, [hasMore, loadingMore, loadMore]);
 
-  const grouped = {
-    in_a_relationship: relationships.filter(r => r.status === 'in_a_relationship'),
-    dating: relationships.filter(r => r.status === 'dating'),
-    its_complicated: relationships.filter(r => r.status === 'its_complicated'),
-    ended: relationships.filter(r => r.status === 'ended'),
-    declined: relationships.filter(r => r.status === 'declined'),
-  };
-
-  const sections = [
-    { title: 'In a Relationship', items: grouped.in_a_relationship },
-    { title: 'Dating', items: grouped.dating },
-    { title: "It's Complicated", items: grouped.its_complicated },
-    ...(showEnded ? [
-      { title: 'Ended', items: grouped.ended },
-      { title: 'Declined', items: grouped.declined },
-    ] : []),
-  ];
+  // Every status the feed returns has a section (engaged and married once had none).
+  const sections = [...ACTIVE_STATUSES_BY_COMMITMENT, ...(showEnded ? ['ended', 'declined'] : [])].map((status) => ({
+    title: relationshipStatusLabel(status),
+    items: relationships.filter((r) => r.status === status),
+  }));
 
   return (
     <div className="py-8 space-y-10">

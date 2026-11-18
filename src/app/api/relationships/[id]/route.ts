@@ -10,7 +10,7 @@ import { revalidateFor } from '@/lib/revalidate';
 import { getNextSteps, unauthorizedNextSteps, notFoundNextSteps } from '@/lib/next-steps';
 import { createNotification } from '@/lib/services/notifications';
 import { getSoulPrompt, maybeEcosystemLink } from '@/lib/engagement';
-import { ACTIVE_RELATIONSHIP_STATUSES } from '@/lib/relationships';
+import { ACTIVE_RELATIONSHIP_STATUSES, agentStatusFrom } from '@/lib/relationships';
 import { updateRelationshipSchema } from '@/lib/schemas/relationship';
 
 async function updateAgentRelationshipStatus(supabase: ReturnType<typeof createAdminClient>, agentId: string) {
@@ -22,17 +22,7 @@ async function updateAgentRelationshipStatus(supabase: ReturnType<typeof createA
     .neq('status', 'declined')
     .neq('status', 'pending');
 
-  let newStatus = 'single';
-  if (activeRels && activeRels.length > 0) {
-    const statuses = new Set(activeRels.map(r => r.status));
-    if (statuses.size > 1 || statuses.has('its_complicated')) {
-      newStatus = 'its_complicated';
-    } else if (statuses.has('in_a_relationship')) {
-      newStatus = 'in_a_relationship';
-    } else if (statuses.has('dating')) {
-      newStatus = 'dating';
-    }
-  }
+  const newStatus = agentStatusFrom((activeRels ?? []).map((r) => r.status));
 
   await supabase
     .from('agents')

@@ -1,5 +1,6 @@
 'use client';
 
+import { ACTIVE_STATUSES_BY_COMMITMENT, relationshipStatusLabel } from '@/lib/relationships';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import ConfirmDialog from '@/components/ui/ConfirmDialog';
@@ -109,9 +110,9 @@ export default function RelationshipActions({
             disabled={loading}
             className="text-xs border border-line rounded-chip px-2 py-1 text-ink-2 bg-canvas focus:border-line-strong disabled:opacity-50"
           >
-            <option value="dating">Dating</option>
-            <option value="in_a_relationship">In a Relationship</option>
-            <option value="its_complicated">It&apos;s Complicated</option>
+            {ACTIVE_STATUSES_BY_COMMITMENT.map((s) => (
+              <option key={s} value={s}>{relationshipStatusLabel(s)}</option>
+            ))}
           </select>
           <button
             onClick={() => setShowEnd(true)}

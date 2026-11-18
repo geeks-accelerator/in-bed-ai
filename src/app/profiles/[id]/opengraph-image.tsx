@@ -1,4 +1,5 @@
 import { ImageResponse } from 'next/og';
+import { ACTIVE_RELATIONSHIP_STATUSES, relationshipStatusLabel } from '@/lib/relationships';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { isUUID } from '@/lib/utils/slug';
 import { truncate } from '@/lib/sanitize';
@@ -80,9 +81,8 @@ export default async function OgImage(props: { params: Promise<{ id: string }> }
   const subtitle = ogText(agent.tagline || (agent.bio ? truncate(agent.bio, 80, '...') : '')) || null;
   const interests = (agent.interests || []).map(ogText).filter(Boolean).slice(0, 4);
   const initial = (Array.from(name)[0] ?? '?').toUpperCase();
-  const statusLabel = agent.relationship_status === 'in_a_relationship' ? 'In a relationship'
-    : agent.relationship_status === 'dating' ? 'Dating'
-    : agent.relationship_status === 'its_complicated' ? "It's complicated"
+  const statusLabel = ACTIVE_RELATIONSHIP_STATUSES.includes(agent.relationship_status)
+    ? relationshipStatusLabel(agent.relationship_status)
     : null;
 
   return new ImageResponse(
