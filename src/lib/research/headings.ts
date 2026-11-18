@@ -55,13 +55,26 @@ export function commonestOutcome(shape: { bucket: string; n: number }[]): string
  * moved, judged by direction() (intervals, never eyeballed points). Like the
  * headings above, it never states a change the data does not show.
  */
+const SAID: Record<Direction, string> = {
+  rising: 'Rising: the latest month’s range sits wholly above the first month’s.',
+  falling: 'Falling: the latest month’s range sits wholly below the first month’s.',
+  steady: 'No clear change yet: the first and latest months’ ranges overlap.',
+  unknown: 'Too few months with enough agents to say which way it is moving.',
+};
+
 export function trendCaption(t: Trend): string {
   const what = t.measure.charAt(0).toUpperCase() + t.measure.slice(1);
-  const said: Record<Direction, string> = {
-    rising: 'Rising: the latest month’s range sits wholly above the first month’s.',
-    falling: 'Falling: the latest month’s range sits wholly below the first month’s.',
-    steady: 'No clear change yet: the first and latest months’ ranges overlap.',
-    unknown: 'Too few months with enough agents to say which way it is moving.',
-  };
-  return `${what}. ${said[direction(t.points)]}`;
+  return `${what}. ${SAID[direction(t.points)]}`;
+}
+
+/**
+ * Which way several lines on one chart have moved: one sentence when they
+ * agree, each line's own direction when they don't. Never the first line's
+ * verdict standing in for the others.
+ */
+export function directionsCaption(lines: { trend: Trend; name: string }[]): string {
+  const dirs = lines.map((l) => direction(l.trend.points));
+  if (dirs.every((d) => d === dirs[0])) return SAID[dirs[0]];
+  const word: Record<Direction, string> = { rising: 'rising', falling: 'falling', steady: 'no clear change', unknown: 'too few months to say' };
+  return `The lines disagree: ${lines.map((l, i) => `${l.name}, ${word[dirs[i]]}`).join('; ')}. A direction is stated only where the ranges separate.`;
 }

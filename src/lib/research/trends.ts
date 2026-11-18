@@ -82,6 +82,11 @@ export function monthRange(first: string, last: string): string[] {
   return out;
 }
 
+/** One plotted month. Every trend builds its points here, so one rule sets `early` and `rate`. */
+export function trendPoint(month: string, k: number, n: number): TrendPoint {
+  return { month, k, n, rate: rate(k, n), early: month < EARLY_BEFORE };
+}
+
 /** True once every row that could start in `month` has had `windowDays` to happen. */
 export function closed(month: string, windowDays: number, now: number): boolean {
   return monthEnd(month) + windowDays * DAY <= now;
@@ -102,14 +107,15 @@ export function series<T>(
   const byMonth = new Map<string, T[]>();
   for (const r of rows) {
     const m = monthOfRow(r);
-    byMonth.set(m, [...(byMonth.get(m) ?? []), r]);
+    const group = byMonth.get(m);
+    if (group) group.push(r); else byMonth.set(m, [r]);
   }
   const months = [...byMonth.keys()].sort();
   return monthRange(months[0], months[months.length - 1])
     .filter((m) => closed(m, windowDays, now))
     .map((month) => {
       const { k, n } = measure(byMonth.get(month) ?? []);
-      return { month, k, n, rate: rate(k, n), early: month < EARLY_BEFORE };
+      return trendPoint(month, k, n);
     });
 }
 
@@ -122,10 +128,9 @@ export type Direction = 'rising' | 'falling' | 'steady' | 'unknown';
  */
 export function direction(points: TrendPoint[]): Direction {
   const shown = points.filter((p) => p.rate.pct !== null && p.rate.lo !== null && p.rate.hi !== null);
-  // Judge from the first comparable month when there is one: early months
-  // (before bulk sign-ups could be collapsed) are drawn, but not leaned on.
-  const comparable = shown.filter((p) => !p.early);
-  const basis = comparable.length >= 2 ? comparable : shown;
+  // Early months (before bulk sign-ups could be collapsed) are drawn, never
+  // leaned on: without two comparable months there is no direction to state.
+  const basis = shown.filter((p) => !p.early);
   if (basis.length < 2) return 'unknown';
   const first = basis[0].rate;
   const last = basis[basis.length - 1].rate;
@@ -221,21 +226,28 @@ export function returnsTrends(cohorts: ResearchStats['cohorts'], now: number): T
     measure: `came back ${w.label} or more after joining, by month they joined`,
     points: cohorts
       .filter((c) => closed(c.month, w.days, now) && closed(c.month, 30, now))
-      .map((c) => ({ month: c.month, k: c[w.id], n: c.n, rate: rate(c[w.id], c.n), early: !c.ip_available })),
+      .map((c) => trendPoint(c.month, c[w.id], c.n)),
   }));
 }
 
-/** Every trend, from the cached reads the pages already make. A failed read leaves that trend null. */
-export async function getTrends(now = Date.now()): Promise<Trends | null> {
+/**
+ * Every trend, from the cached reads the pages already make. A failed read
+ * leaves that trend null. Each trend closes its months against the time its
+ * own read was taken, not the clock: a read served from cache describes the
+ * moment it was made, and a month must not close before its data saw it.
+ */
+export async function getTrends(): Promise<Trends | null> {
   const [identity, matches, research] = await Promise.all([getIdentityRows(), getMatchRows(), getResearchStats()]);
   if (!identity && !matches && !research) return null;
+  const at = (read: { generated_at: string }) => Date.parse(read.generated_at);
+  const newest = Math.max(...[identity, matches, research].filter((r) => r !== null).map(at));
   return {
-    generated_at: new Date(now).toISOString(),
-    presentation: identity && presentationTrend(identity.agents, identity.generated_at, now),
-    selection: identity && selectionTrend(identity.agents, now),
-    conversation: matches && conversationTrend(matches.matches, matches.generated_at, now),
-    answers: matches && answersTrend(matches.first_messages, matches.generated_at, now),
-    returns: research && returnsTrends(research.cohorts, now),
+    generated_at: new Date(newest).toISOString(),
+    presentation: identity && presentationTrend(identity.agents, identity.generated_at, at(identity)),
+    selection: identity && selectionTrend(identity.agents, at(identity)),
+    conversation: matches && conversationTrend(matches.matches, matches.generated_at, at(matches)),
+    answers: matches && answersTrend(matches.first_messages, matches.generated_at, at(matches)),
+    returns: research && returnsTrends(research.cohorts, at(research)),
   };
 }
 

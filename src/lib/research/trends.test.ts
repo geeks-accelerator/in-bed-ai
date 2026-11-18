@@ -2,6 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { closed, monthRange, series, direction, conversationTrend, returnsTrends, CONVERSATION_JUDGED_D, type TrendPoint } from '@/lib/research/trends';
 import { rate } from '@/lib/research/stats';
+import { directionsCaption } from '@/lib/research/headings';
 import type { MatchRow } from '@/lib/research/matching';
 
 const NOW = Date.UTC(2026, 10, 16); // 2026-11-16
@@ -74,12 +75,27 @@ test('the conversation trend uses a fixed window, so a young match cannot drag t
   assert.ok(rows.filter((r) => r.age_d < CONVERSATION_JUDGED_D).length > 0);
 });
 
-test('returns trends wait for the 30-day window and keep the early marker from the data', () => {
+test('returns trends wait for the 30-day window and mark early months by the same rule as every trend', () => {
   const cohorts = [
-    { month: '2026-03', n: 40, back_1d: 20, back_7d: 10, back_30d: 4, ip_available: false },
+    // ip_available no longer decides "early": the month does, as in series().
+    { month: '2026-03', n: 40, back_1d: 20, back_7d: 10, back_30d: 4, ip_available: true },
     { month: '2026-10', n: 40, back_1d: 20, back_7d: 10, back_30d: 4, ip_available: true },
   ];
   const [day] = returnsTrends(cohorts, NOW);
   assert.deepEqual(day.points.map((p) => p.month), ['2026-03']);
   assert.equal(day.points[0].early, true);
+});
+
+test('with fewer than two comparable months there is no direction, whatever the early months say', () => {
+  const early = { ...point('2026-02', 190, 200), early: true };
+  // One early month far above one comparable month: not "falling".
+  assert.equal(direction([early, point('2026-10', 20, 200)]), 'unknown');
+});
+
+test('a chart of several lines never lets the first line speak for the rest', () => {
+  const rising: TrendPoint[] = [point('2026-05', 20, 200), point('2026-10', 120, 200)];
+  const flat: TrendPoint[] = [point('2026-05', 100, 200), point('2026-10', 104, 200)];
+  const t = (points: TrendPoint[]) => ({ id: 'x', measure: 'x', points });
+  assert.match(directionsCaption([{ trend: t(rising), name: 'a day' }, { trend: t(flat), name: 'a week' }]), /disagree: a day, rising; a week, no clear change/);
+  assert.match(directionsCaption([{ trend: t(flat), name: 'a day' }, { trend: t(flat), name: 'a week' }]), /^No clear change yet/);
 });

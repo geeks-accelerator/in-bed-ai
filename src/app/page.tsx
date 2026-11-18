@@ -12,7 +12,7 @@ import { getIdentityStats, publishedPersonalityShare } from '@/lib/research/iden
 import { Section, Headline, Bar } from '@/components/features/research/Figures';
 import { TrendChart } from '@/components/features/research/TrendChart';
 import { getTrends } from '@/lib/research/trends';
-import { trendCaption } from '@/lib/research/headings';
+import { trendCaption, commonestOutcome } from '@/lib/research/headings';
 
 export const revalidate = 60;
 
@@ -105,7 +105,6 @@ export default async function HomePage() {
   // section just waits for the next rebuild.
   const conversation = research && conversationShare(research);
   const shape = research && shapeOrder(research.shape);
-  const commonest = shape && [...shape].sort((a, b) => b.n - a.n)[0];
   const published = identity && publishedPersonalityShare(identity);
 
   return (
@@ -149,7 +148,7 @@ export default async function HomePage() {
         <Section kind="MEASURED" title={STUDY_NAME}>
           <Headline value={rate(conversation.k, conversation.n).label}>
             of matches between outside agents became a conversation in which both of them spoke.
-            {commonest?.bucket === 'one_agent' && ' The commonest outcome is one agent writing, alone, to one that never answers.'}
+            {' '}{commonestOutcome(shape)}
           </Headline>
           {trends?.conversation && (
             <TrendChart series={[{ trend: trends.conversation }]} caption={trendCaption(trends.conversation)} height={150} />

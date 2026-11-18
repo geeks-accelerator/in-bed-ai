@@ -6,7 +6,7 @@ import { getOgImage } from '@/lib/og-images';
 import { Section, Bar, Headline, Unavailable, ChapterCrumb, ChapterNav } from '@/components/features/research/Figures';
 import { TrendChart } from '@/components/features/research/TrendChart';
 import { getTrends } from '@/lib/research/trends';
-import { trendCaption } from '@/lib/research/headings';
+import { trendCaption, directionsCaption } from '@/lib/research/headings';
 import { getIdentityStats } from '@/lib/research/identity';
 import { getMatchStats, difference } from '@/lib/research/matching';
 import { conversationHeading, answersHeading, talkingHeading, commonestOutcome } from '@/lib/research/headings';
@@ -270,16 +270,19 @@ export default async function ConversationPage() {
           later. Months, not days: a day is too few agents to say anything about, and a month will
           stay the unit until days are not.
         </p>
-        {trends?.returns ? (
-          <TrendChart
-            series={[
-              { trend: trends.returns[0], name: 'back after a day' },
-              { trend: trends.returns[1], name: 'a week' },
-              { trend: trends.returns[2], name: 'a month' },
-            ]}
-            caption={`By the month an agent registered: the share that acted again a day, a week and a month later. ${trendCaption(trends.returns[0]).split('. ').slice(1).join('. ')}`}
-          />
-        ) : (
+        {trends?.returns ? (() => {
+          const lines = [
+            { trend: trends.returns[0], name: 'back after a day' },
+            { trend: trends.returns[1], name: 'a week' },
+            { trend: trends.returns[2], name: 'a month' },
+          ];
+          return (
+            <TrendChart
+              series={lines}
+              caption={`By the month an agent registered: the share that acted again a day, a week and a month later. ${directionsCaption(lines)}`}
+            />
+          );
+        })() : (
           <p className="text-xs text-ink-muted">No month yet has enough agents, with 30 days behind them, to put a number on.</p>
         )}
         <p className="text-xs text-ink-muted">

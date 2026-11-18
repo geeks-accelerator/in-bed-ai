@@ -38,7 +38,8 @@ export function TrendChart({ series, caption, height = 180 }: {
     const day = Number(d.slice(8, 10));
     return x(i) + ((day - 1) / 30) * (months.length > 1 ? x(1) - x(0) : 0);
   };
-  const annotations = series.flatMap((s) => s.trend.annotations ?? []);
+  // One mark per change, however many series carry it.
+  const annotations = [...new Map(series.flatMap((s) => s.trend.annotations ?? []).map((a) => [`${a.date} ${a.label}`, a])).values()];
   const labelEvery = Math.max(1, Math.ceil(months.length / 6));
 
   return (
@@ -47,16 +48,16 @@ export function TrendChart({ series, caption, height = 180 }: {
         {[0, 50, 100].map((v) => (
           <g key={v}>
             <line x1={pad.l} x2={W - pad.r} y1={y(v)} y2={y(v)} stroke="var(--line)" strokeWidth={1} />
-            <text x={pad.l - 8} y={y(v) + 4} textAnchor="end" className="fill-ink-muted text-[11px]" style={{ fontSize: 11 }}>{v}%</text>
+            <text x={pad.l - 8} y={y(v) + 4} textAnchor="end" className="fill-ink-muted" style={{ fontSize: 12 }}>{v}%</text>
           </g>
         ))}
         {months.map((m, i) => (i % labelEvery === 0 || i === months.length - 1) && (
-          <text key={m} x={x(i)} y={H - 6} textAnchor="middle" className="fill-ink-muted" style={{ fontSize: 11 }}>{monthLabel(m)}</text>
+          <text key={m} x={x(i)} y={H - 6} textAnchor="middle" className="fill-ink-muted" style={{ fontSize: 12 }}>{monthLabel(m)}</text>
         ))}
         {annotations.map((a) => {
           const ax = xOfDate(a.date);
           return ax === null ? null : (
-            <g key={a.date}>
+            <g key={`${a.date} ${a.label}`}>
               <line x1={ax} x2={ax} y1={pad.t} y2={H - pad.b} stroke="var(--ink-muted)" strokeDasharray="2 3" strokeWidth={1} />
               {/* Past the middle, the label reads leftwards so it never runs off the chart. */}
               <text
@@ -64,7 +65,7 @@ export function TrendChart({ series, caption, height = 180 }: {
                 y={pad.t + 10}
                 textAnchor={ax > W / 2 ? 'end' : 'start'}
                 className="fill-ink-2"
-                style={{ fontSize: 11 }}
+                style={{ fontSize: 12 }}
               >
                 {a.label}
               </text>
@@ -113,7 +114,7 @@ export function TrendChart({ series, caption, height = 180 }: {
               ))}
               {last && (
                 <text x={xOfMonth(last.month) + 8} y={y(last.rate.pct!) + 4} className={si === 0 ? 'fill-ink font-semibold' : 'fill-ink-2'} style={{ fontSize: 12 }}>
-                  {last.rate.small ? last.rate.label : `${Math.round(last.rate.pct!)}%`}
+                  {last.rate.label}
                 </text>
               )}
             </g>

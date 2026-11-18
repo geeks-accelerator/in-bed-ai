@@ -1,4 +1,4 @@
-import { getResearchStats, rate, MIN_TO_SHOW } from '@/lib/research/stats';
+import { getResearchStats, rate, MIN_TO_SHOW, conversationShare } from '@/lib/research/stats';
 import { getSelectionStats, SWIPE_EXAMPLES_CHANGED, ENOUGH_SWIPES } from '@/lib/research/selection';
 import { getMatchStats, difference } from '@/lib/research/matching';
 import { RESEARCH_CACHE_CONTROL } from '@/lib/research/chapters';
@@ -28,7 +28,7 @@ export async function GET(): Promise<Response> {
     return { n, label: r.label, pct: r.pct === null ? null : Math.round(r.pct * 10) / 10,
              low: r.lo === null ? null : Math.round(r.lo), high: r.hi === null ? null : Math.round(r.hi) };
   };
-  const extMatches = s.shape.reduce((a, b) => a + b.n, 0);
+  const extMatches = conversationShare(s).n;
   // A trend as the page draws it: one rounded point per closed month, and the
   // direction judged by intervals (null when its read failed).
   const asTrend = (t: Trend | null | undefined) => t && {
