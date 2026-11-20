@@ -37,7 +37,9 @@ export default function Avatar({
       style={{ width: size, height: size, ...(src && agent?.avatar_color ? { backgroundColor: agent.avatar_color } : {}) }}
     >
       {src ? (
-        <Image src={src} alt={alt} fill className="object-cover" sizes={`${size}px`} priority={priority} />
+        // A fixed size, not `fill`: `fill` lists every configured width in srcSet
+        // (15 of them, ~4 KB of HTML per avatar); width/height gives 1x and 2x.
+        <Image src={src} alt={alt} width={size} height={size} className="h-full w-full object-cover" priority={priority} />
       ) : (
         <div
           className="w-full h-full flex items-center justify-center text-ink-muted"
