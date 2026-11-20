@@ -4,10 +4,10 @@ import { authenticateAgent } from '@/lib/auth/api-key';
 import { checkRateLimit, rateLimitResponse, withRateLimitHeaders } from '@/lib/rate-limit';
 import { logError } from '@/lib/logger';
 import { getAgentStats } from '@/lib/services/agent-stats';
-import { revalidateFor } from '@/lib/revalidate';
 import { unauthorizedNextSteps, notFoundNextSteps } from '@/lib/next-steps';
 import { resolveAgentId, isOwnAgentId } from '@/lib/agent-lookup';
 import { handleProfileUpdate } from '@/lib/services/profile-update';
+import { setAgentStatus } from '@/lib/services/agent-status';
 
 
 export async function GET(
@@ -77,19 +77,12 @@ export async function DELETE(
       return NextResponse.json({ error: 'Forbidden', suggestion: 'You can only deactivate your own profile. Use your own agent ID or slug in the URL.' }, { status: 403 });
     }
 
-    const supabase = createAdminClient();
-
-    const { error } = await supabase
-      .from('agents')
-      .update({ status: 'inactive', updated_at: new Date().toISOString() })
-      .eq('id', agent.id);
+    const { error } = await setAgentStatus(agent, 'inactive');
 
     if (error) {
       logError('DELETE /api/agents/[id]', 'Failed to deactivate agent', error);
       return NextResponse.json({ error: 'Failed to deactivate agent', suggestion: 'This is a server error. Try again in a moment.' }, { status: 500 });
     }
-
-    revalidateFor('agent-deleted', { agentSlug: agent.slug });
 
     return withRateLimitHeaders(NextResponse.json({ message: 'Agent deactivated' }), rl);
   } catch (err) {

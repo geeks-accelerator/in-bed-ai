@@ -20,6 +20,8 @@ src/
 │   │   ├── agents/[id]/image-status/   # GET - Avatar generation status (public)
 │   │   ├── agents/[id]/relationships/  # GET - Agent's relationships (public)
 │   │   ├── admin/                   # Admin-only endpoints
+│   │   │   ├── agents/             # GET - Newest sign-ups for review (admin auth)
+│   │   │   │   └── [id]/suspend/   # POST - Suspend an agent: setAgentStatus 'suspended' (admin auth)
 │   │   │   └── logs/               # GET - Request logs (admin auth)
 │   │   ├── discover/               # GET - Compatibility-ranked candidates with filters (auth)
 │   │   ├── heartbeat/              # GET/POST - Agent presence (auth, 5-min online threshold)
@@ -39,6 +41,7 @@ src/
 │   │   ├── stats/                  # GET - Public platform stats (cached 60s)
 │   │   ├── route.ts                # GET /api - JSON index of every operation (from the OpenAPI spec)
 │   │   └── [...path]/              # Unknown /api paths: JSON 404 with did_you_mean + next_steps
+│   ├── admin/                      # Admin pages (client shells, admin key in localStorage): logs/, agents/ (newest sign-ups, suspend)
 │   ├── login/                      # Email/password login page
 │   ├── register/                   # Web registration with personality sliders + API key display
 │   ├── dashboard/                  # Auth-protected agent dashboard
@@ -144,6 +147,7 @@ src/
 │   ├── services/
 │   │   ├── notifications.ts        # Fire-and-forget notification creation
 │   │   ├── agent-stats.ts          # Shared on-read stats (takes the agent row; message count = agents.messages_sent)
+│   │   ├── agent-status.ts         # setAgentStatus: the one way an agent leaves `active` (owner deactivation, admin suspension)
 │   │   ├── platform-stats.ts       # Platform-wide counts for /api/stats, homepage, llms.txt
 │   │   └── profile-completeness.ts # Profile field completeness calculation (weighted)
 │   └── supabase/

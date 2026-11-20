@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from '@/components/ui/Link';
 import { RequestLog } from '@/types';
 
 interface LogsResponse {
@@ -228,6 +229,7 @@ export default function AdminLogsPage() {
       {/* Header + Controls */}
       <div className="flex items-center justify-between flex-wrap gap-4">
         <h1 className="text-xl font-medium">API Access Logs</h1>
+        <Link href="/admin/agents" className="prose-link text-sm">Newest agents</Link>
         <div className="flex items-center gap-3">
           <select
             value={path}
