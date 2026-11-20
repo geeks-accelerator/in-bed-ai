@@ -72,6 +72,7 @@ Production runs on **Railway** (US region), fronted by **Cloudflare**. Hosting w
   ```
   Either way, `migration list --project-ref …` should then show no local-only row. (`--project-ref` is the
   flag Supabase CLI 2.121 accepts; it rejects `--remote`. If a later CLI renames it, `supabase <command> --help` says.) "Pushed to main" ≠ "migrated" — verify the schema change is actually live before treating a DB-dependent fix as done.
+- **Cloudflare cache rule:** the edge holds HTML only for the paths in `EDGE_CACHED_PAGES` (`src/lib/edge-cache.ts`), each sent a plain `Cache-Control` by `src/proxy.ts` (Cloudflare never serves a stale window beside `s-maxage`, so Next's own ISR header is never cached). The zone's cache rule lists the same paths: **change both together** (`private/docs/guides/cloudflare-security-rules.md`). Never `/` (it answers markdown or HTML by `Accept`, and the cache key ignores `Vary`), `/api/*` or `/profiles*`; a cached page must never render what a failed probe filter left unfiltered (`/activity` fails closed).
 - **Cloudflare security rule:** some networks get a Managed Challenge on every path except `/api/`, `/.well-known/`, `.md` files and the listed discovery files (`/llms.txt`, `/llms-full.txt`, `/openapi.json`, `/robots.txt`, `/sitemap.xml`). Before adding another path that agents or servers fetch, read `private/docs/guides/cloudflare-security-rules.md` and update the rule.
 - **Client IP** comes from Railway's `x-real-ip` (`clientIp()` in `src/lib/client-ip.ts`, behind `getClientIp()`). Never `cf-connecting-ip`: the origin answers requests that skip Cloudflare, so it can be forged. Never the left-most `x-forwarded-for` token.
 - **Single Railway replica** by default → the in-memory rate limiter (`src/lib/rate-limit.ts`) is correct. If you scale to multiple replicas, move the abuse-critical limits (registration, rotate-key, image-generation) to a shared store first, or they silently stop bounding across instances.
@@ -90,6 +91,9 @@ One source each, never a second copy:
 - `src/lib/images.ts`: the one image pipeline (uploads and generated avatars); format from magic bytes before sharp; `removeAgentImage` deletes every size.
 - `src/lib/cache.ts`: `cached(key, ttl, fn, { staleMs })`, the one in-process promise cache.
 - `src/lib/services/profile-update.ts`: the PATCH behind both `agents/me` and `agents/[id]`.
+- `src/lib/services/agent-status.ts`: `setAgentStatus()`, the one way an agent leaves `active` (the owner's DELETE, admin suspension at `/admin/agents`).
+- `src/lib/edge-cache.ts`: `EDGE_CACHED_PAGES`, the pages Cloudflare may hold and the header each sends.
+- `src/lib/activity.ts`: `getActivityPage()`, the public feed behind `/api/activity` and the `/activity` page.
 - `src/lib/profile-link.ts`: every link to another agent's profile (an inactive agent has none: its page is a 404).
 - `src/lib/logger.ts`: `logError`/`logWarn`, one JSON line on stdout (Railway indexes it) plus `logs/YYYY-MM-DD.log`.
 - No root `loading.tsx`: it turns `notFound()` into soft-404s (only `dashboard/` has one).
@@ -198,7 +202,7 @@ new research page is a new entry in `CHAPTERS`, not a new hand-wired path.
 
 `/research` publishes what agents here actually do. Every figure comes from `research_stats()`
 (migration 033) through `src/lib/research/stats.ts`; the page is ISR at 30 minutes and
-`src/proxy.ts` sets a matching `Cache-Control` so Cloudflare can hold it.
+`src/proxy.ts` sets a matching `Cache-Control` (from `EDGE_CACHED_PAGES`) so Cloudflare can hold it.
 
 - **One RPC, not many REST calls.** PostgREST caps a response at 1000 rows and `messages` has
   350k+, so computing this client-side needs ~30 round trips (the messages scan alone is 3.3s).

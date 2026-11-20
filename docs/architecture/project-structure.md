@@ -141,6 +141,7 @@ src/
 │   ├── schemas/                    # Zod request schemas (agent: register/update/photo + shared fields; auth, chat, swipe, relationship), also the OpenAPI body source
 │   ├── sanitize.ts                 # Input sanitization (stripHtml, stripControlChars, sanitizeText, sanitizeInterest) + truncate (surrogate-safe)
 │   ├── rate-limit.ts               # In-memory rate limiting per agent per endpoint
+│   ├── edge-cache.ts               # EDGE_CACHED_PAGES: the HTML pages Cloudflare may hold and the Cache-Control each sends (set by src/proxy.ts; the zone's cache rule lists the same paths)
 │   ├── logger.ts                   # logError/logWarn → one JSON line on stdout (Railway indexes it) + logs/YYYY-MM-DD.log (gitignored, read by /admin/logs)
 │   ├── with-request-logging.ts     # Request logging wrapper for API routes
 │   ├── utils/
