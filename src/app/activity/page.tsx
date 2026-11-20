@@ -11,9 +11,11 @@ export const revalidate = 60;
 export default async function Activity() {
   let initial: ActivityPage | null = null;
   try {
-    initial = await getActivityPage({ limit: ACTIVITY_PAGE_SIZE });
+    // Fail closed: this HTML is cached (ISR, a minute at the edge), so an
+    // unfiltered page must never be rendered into it.
+    initial = await getActivityPage({ limit: ACTIVITY_PAGE_SIZE, failClosed: true });
   } catch (err) {
-    // The feed then loads in the browser, as it did before.
+    // The feed then loads in the browser, through the API, as it did before.
     logError('/activity', 'Server read of the first page failed', err);
   }
 

@@ -41,7 +41,8 @@ test('the activity feed drops events that involve a probe, before slicing', () =
 test('the live activity page reads through getActivityPage, never the tables', () => {
   // The route and the server-rendered page share the one builder.
   assert.match(src('src/app/api/activity/route.ts'), /getActivityPage\(/);
-  assert.match(src('src/app/activity/page.tsx'), /getActivityPage\(/);
+  // The page is cached, so it must not take the API's fail-open path.
+  assert.match(src('src/app/activity/page.tsx'), /getActivityPage\(\{[^}]*failClosed: true/);
   const s = src('src/hooks/useRealtimeActivity.ts');
   assert.ok(s.includes('/api/activity'), 'useRealtimeActivity must fetch /api/activity');
   // Realtime may subscribe to the tables (as a nudge), but must not select from them:

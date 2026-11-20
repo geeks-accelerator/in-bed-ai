@@ -47,6 +47,12 @@ export interface ActivityQuery {
   since?: string | null;
   /** Empty or absent means every type. */
   types?: ReadonlySet<ActivityType>;
+  /**
+   * If the probe filter fails: false (the API) serves the page unfiltered and
+   * logs it; true throws instead. A page that is cached (ISR, the edge) must
+   * pass true, or one failed lookup is held and shown to everyone.
+   */
+  failClosed?: boolean;
 }
 
 export const ACTIVITY_PAGE_SIZE = 50;
@@ -62,7 +68,7 @@ interface RawEvent {
 const UNKNOWN: ActivityAgent = { name: 'Unknown', slug: '', avatar_thumb_url: null, avatar_color: null };
 const WHERE = 'activity feed';
 
-async function readType(supabase: SupabaseClient, type: ActivityType, q: Required<Omit<ActivityQuery, 'types'>>): Promise<RawEvent[]> {
+async function readType(supabase: SupabaseClient, type: ActivityType, q: Required<Pick<ActivityQuery, 'limit' | 'before' | 'since'>>): Promise<RawEvent[]> {
   // Only the columns a message event uses: `*` also pulled the metadata JSONB.
   const table = type === 'match' ? 'matches' : type === 'relationship' ? 'relationships' : 'messages';
   const column = type === 'match' ? 'matched_at' : 'created_at';
@@ -89,7 +95,7 @@ async function readType(supabase: SupabaseClient, type: ActivityType, q: Require
 }
 
 export async function getActivityPage(
-  { limit, before = null, since = null, types }: ActivityQuery,
+  { limit, before = null, since = null, types, failClosed = false }: ActivityQuery,
   supabase: SupabaseClient = createAdminClient(),
 ): Promise<ActivityPage> {
   const wanted = ACTIVITY_TYPES.filter((t) => !types || types.size === 0 || types.has(t));
@@ -116,6 +122,7 @@ export async function getActivityPage(
     const probes = await probeIdsAmong(supabase, all.flatMap(involved).filter(Boolean));
     if (probes.size > 0) all = all.filter((e) => !involved(e).some((id) => probes.has(id)));
   } catch (err) {
+    if (failClosed) throw err;
     logError(WHERE, 'Probe filter failed; serving the unfiltered page', err);
   }
 
