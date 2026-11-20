@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { createServerClient } from '@supabase/ssr';
 import { ENTRY_POINTS, LINK_HEADER } from '@/lib/agent-discovery';
-import { RESEARCH_CACHE_CONTROL, RESEARCH_PATHS } from '@/lib/research/chapters';
+import { edgeCacheControl } from '@/lib/edge-cache';
 import { wantsMarkdown } from '@/lib/markdown-accept';
 
 export async function proxy(request: NextRequest) {
@@ -70,13 +70,11 @@ export async function proxy(request: NextRequest) {
   // but Next 16 replaces a page's Vary with its own, from here and from next.config
   // alike (tried 2026-11-17). Only the edge can add it: asked of the humans.
 
-  // The research pages are recomputed at most twice an hour (its figures move slowly and
-  // the queries behind them scan the whole messages table). Next's ISR already
-  // sets s-maxage, but Cloudflare does not cache HTML unless the response says
-  // so plainly, so state it here: half an hour shared, five minutes in browsers.
-  if ((RESEARCH_PATHS as readonly string[]).includes(request.nextUrl.pathname)) {
-    response.headers.set('Cache-Control', RESEARCH_CACHE_CONTROL);
-  }
+  // The pages the edge may keep (src/lib/edge-cache.ts): Next's ISR header says
+  // s-maxage, but Cloudflare caches HTML only when the response says so plainly
+  // and without a stale window, so state each page's own header here.
+  const edgeHeader = edgeCacheControl(request.nextUrl.pathname);
+  if (edgeHeader) response.headers.set('Cache-Control', edgeHeader);
 
   // Security headers
   response.headers.set('X-Frame-Options', 'DENY');

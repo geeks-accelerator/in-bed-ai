@@ -2,7 +2,8 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
-import { RESEARCH_CACHE_CONTROL } from '@/lib/research/chapters';
+import { RESEARCH_CACHE_CONTROL, RESEARCH_PATHS } from '@/lib/research/chapters';
+import { EDGE_CACHED_PAGES, edgeCacheControl } from '@/lib/edge-cache';
 
 /**
  * Cloudflare reads `s-maxage` as also `proxy-revalidate` (RFC 9111), so a
@@ -16,6 +17,20 @@ import { RESEARCH_CACHE_CONTROL } from '@/lib/research/chapters';
 test('the research cache header has a shared lifetime and no stale window', () => {
   assert.match(RESEARCH_CACHE_CONTROL, /s-maxage=\d+/);
   assert.doesNotMatch(RESEARCH_CACHE_CONTROL, /stale-(while-revalidate|if-error)/);
+});
+
+test('every page the edge may keep says so plainly: public, a shared lifetime, no stale window', () => {
+  for (const [path, header] of Object.entries(EDGE_CACHED_PAGES)) {
+    assert.match(header, /^public, max-age=\d+, s-maxage=\d+$/, path);
+  }
+  for (const p of RESEARCH_PATHS) assert.equal(edgeCacheControl(p), RESEARCH_CACHE_CONTROL, p);
+});
+
+test('the edge never keeps the home page, the API, profiles or anything unlisted', () => {
+  // `/` answers markdown or HTML by Accept and Cloudflare's cache key ignores Vary.
+  for (const p of ['/', '/api/stats', '/profiles', '/profiles/alaskatwin', '/dashboard', '/research.json', '/about/x']) {
+    assert.equal(edgeCacheControl(p), undefined, p);
+  }
 });
 
 function sources(dir: string): string[] {

@@ -73,9 +73,11 @@ await report({
       { what: 'home, with its security headers', path: '/', accept: 'text/html', expect: 200, type: 'text/html', headers: ['strict-transport-security', 'x-content-type-options', 'x-frame-options', 'referrer-policy'] },
       { what: 'agents', path: '/agents', accept: 'text/html', expect: 200, type: 'text/html' },
       { what: 'a profile: for one reader, never shared', path: '/profiles/alaskatwin', accept: 'text/html', expect: 200, type: 'text/html', match: { 'cache-control': 'no-store' } },
-      // The one HTML a Cache Rule keeps at the edge ("Research pages: honour origin
+      // HTML a Cache Rule keeps at the edge ("Research pages: honour origin
       // cache-control"); RESEARCH_CACHE_CONTROL in src/lib/research/chapters.ts.
       { what: 'research: kept at the edge, no stale window', path: '/research', accept: 'text/html', expect: 200, type: 'text/html', match: { 'cache-control': '^public, max-age=300, s-maxage=1800$', 'cf-cache-status': '^(HIT|MISS|EXPIRED|REVALIDATED|UPDATING)$' } },
+      // A static page the same rule keeps (src/lib/edge-cache.ts lists every one).
+      { what: 'about: kept at the edge for an hour', path: '/about', accept: 'text/html', expect: 200, type: 'text/html', match: { 'cache-control': '^public, max-age=300, s-maxage=3600$' } },
       { what: 'a missing page: never kept', path: '/no-such-page', accept: 'text/html', expect: 404, match: { 'cache-control': 'no-store' } },
       // Nothing secret answers (docs/standard.md, every project): scanners ask for these daily.
       { what: 'no .env', path: '/.env', expect: 404 },
