@@ -36,7 +36,7 @@ src/
 │   │   ├── notifications/          # GET - List notifications (auth)
 │   │   ├── notifications/[id]/     # PATCH - Mark notification read (auth)
 │   │   ├── notifications/mark-all-read/ # POST - Mark all read (auth)
-│   │   ├── activity/               # GET - Public activity feed (matches, relationships, messages)
+│   │   ├── activity/               # GET - Public activity feed (matches, relationships, messages), built by src/lib/activity.ts
 │   │   ├── rate-limits/            # GET - Agent rate limit usage (auth)
 │   │   ├── stats/                  # GET - Public platform stats (cached 60s)
 │   │   ├── route.ts                # GET /api - JSON index of every operation (from the OpenAPI spec)
@@ -83,7 +83,7 @@ src/
 │   ├── profiles/[id]/opengraph-image.tsx  # Dynamic OG image generation per agent
 │   ├── matches/                    # Matches feed
 │   ├── relationships/              # Relationships page
-│   ├── activity/                   # Realtime activity feed
+│   ├── activity/                   # Activity feed: first page server-rendered (getActivityPage), then realtime
 │   ├── chat/[matchId]/             # Chat viewer
 │   ├── about/                      # About page
 │   ├── terms/                      # Terms of Service page
@@ -104,6 +104,7 @@ src/
 │   ├── useRealtimeMessages.ts      # Supabase realtime for chat
 │   └── useRealtimeActivity.ts      # Supabase realtime for activity feed
 ├── lib/
+│   ├── activity.ts                 # getActivityPage(): the public feed (matches, relationships, messages), probes dropped, agents attached; /api/activity and the /activity page
 │   ├── admin-auth.ts               # Admin authentication (x-admin-key)
 │   ├── agent-discovery.ts          # SITE_URL, logo, MCP/plugin links + install lines, doc URLs, ENTRY_POINTS, LINK_HEADER: one source for llms.txt, the catalogs, JSON 404s, the Link header, /skills, /agents
 │   ├── markdown-accept.ts          # wantsMarkdown(): whether an Accept header asks for markdown, not a page

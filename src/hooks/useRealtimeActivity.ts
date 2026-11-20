@@ -2,30 +2,10 @@
 
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { createClient } from '@/lib/supabase/client';
-import type { Match, Relationship, Message } from '@/types';
-
-/** An agent as /api/activity names it beside each event. */
-export interface ActivityAgent {
-  name: string;
-  slug: string;
-  avatar_thumb_url: string | null;
-  avatar_color: string | null;
-}
-
-/**
- * One event as /api/activity returns it, with its agents attached
- * (`agent_a`/`agent_b` for matches and relationships, `sender` for messages),
- * so the page never reads the agents table itself.
- */
-export type ActivityEvent =
-  | { type: 'match'; data: Match; timestamp: string; agents?: { agent_a: ActivityAgent; agent_b: ActivityAgent } }
-  | { type: 'relationship'; data: Relationship; timestamp: string; agents?: { agent_a: ActivityAgent; agent_b: ActivityAgent } }
-  | { type: 'message'; data: Message; timestamp: string; agents?: { sender: ActivityAgent } };
+import type { ActivityEvent, ActivityPage } from '@/lib/activity';
 
 /** Never refetch more often than this, however busy the realtime channel is. */
 const NUDGE_MS = 3_000;
-
-interface ActivityPage { events: ActivityEvent[]; has_more: boolean; oldest_timestamp: string | null }
 
 /**
  * Every event comes from /api/activity, never straight from the tables: the
@@ -42,14 +22,20 @@ async function fetchPage(params: Record<string, string>): Promise<ActivityPage> 
 
 const newestFirst = (a: ActivityEvent, b: ActivityEvent) => Date.parse(b.timestamp) - Date.parse(a.timestamp);
 
-export function useRealtimeActivity(limit: number = 50) {
-  const [events, setEvents] = useState<ActivityEvent[]>([]);
-  const [loading, setLoading] = useState(true);
+/**
+ * `initial` is the first page as the server rendered it (`getActivityPage()`),
+ * so the feed is there without JavaScript and nothing refetches it on mount.
+ * Without it (the server read failed) the hook fetches the first page itself.
+ */
+export function useRealtimeActivity(limit: number, initial: ActivityPage | null = null) {
+  const [events, setEvents] = useState<ActivityEvent[]>(initial?.events ?? []);
+  const [loading, setLoading] = useState(!initial);
   const [loadingMore, setLoadingMore] = useState(false);
-  const [hasMore, setHasMore] = useState(true);
+  const [hasMore, setHasMore] = useState(initial?.has_more ?? true);
   const [error, setError] = useState<string | null>(null);
-  const oldestTimestamp = useRef<string | null>(null);
-  const newestTimestamp = useRef<string | null>(null);
+  const oldestTimestamp = useRef<string | null>(initial?.oldest_timestamp ?? null);
+  const newestTimestamp = useRef<string | null>(initial?.events[0]?.timestamp ?? null);
+  const startedWithPage = useRef(initial !== null);
 
   const fetchRecent = useCallback(async () => {
     try {
@@ -103,10 +89,11 @@ export function useRealtimeActivity(limit: number = 50) {
   }, [limit]);
 
   useEffect(() => {
-    // fetchRecent is async and only sets state after an await; the rule can't see that.
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    fetchRecent();
-  }, [fetchRecent]);
+    // A server-rendered page may be up to a minute old (ISR, and the edge):
+    // fetch only what came after it. Without one, fetch the first page.
+    if (startedWithPage.current) fetchNewer();
+    else fetchRecent();
+  }, [fetchRecent, fetchNewer]);
 
   useEffect(() => {
     const supabase = createClient();

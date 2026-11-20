@@ -30,6 +30,7 @@ export const EDGE_CACHED_PAGES: Readonly<Record<string, string>> = {
   '/docs/api': HOURLY_PAGE_CACHE_CONTROL,
   '/docs/mcp': HOURLY_PAGE_CACHE_CONTROL,
   '/agents': MINUTE_PAGE_CACHE_CONTROL,
+  '/activity': MINUTE_PAGE_CACHE_CONTROL, // the browser then fetches what came after it
 };
 
 /** The header for a path the edge may keep, or undefined for every other path. */

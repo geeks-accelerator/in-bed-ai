@@ -30,15 +30,18 @@ for (const [file, filters] of LISTING_READS) {
   });
 }
 
-test('the activity API drops events that involve a probe, before slicing', () => {
-  const s = src('src/app/api/activity/route.ts');
+test('the activity feed drops events that involve a probe, before slicing', () => {
+  const s = src('src/lib/activity.ts');
   const filter = s.indexOf('probeIdsAmong(');
-  const slice = s.indexOf('allEvents.slice(0, limit)');
-  assert.ok(filter > 0, 'activity route no longer calls probeIdsAmong');
+  const slice = s.indexOf('all.slice(0, limit)');
+  assert.ok(filter > 0, 'getActivityPage no longer calls probeIdsAmong');
   assert.ok(filter < slice, 'the probe filter must run before the page is sliced, or pages come back short');
 });
 
-test('the live activity page reads through the API, never the tables', () => {
+test('the live activity page reads through getActivityPage, never the tables', () => {
+  // The route and the server-rendered page share the one builder.
+  assert.match(src('src/app/api/activity/route.ts'), /getActivityPage\(/);
+  assert.match(src('src/app/activity/page.tsx'), /getActivityPage\(/);
   const s = src('src/hooks/useRealtimeActivity.ts');
   assert.ok(s.includes('/api/activity'), 'useRealtimeActivity must fetch /api/activity');
   // Realtime may subscribe to the tables (as a nudge), but must not select from them:

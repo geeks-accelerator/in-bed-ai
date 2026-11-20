@@ -1,28 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createAdminClient } from '@/lib/supabase/admin';
 import { logError } from '@/lib/logger';
-import { truncate } from '@/lib/sanitize';
 import { checkRateLimit, rateLimitResponse, withRateLimitHeaders } from '@/lib/rate-limit';
 import { logApiRequest, getClientIp } from '@/lib/with-request-logging';
-import { probeIdsAmong } from '@/lib/probes';
+import { getActivityPage, ACTIVITY_PAGE_SIZE, ACTIVITY_TYPES, type ActivityType } from '@/lib/activity';
 import { parseTimestamp } from '@/lib/cursor';
 
-const VALID_TYPES = new Set(['match', 'relationship', 'message']);
-
-
-interface AgentSummary {
-  name: string;
-  slug: string;
-  avatar_thumb_url: string | null;
-  avatar_color: string | null;
-}
-
-interface ActivityEvent {
-  type: 'match' | 'relationship' | 'message';
-  data: Record<string, unknown>;
-  agents: Record<string, AgentSummary>;
-  timestamp: string;
-}
+const VALID_TYPES = new Set<string>(ACTIVITY_TYPES);
 
 export async function GET(request: NextRequest) {
   const startTime = Date.now();
@@ -31,7 +14,8 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
 
     // Parse and validate params
-    const limit = Math.min(100, Math.max(1, parseInt(searchParams.get('limit') || '50', 10)));
+    // A non-number (`limit=abc`) reads as the default, not NaN.
+    const limit = Math.min(100, Math.max(1, parseInt(searchParams.get('limit') || '', 10) || ACTIVITY_PAGE_SIZE));
 
     const beforeParam = searchParams.get('before');
     let before: string | null = null;
@@ -61,7 +45,7 @@ export async function GET(request: NextRequest) {
 
     // Parse type filter
     const typeParam = searchParams.get('type');
-    const requestedTypes = new Set<string>();
+    const requestedTypes = new Set<ActivityType>();
     if (typeParam) {
       for (const t of typeParam.split(',')) {
         const trimmed = t.trim().toLowerCase();
@@ -71,12 +55,9 @@ export async function GET(request: NextRequest) {
             { status: 400 }
           );
         }
-        requestedTypes.add(trimmed);
+        requestedTypes.add(trimmed as ActivityType);
       }
     }
-    const includeMatches = requestedTypes.size === 0 || requestedTypes.has('match');
-    const includeRelationships = requestedTypes.size === 0 || requestedTypes.has('relationship');
-    const includeMessages = requestedTypes.size === 0 || requestedTypes.has('message');
 
     // Rate limit by IP (public endpoint, no agent ID)
     const ip = getClientIp(request) || 'anonymous';
@@ -85,196 +66,8 @@ export async function GET(request: NextRequest) {
       return rateLimitResponse(rl);
     }
 
-    const supabase = createAdminClient();
-
-    // Fetch per-type limit: request more than needed so after merge+sort we have enough
-    const perTypeLimit = Math.min(limit, 100);
-
-    // Build queries in parallel
-    const queries: Promise<{ type: string; events: ActivityEvent[] }>[] = [];
-
-    if (includeMatches) {
-      queries.push((async () => {
-        let q = supabase
-          .from('matches')
-          .select('*')
-          .order('matched_at', { ascending: false })
-          .limit(perTypeLimit);
-        if (before) q = q.lt('matched_at', before);
-        if (since) q = q.gt('matched_at', since);
-        const { data, error } = await q;
-        if (error) {
-          logError('GET /api/activity', 'Failed to fetch matches', error);
-          return { type: 'match', events: [] };
-        }
-        return {
-          type: 'match',
-          events: (data || []).map((m) => ({
-            type: 'match' as const,
-            data: m,
-            agents: {},
-            timestamp: m.matched_at,
-          })),
-        };
-      })());
-    }
-
-    if (includeRelationships) {
-      queries.push((async () => {
-        let q = supabase
-          .from('relationships')
-          .select('*')
-          .neq('status', 'ended')
-          .neq('status', 'declined')
-          .order('created_at', { ascending: false })
-          .limit(perTypeLimit);
-        if (before) q = q.lt('created_at', before);
-        if (since) q = q.gt('created_at', since);
-        const { data, error } = await q;
-        if (error) {
-          logError('GET /api/activity', 'Failed to fetch relationships', error);
-          return { type: 'relationship', events: [] };
-        }
-        return {
-          type: 'relationship',
-          events: (data || []).map((r) => ({
-            type: 'relationship' as const,
-            data: r,
-            agents: {},
-            timestamp: r.created_at,
-          })),
-        };
-      })());
-    }
-
-    if (includeMessages) {
-      queries.push((async () => {
-        // Only the columns the response actually uses — `select('*')` also
-        // pulled the metadata JSONB for every row just to discard it below.
-        let q = supabase
-          .from('messages')
-          .select('id, match_id, sender_id, content, created_at')
-          .order('created_at', { ascending: false })
-          .limit(perTypeLimit);
-        if (before) q = q.lt('created_at', before);
-        if (since) q = q.gt('created_at', since);
-        const { data, error } = await q;
-        if (error) {
-          logError('GET /api/activity', 'Failed to fetch messages', error);
-          return { type: 'message', events: [] };
-        }
-        return {
-          type: 'message',
-          events: (data || []).map((msg) => ({
-            type: 'message' as const,
-            data: {
-              id: msg.id,
-              match_id: msg.match_id,
-              sender_id: msg.sender_id,
-              content: msg.content ? truncate(msg.content, 100, '...') : msg.content,
-              created_at: msg.created_at,
-            },
-            agents: {},
-            timestamp: msg.created_at,
-          })),
-        };
-      })());
-    }
-
-    const results = await Promise.all(queries);
-
-    // Merge all events
-    let allEvents: ActivityEvent[] = [];
-    for (const r of results) {
-      allEvents = allEvents.concat(r.events);
-    }
-
-    // Sort by timestamp DESC
-    allEvents.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
-
-    // Drop events that involve a probe (migration 045, src/lib/probes.ts) before
-    // slicing, so a page is still full. A message only names its sender, so its
-    // match supplies the other agent.
-    try {
-      const messageMatchIds = allEvents
-        .filter((e) => e.type === 'message')
-        .map((e) => (e.data as Record<string, unknown>).match_id as string);
-      const pairOf = new Map<string, string[]>();
-      if (messageMatchIds.length > 0) {
-        const { data: pairs, error: pairsError } = await supabase
-          .from('matches')
-          .select('id, agent_a_id, agent_b_id')
-          .in('id', [...new Set(messageMatchIds)]);
-        if (pairsError) throw pairsError;
-        for (const p of pairs ?? []) pairOf.set(p.id, [p.agent_a_id, p.agent_b_id]);
-      }
-      const involved = (e: ActivityEvent): string[] => {
-        const d = e.data as Record<string, unknown>;
-        return e.type === 'message'
-          ? [d.sender_id as string, ...(pairOf.get(d.match_id as string) ?? [])]
-          : [d.agent_a_id as string, d.agent_b_id as string];
-      };
-      const probes = await probeIdsAmong(supabase, allEvents.flatMap(involved).filter(Boolean));
-      if (probes.size > 0) allEvents = allEvents.filter((e) => !involved(e).some((id) => probes.has(id)));
-    } catch (err) {
-      logError('GET /api/activity', 'Probe filter failed; serving the unfiltered page', err);
-    }
-
-    // Slice to limit
-    const sliced = allEvents.slice(0, limit);
-
-    // Collect all agent IDs that need enrichment
-    const agentIds = new Set<string>();
-    for (const event of sliced) {
-      const d = event.data as Record<string, unknown>;
-      if (event.type === 'match' || event.type === 'relationship') {
-        if (d.agent_a_id) agentIds.add(d.agent_a_id as string);
-        if (d.agent_b_id) agentIds.add(d.agent_b_id as string);
-      } else if (event.type === 'message') {
-        if (d.sender_id) agentIds.add(d.sender_id as string);
-      }
-    }
-
-    // Fetch agent summaries
-    const agentsMap: Record<string, AgentSummary> = {};
-    if (agentIds.size > 0) {
-      const { data: agents, error: agentsError } = await supabase
-        .from('agents')
-        .select('id, name, slug, avatar_thumb_url, avatar_color')
-        .in('id', Array.from(agentIds));
-
-      if (agentsError) {
-        logError('GET /api/activity', 'Failed to fetch agent details', agentsError);
-      } else if (agents) {
-        for (const a of agents) {
-          agentsMap[a.id] = {
-            name: a.name,
-            slug: a.slug,
-            avatar_thumb_url: a.avatar_thumb_url,
-            avatar_color: a.avatar_color,
-          };
-        }
-      }
-    }
-
-    // Enrich events with agent data
-    const unknown: AgentSummary = { name: 'Unknown', slug: '', avatar_thumb_url: null, avatar_color: null };
-    for (const event of sliced) {
-      const d = event.data as Record<string, unknown>;
-      if (event.type === 'match' || event.type === 'relationship') {
-        event.agents = {
-          agent_a: agentsMap[d.agent_a_id as string] || unknown,
-          agent_b: agentsMap[d.agent_b_id as string] || unknown,
-        };
-      } else if (event.type === 'message') {
-        event.agents = {
-          sender: agentsMap[d.sender_id as string] || unknown,
-        };
-      }
-    }
-
-    const hasMore = allEvents.length > limit;
-    const oldestTimestamp = sliced.length > 0 ? sliced[sliced.length - 1].timestamp : null;
+    const { events: sliced, has_more: hasMore, oldest_timestamp: oldestTimestamp } =
+      await getActivityPage({ limit, before, since, types: requestedTypes });
 
     const response = NextResponse.json({
       events: sliced,

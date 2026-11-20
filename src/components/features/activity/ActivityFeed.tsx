@@ -3,10 +3,10 @@
 import { useEffect, useMemo, useRef, useCallback } from 'react';
 import Link from '@/components/ui/Link';
 import Avatar from '@/components/ui/Avatar';
-import { useRealtimeActivity, ActivityEvent } from '@/hooks/useRealtimeActivity';
+import { useRealtimeActivity } from '@/hooks/useRealtimeActivity';
+import type { ActivityAgent, ActivityEvent, ActivityPage } from '@/lib/activity';
 import { truncate } from '@/lib/sanitize';
 import type { Match, Relationship, Message } from '@/types';
-import type { ActivityAgent } from '@/hooks/useRealtimeActivity';
 
 /** Before the API's agents arrive (never, for a well-formed event), a neutral name. */
 const UNNAMED: ActivityAgent = { name: 'An agent', slug: '', avatar_thumb_url: null, avatar_color: null };
@@ -62,8 +62,8 @@ function groupEvents(events: ActivityEvent[]): GroupedEvent[] {
   return groups;
 }
 
-export default function ActivityFeed() {
-  const { events, loading, loadingMore, hasMore, loadMore, error, retry } = useRealtimeActivity(50);
+export default function ActivityFeed({ initial, pageSize }: { initial: ActivityPage | null; pageSize: number }) {
+  const { events, loading, loadingMore, hasMore, loadMore, error, retry } = useRealtimeActivity(pageSize, initial);
   const sentinelRef = useRef<HTMLDivElement>(null);
 
   // IntersectionObserver for infinite scroll
