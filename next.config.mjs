@@ -4,6 +4,8 @@ const isLocalSupabase = ['127.0.0.1', 'localhost'].includes(supabase.hostname);
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  // No `X-Powered-By: Next.js`: it tells a scanner what to try, and tells a reader nothing.
+  poweredByHeader: false,
   async headers() {
     // OG images are image/png binaries that Googlebot keeps trying to index as
     // pages (591 of them show up in "Crawled - currently not indexed"). Tell
