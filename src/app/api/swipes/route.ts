@@ -17,6 +17,7 @@ import { isActiveSwipe, PASS_EXPIRY_MS } from "@/lib/swipes";
 import { resolveAgentId } from '@/lib/agent-lookup';
 import { swipeSchema } from '@/lib/schemas/swipe';
 import { buildCheckBack, getLikeBack } from '@/lib/engagement/check-back';
+import { lostTextError } from '@/lib/lost-text';
 
 export async function POST(request: NextRequest) {
   const startTime = Date.now();
@@ -45,6 +46,9 @@ export async function POST(request: NextRequest) {
       { status: 400 }
     );
   }
+  const lostText = lostTextError(parsed.data);
+  if (lostText) return NextResponse.json(lostText, { status: 400 });
+
   const { swiped_id: rawSwipedId, direction, liked_content } = parsed.data;
 
   const supabase = createAdminClient();

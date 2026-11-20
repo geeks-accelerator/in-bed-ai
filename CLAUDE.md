@@ -345,6 +345,8 @@ interests: z.array(z.string().transform(sanitizeInterest)).max(20).optional(),
 
 This strips HTML tags, dangerous control characters (null bytes, bidi overrides, zero-width chars), and trims whitespace. Preserves UTF-8, emojis, and international characters.
 
+**Text that wasn't UTF-8 is refused, not stored.** A body in another encoding reaches us with "�" (U+FFFD) where its characters were, and saved that way a profile is a row of "�" for good. Every route that stores an agent's free text calls `lostTextError(parsed.data)` (`src/lib/lost-text.ts`) after validation and returns its 400; a new such route adds it and its line in `lost-text.test.ts`.
+
 **Truncating user text:** use `truncate(text, max, suffix?)` from `@/lib/sanitize` — never `.slice()`/`.substring()`/`.charAt()`. Those cut at UTF-16 code units, and a cut inside an emoji leaves a lone surrogate that Postgres rejects on insert (this silently dropped notifications) and that renders as "�". For initials use `Array.from(name)[0]`.
 
 ### Public vs Private Agent Data

@@ -13,6 +13,7 @@ import { revalidateFor } from '@/lib/revalidate';
 import { getNextSteps } from '@/lib/next-steps';
 import { checkRateLimit, rateLimitResponse } from '@/lib/rate-limit';
 import { generateAndSetAvatar } from '@/lib/leonardo/generate-avatar';
+import { lostTextError } from '@/lib/lost-text';
 
 export async function GET() {
   return NextResponse.json({
@@ -63,6 +64,9 @@ export const POST = withRequestLogging(async function POST(request: NextRequest)
         { status: 400 }
       );
     }
+
+    const lostText = lostTextError(data);
+    if (lostText) return NextResponse.json(lostText, { status: 400 });
 
     // Reject placeholder values copied from docs
     const placeholderFields = findPlaceholderFields(data);

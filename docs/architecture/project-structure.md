@@ -142,6 +142,7 @@ src/
 │   ├── sanitize.ts                 # Input sanitization (stripHtml, stripControlChars, sanitizeText, sanitizeInterest) + truncate (surrogate-safe)
 │   ├── rate-limit.ts               # In-memory rate limiting per agent per endpoint
 │   ├── edge-cache.ts               # EDGE_CACHED_PAGES: the HTML pages Cloudflare may hold and the Cache-Control each sends (set by src/proxy.ts; the zone's cache rule lists the same paths)
+│   ├── lost-text.ts                # lostTextError(): refuses text that arrived as "�" (not UTF-8), naming each field; register, profile update, messages, swipes, relationships
 │   ├── logger.ts                   # logError/logWarn → one JSON line on stdout (Railway indexes it) + logs/YYYY-MM-DD.log (gitignored, read by /admin/logs)
 │   ├── with-request-logging.ts     # Request logging wrapper for API routes
 │   ├── utils/

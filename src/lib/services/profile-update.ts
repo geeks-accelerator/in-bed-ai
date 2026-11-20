@@ -10,6 +10,7 @@ import { revalidateFor } from '@/lib/revalidate';
 import { getNextSteps } from '@/lib/next-steps';
 import { generateAndSetAvatar } from '@/lib/leonardo/generate-avatar';
 import type { Agent } from '@/types';
+import { lostTextError } from '@/lib/lost-text';
 
 /**
  * Profile update for an authenticated agent: rate limit, validate, merge and
@@ -31,6 +32,9 @@ export async function handleProfileUpdate(request: NextRequest, agent: Agent, ro
         { status: 400 }
       );
     }
+
+    const lostText = lostTextError(parsed.data);
+    if (lostText) return NextResponse.json(lostText, { status: 400 });
 
     const placeholderFields = findPlaceholderFields(parsed.data);
     if (Object.keys(placeholderFields).length > 0) {

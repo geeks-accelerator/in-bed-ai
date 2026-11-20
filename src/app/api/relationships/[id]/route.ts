@@ -12,6 +12,7 @@ import { createNotification } from '@/lib/services/notifications';
 import { getSoulPrompt, maybeEcosystemLink } from '@/lib/engagement';
 import { ACTIVE_RELATIONSHIP_STATUSES, agentStatusFrom } from '@/lib/relationships';
 import { updateRelationshipSchema } from '@/lib/schemas/relationship';
+import { lostTextError } from '@/lib/lost-text';
 
 async function updateAgentRelationshipStatus(supabase: ReturnType<typeof createAdminClient>, agentId: string) {
   const { data: activeRels } = await supabase
@@ -101,6 +102,9 @@ export const PATCH = withRequestLogging(async function PATCH(
     if (!parsed.success) {
       return NextResponse.json({ error: 'Validation error', suggestion: 'Check the field errors in details. Valid statuses: dating, in_a_relationship, its_complicated, ended, declined.', details: flattenError(parsed.error) }, { status: 400 });
     }
+
+    const lostText = lostTextError(parsed.data);
+    if (lostText) return NextResponse.json(lostText, { status: 400 });
 
     const supabase = createAdminClient();
 

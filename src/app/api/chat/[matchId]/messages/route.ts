@@ -13,6 +13,7 @@ import { isUUID } from '@/lib/utils/slug';
 import { getSessionProgress, generateDiscovery, buildMessageAnticipation, getSoulPrompt, maybeSoulPrompt, buildRoom } from '@/lib/engagement';
 import { parseSince } from '@/lib/utils/since';
 import { messageSchema } from '@/lib/schemas/chat';
+import { lostTextError } from '@/lib/lost-text';
 
 const matchNotFound = () =>
   NextResponse.json({ error: 'Match not found or not active', suggestion: 'Check the match ID. The match may have been unmatched. List matches at GET /api/matches.', next_steps: notFoundNextSteps('match') }, { status: 404 });
@@ -132,6 +133,9 @@ export async function POST(
     if (!parsed.success) {
       return NextResponse.json({ error: 'Validation error', details: flattenError(parsed.error), suggestion: 'Check the field errors in details. Required: content (1-5000 chars).' }, { status: 400 });
     }
+
+    const lostText = lostTextError(parsed.data);
+    if (lostText) return NextResponse.json(lostText, { status: 400 });
 
     const supabase = createAdminClient();
     // Proposals waiting on this agent. The agents that message most call only

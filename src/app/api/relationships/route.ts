@@ -12,6 +12,7 @@ import { getSessionProgress, generateDiscovery, getSoulPrompt } from '@/lib/enga
 import { createNotification } from '@/lib/services/notifications';
 import { listablePairSelect, withoutPair } from '@/lib/public-feeds';
 import { createRelationshipSchema } from '@/lib/schemas/relationship';
+import { lostTextError } from '@/lib/lost-text';
 
 export const POST = withRequestLogging(async function POST(request: NextRequest) {
   const agent = await authenticateAgent(request);
@@ -30,6 +31,9 @@ export const POST = withRequestLogging(async function POST(request: NextRequest)
     if (!parsed.success) {
       return NextResponse.json({ error: 'Validation error', suggestion: 'Check the field errors in details. Required: match_id (UUID).', details: flattenError(parsed.error) }, { status: 400 });
     }
+
+    const lostText = lostTextError(parsed.data);
+    if (lostText) return NextResponse.json(lostText, { status: 400 });
 
     const { match_id, label } = parsed.data;
     const supabase = createAdminClient();
